@@ -36,7 +36,7 @@ struct DeviceDetailView: View {
                 LoadingView()
             }
         }
-        .navigationTitle("设备详情")
+        .navigationTitle(L10n.Device.detail)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             vm.selectedAccountId = accountId
@@ -56,9 +56,9 @@ struct DeviceDetailView: View {
                 )
             }
         }
-        .alert("确认删除设备", isPresented: $showDeleteConfirm) {
-            Button("取消", role: .cancel) {}
-            Button("删除", role: .destructive) {
+        .alert(L10n.Device.deleteTitle, isPresented: $showDeleteConfirm) {
+            Button(L10n.cancel, role: .cancel) {}
+            Button(L10n.delete, role: .destructive) {
                 Task {
                     isDeleting = true
                     do {
@@ -71,25 +71,26 @@ struct DeviceDetailView: View {
                 }
             }
         } message: {
-            Text("将同时在 Apple Developer 禁用此设备，并移除本地记录，此操作不可恢复。")
+            Text(L10n.Device.deleteMessage)
         }
     }
 
     // MARK: - Device Info
 
     private func deviceInfoCard(_ device: Device) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let tint: Color = device.isEnabled ? .dsAccent : .dsAccentPink
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
                 HIcon(AppIcon.device)
                     .font(.title2)
-                    .foregroundStyle(Color.dsAccent)
+                    .foregroundStyle(tint)
                     .frame(width: 48, height: 48)
-                    .background(Color.dsAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                    .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(device.displayName)
                         .font(.title3.bold())
-                        .foregroundStyle(Color.dsText)
+                        .foregroundStyle(device.isEnabled ? Color.dsText : Color.dsAccentPink)
                     StatusBadge.forStatus(device.status ?? "UNKNOWN")
                 }
             }
@@ -97,16 +98,16 @@ struct DeviceDetailView: View {
             Divider().overlay(Color.dsBorder)
 
             Group {
-                DetailRow(label: "UDID", value: device.udid ?? "N/A", monospaced: true)
-                DetailRow(label: "平台", value: device.platform ?? "N/A")
+                DetailRow(label: L10n.Device.formUdid, value: device.udid ?? L10n.na, monospaced: true)
+                DetailRow(label: L10n.Cert.platform, value: Localized.platform(device.platform ?? L10n.na))
                 if let model = device.model {
-                    DetailRow(label: "型号", value: model)
+                    DetailRow(label: NSLocalizedString("cert.model", comment: ""), value: model)
                 }
                 if let cls = device.device_class {
-                    DetailRow(label: "类型", value: cls)
+                    DetailRow(label: NSLocalizedString("cert.deviceClass", comment: ""), value: Localized.deviceClass(cls))
                 }
                 if let date = device.created_at {
-                    DetailRow(label: "添加时间", value: String(date.prefix(19)))
+                    DetailRow(label: NSLocalizedString("cert.addedAt", comment: ""), value: String(date.prefix(19)))
                 }
             }
         }
@@ -120,11 +121,11 @@ struct DeviceDetailView: View {
             HStack {
                 HIcon(AppIcon.certificate)
                     .foregroundStyle(Color.dsAccentPurple)
-                Text("关联证书")
+                Text(L10n.Device.relatedCerts)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                Text("\(device.certificates?.count ?? 0) 个")
+                Text(L10n.count(device.certificates?.count ?? 0))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -138,7 +139,7 @@ struct DeviceDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(cert.name ?? "未命名")
+                                    Text(cert.name ?? L10n.unnamed)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(Color.dsText)
                                     HStack(spacing: 6) {
@@ -146,7 +147,7 @@ struct DeviceDetailView: View {
                                             .font(.caption)
                                             .foregroundStyle(Color.dsMuted)
                                         if let pwd = cert.password {
-                                            Text("密码: \(pwd)")
+                                            Text("\(L10n.Cert.password): \(pwd)")
                                                 .font(.caption.monospaced())
                                                 .foregroundStyle(Color.dsAccentBlue)
                                         }
@@ -171,7 +172,7 @@ struct DeviceDetailView: View {
 
                                 if let pwd = cert.password {
                                     PillButton(
-                                        title: copiedText == pwd ? "已复制" : "复制密码",
+                                        title: copiedText == pwd ? NSLocalizedString("common.done", comment: "") : NSLocalizedString("common.copy", comment: ""),
                                         icon: copiedText == pwd ? AppIcon.check : AppIcon.copy,
                                         color: .dsAccent
                                     ) {
@@ -191,7 +192,7 @@ struct DeviceDetailView: View {
                     }
                 }
             } else {
-                Text("暂无关联证书")
+                Text(L10n.Device.noRelatedCerts)
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
                     .padding(.vertical, 8)
@@ -207,11 +208,11 @@ struct DeviceDetailView: View {
             HStack {
                 HIcon(AppIcon.profile)
                     .foregroundStyle(Color.dsAccentOrange)
-                Text("关联描述文件")
+                Text(L10n.Device.relatedProfiles)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                Text("\(device.profiles?.count ?? 0) 个")
+                Text(L10n.count(device.profiles?.count ?? 0))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -225,20 +226,20 @@ struct DeviceDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(profile.name ?? "未命名")
+                                    Text(profile.name ?? L10n.unnamed)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(Color.dsText)
-                                    Text(profile.type ?? "")
+                                    Text(Localized.profileType(profile.type ?? ""))
                                         .font(.caption)
                                         .foregroundStyle(Color.dsMuted)
                                 }
                                 Spacer()
                                 if profile.has_file == true {
-                                    StatusBadge("可下载", color: .dsAccent)
+                                    StatusBadge(L10n.Profile.downloadable, color: .dsAccent)
                                 }
                             }
 
-                            PillButton(title: "下载描述文件", icon: AppIcon.docDownload, color: .dsAccentOrange) {
+                            PillButton(title: L10n.Profile.download, icon: AppIcon.docDownload, color: .dsAccentOrange) {
                                 Task { await downloadService.download(endpoint: "/profiles/\(profile.id)/download") }
                             }
                         }
@@ -250,7 +251,7 @@ struct DeviceDetailView: View {
                     }
                 }
             } else {
-                Text("暂无关联描述文件")
+                Text(L10n.Device.noRelatedProfiles)
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
                     .padding(.vertical, 8)
@@ -268,7 +269,7 @@ struct DeviceDetailView: View {
             } label: {
                 HStack(spacing: 8) {
                     HIcon(AppIcon.link).font(.body)
-                    Text("重新一键绑定")
+                    Text(L10n.Device.rebind)
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -293,7 +294,7 @@ struct DeviceDetailView: View {
                     } else {
                         HIcon(AppIcon.close).font(.body)
                     }
-                    Text("删除设备")
+                    Text(L10n.Device.deleteDevice)
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -314,13 +315,13 @@ struct DeviceDetailView: View {
             HStack {
                 HIcon(AppIcon.download)
                     .foregroundStyle(Color.dsAccent)
-                Text("打包下载")
+                Text(L10n.Device.batchDownload)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
             }
 
             if let profiles = device.profiles, !profiles.isEmpty {
-                Text("每个包含对应的证书 P12、描述文件和密码")
+                Text(L10n.Device.batchDownloadDesc)
                     .font(.caption)
                     .foregroundStyle(Color.dsMuted)
 
@@ -334,11 +335,11 @@ struct DeviceDetailView: View {
                                 .background(Color.dsAccentOrange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(profile.name ?? "未命名")
+                                Text(profile.name ?? L10n.unnamed)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Color.dsText)
                                     .lineLimit(1)
-                                Text(profile.type ?? "")
+                                Text(Localized.profileType(profile.type ?? ""))
                                     .font(.caption)
                                     .foregroundStyle(Color.dsMuted)
                             }
@@ -361,7 +362,7 @@ struct DeviceDetailView: View {
                                     } else {
                                         HIcon(AppIcon.download).font(.caption2)
                                     }
-                                    Text("下载")
+                                    Text(L10n.download)
                                 }
                                 .font(.caption.weight(.medium))
                                 .padding(.horizontal, 12)
@@ -384,7 +385,7 @@ struct DeviceDetailView: View {
                     VStack(spacing: 6) {
                         HIcon(AppIcon.download)
                             .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        Text("暂无关联的描述文件可供下载")
+                        Text(L10n.Device.noBatchProfiles)
                             .font(.subheadline)
                             .foregroundStyle(Color.dsMuted)
                     }

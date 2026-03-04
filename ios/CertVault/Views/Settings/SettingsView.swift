@@ -8,8 +8,11 @@ struct SettingsView: View {
     @EnvironmentObject private var notificationManager: NotificationManager
     @State private var showChangePassword = false
     @State private var showLogoutConfirm = false
+    @State private var showClearCacheConfirm = false
     @State private var showSMTP = false
     @State private var serverStatus: ServerStatus = .checking
+    @State private var cacheSize: Int64 = 0
+    @State private var cacheCleared = false
 
     private enum ServerStatus {
         case checking, online(String), offline
@@ -17,9 +20,9 @@ struct SettingsView: View {
 
     private var roleDisplayName: String {
         switch authVM.role {
-        case "superadmin": return "超级管理员"
-        case "admin": return "管理员"
-        default: return "用户"
+        case "superadmin": return NSLocalizedString("user.role.superadmin", comment: "")
+        case "admin": return NSLocalizedString("user.role.superadmin", comment: "")
+        default: return NSLocalizedString("user.role.user", comment: "")
         }
     }
 
@@ -38,6 +41,7 @@ struct SettingsView: View {
                 }
                 appearanceSection
                 securitySection
+                cacheSection
                 notificationSection
                 aboutSection
                 logoutSection
@@ -46,19 +50,29 @@ struct SettingsView: View {
             .padding(.bottom, 20)
         }
         .pageBackground()
-        .navigationTitle("设置")
-        .alert("确认退出", isPresented: $showLogoutConfirm) {
-            Button("退出", role: .destructive) {
+        .navigationTitle(L10n.Settings.title)
+        .alert(L10n.Settings.logoutTitle, isPresented: $showLogoutConfirm) {
+            Button(L10n.Settings.logout, role: .destructive) {
                 Task { await authVM.logout() }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
-            Text("退出后需要重新登录")
+            Text(L10n.Settings.logoutMessage)
         }
         .sheet(isPresented: $showChangePassword) {
             ChangePasswordSheet()
         }
+        .alert(L10n.Settings.clearCacheTitle, isPresented: $showClearCacheConfirm) {
+            Button(L10n.Settings.clearCache, role: .destructive) { clearCache() }
+            Button(L10n.cancel, role: .cancel) {}
+        } message: {
+            Text(L10n.Settings.clearCacheMessage)
+        }
+        .alert(L10n.Settings.clearCacheDone, isPresented: $cacheCleared) {
+            Button(L10n.ok) {}
+        }
         .task { await checkServerHealth() }
+        .onAppear { cacheSize = DatabaseManager.shared.cacheSize() }
     }
 
     // MARK: - Profile
@@ -95,7 +109,7 @@ struct SettingsView: View {
 
     private var adminSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("管理")
+            sectionHeader(NSLocalizedString("settings.admin", comment: ""))
 
             NavigationLink {
                 UserManagementView()
@@ -105,7 +119,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsAccentPurple)
                         .frame(width: 20)
-                    Text("用户管理")
+                    Text(L10n.Settings.userManagement)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                     Spacer()
@@ -127,7 +141,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsAccentBlue)
                         .frame(width: 20)
-                    Text("邮件服务配置")
+                    Text(L10n.Settings.emailConfig)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                     Spacer()
@@ -152,7 +166,7 @@ struct SettingsView: View {
 
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("外观")
+            sectionHeader(NSLocalizedString("settings.appearance", comment: ""))
 
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
@@ -160,7 +174,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsAccentPurple)
                         .frame(width: 20)
-                    Text("显示模式")
+                    Text(L10n.Settings.displayMode)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                     Spacer()
@@ -190,7 +204,7 @@ struct SettingsView: View {
 
     private var securitySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("安全")
+            sectionHeader(NSLocalizedString("settings.security", comment: ""))
 
             Button { showChangePassword = true } label: {
                 HStack(spacing: 12) {
@@ -198,7 +212,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsAccentOrange)
                         .frame(width: 20)
-                    Text("修改密码")
+                    Text(L10n.Settings.changePassword)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                     Spacer()
@@ -216,11 +230,82 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Cache
+
+    private var cacheSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(L10n.Settings.cache)
+
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    HIcon(AppIcon.category)
+                        .font(.body)
+                        .foregroundStyle(Color.dsAccentCyan)
+                        .frame(width: 20)
+                    Text(L10n.Settings.cache)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.dsText)
+                    Spacer()
+                    Text(formattedCacheSize)
+                        .font(.subheadline.monospaced())
+                        .foregroundStyle(Color.dsMuted)
+                }
+                .padding(14)
+
+                Divider().padding(.horizontal, 14)
+
+                Button {
+                    showClearCacheConfirm = true
+                } label: {
+                    HStack(spacing: 12) {
+                        HIcon(AppIcon.delete)
+                            .font(.body)
+                            .foregroundStyle(Color.dsAccentPink)
+                            .frame(width: 20)
+                        Text(L10n.Settings.clearCache)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.dsAccentPink)
+                        Spacer()
+                        HIcon(AppIcon.chevronRight)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.dsMuted.opacity(0.4))
+                    }
+                    .padding(14)
+                }
+            }
+            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.dsBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    private var formattedCacheSize: String {
+        if cacheSize < 1024 {
+            return "\(cacheSize) B"
+        } else if cacheSize < 1024 * 1024 {
+            return String(format: "%.1f KB", Double(cacheSize) / 1024)
+        } else {
+            return String(format: "%.1f MB", Double(cacheSize) / 1024 / 1024)
+        }
+    }
+
+    private func clearCache() {
+        do {
+            try DatabaseManager.shared.clearAll()
+            cacheSize = DatabaseManager.shared.cacheSize()
+            cacheCleared = true
+        } catch {
+            AppLogger.data.error("Clear cache failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Notifications
 
     private var notificationSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("推送通知")
+            sectionHeader(L10n.Settings.notification)
 
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
@@ -228,7 +313,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsAccentBlue)
                         .frame(width: 20)
-                    Text("通知权限")
+                    Text(L10n.Settings.notification)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                     Spacer()
@@ -249,7 +334,7 @@ struct SettingsView: View {
                                 .font(.body)
                                 .foregroundStyle(Color.dsAccentOrange)
                                 .frame(width: 20)
-                            Text("前往系统设置开启")
+                            Text(NSLocalizedString("settings.notification.goSettings", comment: ""))
                                 .font(.subheadline)
                                 .foregroundStyle(Color.dsAccentOrange)
                             Spacer()
@@ -268,7 +353,7 @@ struct SettingsView: View {
                                 .font(.body)
                                 .foregroundStyle(Color.dsAccent)
                                 .frame(width: 20)
-                            Text("开启推送通知")
+                            Text(NSLocalizedString("settings.notification.enable", comment: ""))
                                 .font(.subheadline)
                                 .foregroundStyle(Color.dsAccent)
                             Spacer()
@@ -293,7 +378,7 @@ struct SettingsView: View {
                                 .font(.caption.monospaced())
                                 .foregroundStyle(Color.dsMuted)
                         } else {
-                            Text("等待注册")
+                            Text(NSLocalizedString("settings.notification.waiting", comment: ""))
                                 .font(.caption)
                                 .foregroundStyle(Color.dsMuted)
                         }
@@ -315,28 +400,28 @@ struct SettingsView: View {
         case .authorized:
             HStack(spacing: 6) {
                 Circle().fill(Color.dsAccent).frame(width: 8, height: 8)
-                Text("已开启")
+                Text(NSLocalizedString("settings.notification.enabled", comment: ""))
                     .font(.subheadline)
                     .foregroundStyle(Color.dsAccent)
             }
         case .denied:
             HStack(spacing: 6) {
                 Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                Text("已关闭")
+                Text(NSLocalizedString("settings.notification.denied", comment: ""))
                     .font(.subheadline)
                     .foregroundStyle(Color.dsAccentPink)
             }
         case .provisional:
             HStack(spacing: 6) {
                 Circle().fill(Color.dsAccentOrange).frame(width: 8, height: 8)
-                Text("临时授权")
+                Text(NSLocalizedString("settings.notification.provisional", comment: ""))
                     .font(.subheadline)
                     .foregroundStyle(Color.dsAccentOrange)
             }
         default:
             HStack(spacing: 6) {
                 Circle().fill(Color.dsMuted).frame(width: 8, height: 8)
-                Text("未设置")
+                Text(NSLocalizedString("settings.notification.notDetermined", comment: ""))
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
             }
@@ -347,7 +432,7 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("关于")
+            sectionHeader(NSLocalizedString("settings.about", comment: ""))
 
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
@@ -355,7 +440,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsAccent)
                         .frame(width: 20)
-                    Text("服务器状态")
+                    Text(L10n.Settings.serverStatus)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                     Spacer()
@@ -366,14 +451,14 @@ struct SettingsView: View {
                     case .online(_):
                         HStack(spacing: 6) {
                             Circle().fill(Color.dsAccent).frame(width: 8, height: 8)
-                            Text("在线")
+                            Text(Localized.status("ONLINE"))
                                 .font(.subheadline)
                                 .foregroundStyle(Color.dsAccent)
                         }
                     case .offline:
                         HStack(spacing: 6) {
                             Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                            Text("离线")
+                            Text(Localized.status("OFFLINE"))
                                 .font(.subheadline)
                                 .foregroundStyle(Color.dsAccentPink)
                         }
@@ -388,7 +473,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsMuted)
                         .frame(width: 20)
-                    Text("版本")
+                    Text(L10n.Settings.version)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                     Spacer()
@@ -430,7 +515,7 @@ struct SettingsView: View {
         Button(role: .destructive) { showLogoutConfirm = true } label: {
             HStack(spacing: 8) {
                 HIcon(AppIcon.logout).font(.body)
-                Text("退出登录")
+                Text(L10n.Settings.logout)
                     .fontWeight(.medium)
             }
             .frame(maxWidth: .infinity)
@@ -461,9 +546,9 @@ private struct ChangePasswordSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    SecureField("当前密码", text: $oldPassword)
-                    SecureField("新密码", text: $newPassword)
-                    SecureField("确认新密码", text: $confirmPassword)
+                    SecureField(NSLocalizedString("settings.changePassword.current", comment: ""), text: $oldPassword)
+                    SecureField(NSLocalizedString("settings.changePassword.new", comment: ""), text: $newPassword)
+                    SecureField(NSLocalizedString("settings.changePassword.confirm", comment: ""), text: $confirmPassword)
                 }
 
                 if let err = errorMsg {
@@ -472,21 +557,21 @@ private struct ChangePasswordSheet: View {
                     }
                 }
             }
-            .navigationTitle("修改密码")
+            .navigationTitle(L10n.Settings.changePassword)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("确认") { save() }
+                    Button(L10n.confirm) { save() }
                         .disabled(!isValid || isLoading)
                 }
             }
-            .alert("修改成功", isPresented: $success) {
-                Button("好") { dismiss() }
+            .alert(NSLocalizedString("settings.changePassword.success", comment: ""), isPresented: $success) {
+                Button(L10n.ok) { dismiss() }
             } message: {
-                Text("密码已更新，下次登录请使用新密码")
+                Text(NSLocalizedString("settings.changePassword.successMsg", comment: ""))
             }
         }
         .presentationDetents([.medium])
@@ -498,7 +583,7 @@ private struct ChangePasswordSheet: View {
 
     private func save() {
         guard newPassword == confirmPassword else {
-            errorMsg = "两次密码输入不一致"
+            errorMsg = L10n.Register.passwordMismatch
             return
         }
         isLoading = true
@@ -529,7 +614,7 @@ private struct SMTPConfigSheet: View {
         NavigationStack {
             Group {
                 if isLoading {
-                    ProgressView("加载中...")
+                    ProgressView(L10n.loading)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = errorMsg {
                     VStack(spacing: 12) {
@@ -544,24 +629,24 @@ private struct SMTPConfigSheet: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let smtp = config {
                     List {
-                        Section("连接信息") {
-                            row("SMTP 主机", smtp.host.isEmpty ? "未配置" : smtp.host)
-                            row("端口", smtp.port)
-                            row("SSL/TLS", smtp.secure == "true" ? "已启用" : "未启用")
+                        Section(NSLocalizedString("settings.email.connection", comment: "")) {
+                            row(NSLocalizedString("settings.email.smtpHost", comment: ""), smtp.host.isEmpty ? Localized.status("NOTCONFIGURED") : smtp.host)
+                            row(NSLocalizedString("settings.email.port", comment: ""), smtp.port)
+                            row(NSLocalizedString("settings.email.ssl", comment: ""), smtp.secure == "true" ? Localized.status("SSLENABLED") : Localized.status("SSLDISABLED"))
                         }
-                        Section("账号") {
-                            row("发件人", smtp.user.isEmpty ? "未配置" : smtp.user)
+                        Section(L10n.account) {
+                            row(NSLocalizedString("settings.email.sender", comment: ""), smtp.user.isEmpty ? Localized.status("NOTCONFIGURED") : smtp.user)
                         }
-                        Section("状态") {
+                        Section(NSLocalizedString("settings.email.status", comment: "")) {
                             HStack {
-                                Text("邮件服务")
+                                Text(L10n.Settings.emailConfig)
                                     .foregroundStyle(Color.dsText)
                                 Spacer()
                                 HStack(spacing: 6) {
                                     Circle()
                                         .fill(smtp.configured ? Color.dsAccent : Color.dsAccentPink)
                                         .frame(width: 8, height: 8)
-                                    Text(smtp.configured ? "已配置" : "未配置")
+                                    Text(smtp.configured ? Localized.status("CONFIGURED") : Localized.status("NOTCONFIGURED"))
                                         .foregroundStyle(smtp.configured ? Color.dsAccent : Color.dsAccentPink)
                                 }
                                 .font(.subheadline)
@@ -570,11 +655,11 @@ private struct SMTPConfigSheet: View {
                     }
                 }
             }
-            .navigationTitle("邮件服务配置")
+            .navigationTitle(L10n.Settings.emailConfig)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") { dismiss() }
+                    Button(L10n.close) { dismiss() }
                 }
             }
         }

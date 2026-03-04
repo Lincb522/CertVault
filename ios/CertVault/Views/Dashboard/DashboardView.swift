@@ -36,6 +36,15 @@ struct DashboardView: View {
                         .padding(.top, 24)
                         .padding(.bottom, 20)
                         .opacity(animateCards ? 1 : 0)
+                } else if vm.isLoading {
+                    LoadingView()
+                        .frame(maxWidth: .infinity, minHeight: 300)
+                } else if let err = vm.errorMessage {
+                    ErrorView(message: err) { Task { await vm.load() } }
+                        .frame(maxWidth: .infinity, minHeight: 300)
+                } else {
+                    LoadingView()
+                        .frame(maxWidth: .infinity, minHeight: 300)
                 }
             }
             .padding(.horizontal, 16)
@@ -43,23 +52,37 @@ struct DashboardView: View {
         .pageBackground()
         .navigationTitle("CertVault")
         .refreshable { await vm.load() }
-        .overlay {
-            if vm.isLoading && vm.stats == nil {
-                LoadingView()
-            } else if let err = vm.errorMessage, vm.stats == nil {
-                ErrorView(message: err) { Task { await vm.load() } }
+        .onAppear {
+            AppLogger.ui.info("🖼️ DashboardView appeared")
+            vm.startObserving()
+            vm.loadCached()
+            if vm.stats != nil {
+                withAnimation(.easeOut(duration: 0.3)) { animateCards = true }
             }
         }
         .task {
-            await vm.load()
-            await certVM.loadAccounts()
-            await deviceVM.loadAccounts()
-            withAnimation(.easeOut(duration: 0.5)) { animateCards = true }
+            await loadAllData()
         }
-        .onAppear { AppLogger.ui.info("🖼️ DashboardView appeared") }
+        .onChange(of: vm.needsRefresh) { refresh in
+            if refresh {
+                vm.needsRefresh = false
+                animateCards = false
+                Task { await loadAllData() }
+            }
+        }
         .sheet(isPresented: $showCreateCert) { CreateCertView(vm: certVM) }
         .sheet(isPresented: $showRegisterDevice) { RegisterDeviceSheet(vm: deviceVM) }
         .sheet(isPresented: $showCreateProfile) { CreateProfileSheetWrapper() }
+    }
+
+    private func loadAllData() async {
+        async let dashboard: () = vm.load()
+        async let certs: () = certVM.loadAccounts()
+        async let devices: () = deviceVM.loadAccounts()
+        _ = await (dashboard, certs, devices)
+        if !animateCards {
+            withAnimation(.easeOut(duration: 0.4)) { animateCards = true }
+        }
     }
 
     // MARK: - Hero
@@ -88,10 +111,10 @@ struct DashboardView: View {
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: .now)
         switch hour {
-        case 6..<12: return "早上好"
-        case 12..<14: return "中午好"
-        case 14..<18: return "下午好"
-        default: return "晚上好"
+        case 6..<12: return L10n.Dashboard.greetingMorning
+        case 12..<14: return L10n.Dashboard.greetingNoon
+        case 14..<18: return L10n.Dashboard.greetingAfternoon
+        default: return L10n.Dashboard.greetingEvening
         }
     }
 
@@ -99,10 +122,10 @@ struct DashboardView: View {
 
     private func statsStrip(_ stats: DashboardStats) -> some View {
         LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: 10), count: 2), spacing: 10) {
-            MiniStatCard(title: "开发者账号", value: stats.accounts, icon: AppIcon.account, color: .dsAccentBlue)
-            MiniStatCard(title: "注册设备", value: stats.devices, icon: AppIcon.device, color: .dsAccent)
-            MiniStatCard(title: "签名证书", value: stats.certificates, icon: AppIcon.certificate, color: .dsAccentPurple)
-            MiniStatCard(title: "描述文件", value: stats.profiles, icon: AppIcon.profile, color: .dsAccentOrange)
+            MiniStatCard(title: L10n.Dashboard.statAccounts, value: stats.accounts, icon: AppIcon.account, color: .dsAccentBlue)
+            MiniStatCard(title: L10n.Dashboard.statDevices, value: stats.devices, icon: AppIcon.device, color: .dsAccent)
+            MiniStatCard(title: L10n.Dashboard.statCerts, value: stats.certificates, icon: AppIcon.certificate, color: .dsAccentPurple)
+            MiniStatCard(title: L10n.Dashboard.statProfiles, value: stats.profiles, icon: AppIcon.profile, color: .dsAccentOrange)
         }
     }
 
@@ -110,15 +133,15 @@ struct DashboardView: View {
 
     private var quickActionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("快捷操作")
+            sectionTitle(L10n.Dashboard.quickActions)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ActionChip(icon: AppIcon.addCircle, title: "创建证书", color: .dsAccentBlue) { showCreateCert = true }
-                    ActionChip(icon: AppIcon.addSquare, title: "添加设备", color: .dsAccent) { showRegisterDevice = true }
-                    ActionChip(icon: AppIcon.docAdd, title: "描述文件", color: .dsAccentOrange) { showCreateProfile = true }
+                    ActionChip(icon: AppIcon.addCircle, title: L10n.Dashboard.actionCreateCert, color: .dsAccentBlue) { showCreateCert = true }
+                    ActionChip(icon: AppIcon.addSquare, title: L10n.Dashboard.actionAddDevice, color: .dsAccent) { showRegisterDevice = true }
+                    ActionChip(icon: AppIcon.docAdd, title: L10n.Dashboard.actionProfiles, color: .dsAccentOrange) { showCreateProfile = true }
                     NavigationLink { AccountListView() } label: {
-                        ActionChipLabel(icon: AppIcon.account, title: "管理账号", color: .dsAccentPurple)
+                        ActionChipLabel(icon: AppIcon.account, title: L10n.Dashboard.actionAccounts, color: .dsAccentPurple)
                     }
                 }
                 .padding(.horizontal, 1)
@@ -130,10 +153,10 @@ struct DashboardView: View {
 
     private var recentCertificatesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("最近证书")
+            sectionTitle(L10n.Dashboard.recentCerts)
 
             if vm.recentCerts.isEmpty {
-                emptyPlaceholder(icon: AppIcon.certificate, text: "暂无证书")
+                emptyPlaceholder(icon: AppIcon.certificate, text: L10n.Dashboard.noCerts)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(vm.recentCerts.prefix(5).enumerated()), id: \.element.id) { index, cert in
@@ -143,7 +166,7 @@ struct DashboardView: View {
                             recentRow(
                                 icon: AppIcon.certificate,
                                 color: .dsAccentPurple,
-                                title: cert.name ?? "未命名",
+                                title: cert.name ?? L10n.unnamed,
                                 subtitle: certTypeLabel(cert.type),
                                 trailing: cert.created_at?.prefix(10).description
                             )
@@ -165,17 +188,17 @@ struct DashboardView: View {
 
     private var recentDevicesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("最近设备")
+            sectionTitle(L10n.Dashboard.recentDevices)
 
             if vm.recentDevices.isEmpty {
-                emptyPlaceholder(icon: AppIcon.device, text: "暂无设备")
+                emptyPlaceholder(icon: AppIcon.device, text: L10n.Dashboard.noDevices)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(vm.recentDevices.prefix(5).enumerated()), id: \.element.id) { index, device in
                         recentRow(
                             icon: AppIcon.device,
                             color: .dsAccent,
-                            title: device.name ?? "未命名",
+                            title: device.name ?? L10n.unnamed,
                             subtitle: (device.udid ?? "").truncated(16),
                             trailing: device.platform
                         )
@@ -249,14 +272,7 @@ struct DashboardView: View {
     }
 
     private func certTypeLabel(_ type: String?) -> String {
-        switch type {
-        case "IOS_DEVELOPMENT": return "iOS 开发"
-        case "IOS_DISTRIBUTION": return "iOS 发布"
-        case "MAC_APP_DEVELOPMENT": return "macOS 开发"
-        case "MAC_APP_DISTRIBUTION": return "macOS 发布"
-        case "DEVELOPER_ID_APPLICATION": return "Developer ID"
-        default: return type ?? ""
-        }
+        Localized.certType(type ?? "")
     }
 }
 

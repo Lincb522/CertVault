@@ -95,17 +95,38 @@ app.use('/api/push-keys', pushKeysRoutes);
 const fs = require('fs');
 
 const publicDir = path.join(__dirname, '../public');
+const clientDist = path.join(__dirname, '../client');
+
+console.log('[路径诊断]');
+console.log('  __dirname:', __dirname);
+console.log('  publicDir:', publicDir, '存在:', fs.existsSync(publicDir));
+console.log('  clientDist:', clientDist, '存在:', fs.existsSync(clientDist));
 if (fs.existsSync(publicDir)) {
-  app.use(express.static(publicDir));
+  console.log('  public/ 文件:', fs.readdirSync(publicDir));
+}
+if (fs.existsSync(clientDist)) {
+  console.log('  client/ 文件:', fs.readdirSync(clientDist));
+  const clientIndex = path.join(clientDist, 'index.html');
+  if (fs.existsSync(clientIndex)) {
+    const content = fs.readFileSync(clientIndex, 'utf8');
+    console.log('  client/index.html 大小:', content.length, '包含/admin/:', content.includes('/admin/'));
+  }
 }
 
-const clientDist = path.join(__dirname, '../client');
-if (fs.existsSync(clientDist)) {
-  app.use('/admin', express.static(clientDist));
-  app.get('/admin/*', (req, res) => {
-    res.sendFile(path.join(clientDist, 'index.html'));
-  });
-}
+app.use(express.static(publicDir));
+
+app.get('/admin', (req, res) => res.redirect('/admin/'));
+app.use('/admin/', express.static(clientDist));
+app.get('/admin/*', (req, res) => {
+  if (req.path.match(/\.(js|css|png|jpg|gif|svg|ico|woff2?|ttf|eot|map)$/)) {
+    return res.status(404).send('Not found');
+  }
+  const indexPath = path.join(clientDist, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  res.status(500).send('Admin panel not found: ' + indexPath);
+});
 
 app.use((err, req, res, next) => {
   console.error('Server Error:', err);
@@ -115,8 +136,37 @@ app.use((err, req, res, next) => {
   });
 });
 
+async function deduplicateRecords() {
+  const { getDb } = require('./config/database');
+  const db = getDb();
+  try {
+    const dupCerts = await db.prepare(`
+      SELECT c1.id AS dup_id FROM certificates c1
+      INNER JOIN certificates c2 ON c1.apple_id = c2.apple_id AND c1.account_id = c2.account_id
+      WHERE c1.apple_id IS NOT NULL AND c1.id = c1.apple_id AND c2.id != c2.apple_id
+    `).all();
+    for (const row of dupCerts) {
+      await db.prepare('DELETE FROM certificates WHERE id = ?').run(row.dup_id);
+    }
+    if (dupCerts.length > 0) console.log(`Cleaned ${dupCerts.length} duplicate certificates`);
+
+    const dupProfiles = await db.prepare(`
+      SELECT p1.id AS dup_id FROM profiles p1
+      INNER JOIN profiles p2 ON p1.apple_id = p2.apple_id AND p1.account_id = p2.account_id
+      WHERE p1.apple_id IS NOT NULL AND p1.id = p1.apple_id AND p2.id != p2.apple_id
+    `).all();
+    for (const row of dupProfiles) {
+      await db.prepare('DELETE FROM profiles WHERE id = ?').run(row.dup_id);
+    }
+    if (dupProfiles.length > 0) console.log(`Cleaned ${dupProfiles.length} duplicate profiles`);
+  } catch (e) {
+    console.error('Dedup error:', e.message);
+  }
+}
+
 initDatabase().then(async () => {
   await ensureAdminExists();
+  await deduplicateRecords();
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

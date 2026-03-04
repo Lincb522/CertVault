@@ -64,7 +64,7 @@ struct LoginView: View {
                     .font(.title.bold())
                     .foregroundStyle(Color.dsText)
 
-                Text("Apple 开发者证书管理工具")
+                Text(L10n.Login.subtitle)
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
             }
@@ -76,16 +76,16 @@ struct LoginView: View {
     private var loginCard: some View {
         VStack(spacing: 18) {
             VStack(spacing: 12) {
-                inputField(icon: AppIcon.user, placeholder: "用户名 / 邮箱") {
-                    TextField("", text: $username, prompt: Text("用户名 / 邮箱").foregroundColor(.dsMuted.opacity(0.6)))
+                inputField(icon: AppIcon.user, placeholder: L10n.Login.username) {
+                    TextField("", text: $username, prompt: Text(L10n.Login.username).foregroundColor(.dsMuted.opacity(0.6)))
                         .textContentType(.username)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .foregroundStyle(Color.dsText)
                 }
 
-                inputField(icon: AppIcon.lock, placeholder: "密码") {
-                    SecureField("", text: $password, prompt: Text("密码").foregroundColor(.dsMuted.opacity(0.6)))
+                inputField(icon: AppIcon.lock, placeholder: L10n.Login.password) {
+                    SecureField("", text: $password, prompt: Text(L10n.Login.password).foregroundColor(.dsMuted.opacity(0.6)))
                         .textContentType(.password)
                         .foregroundStyle(Color.dsText)
                 }
@@ -139,7 +139,7 @@ struct LoginView: View {
                 if authVM.isLoading {
                     ProgressView().tint(.white)
                 } else {
-                    Text("登  录")
+                    Text(L10n.Login.submit)
                         .font(.body.weight(.semibold))
                 }
             }
@@ -160,14 +160,14 @@ struct LoginView: View {
 
     private var registerLink: some View {
         HStack(spacing: 4) {
-            Text("还没有账号？")
+            Text(L10n.Login.noAccount)
                 .font(.footnote)
                 .foregroundStyle(Color.dsMuted)
             Button {
                 authVM.errorMessage = nil
                 showRegister = true
             } label: {
-                Text("立即注册")
+                Text(L10n.Login.goRegister)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Color.dsAccentBlue)
             }

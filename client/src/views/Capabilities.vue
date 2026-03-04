@@ -11,7 +11,7 @@
         <el-select
           v-model="selectedBundleId"
           placeholder="选择 Bundle ID"
-          style="width: 400px"
+          style="width: 100%; max-width: 400px"
           :disabled="!store.currentAccountId"
         >
           <el-option

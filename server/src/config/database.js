@@ -223,6 +223,13 @@ async function initDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_push_devices_token ON push_devices(device_token);
+
+    CREATE TABLE IF NOT EXISTS deleted_apple_certs (
+      apple_id TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      deleted_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (apple_id, account_id)
+    );
   `);
 
   console.log('Database initialized (PostgreSQL)');

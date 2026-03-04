@@ -9,9 +9,9 @@ struct PushGuideView: View {
         ScrollView {
             VStack(spacing: 20) {
                 Picker("", selection: $selectedTab) {
-                    Text("配置方式").tag(0)
-                    Text("常用服务").tag(1)
-                    Text("错误码").tag(2)
+                    Text(L10n.Push.guideMethods).tag(0)
+                    Text(L10n.Push.guideServices).tag(1)
+                    Text(L10n.Push.guideErrors).tag(2)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)
@@ -26,7 +26,7 @@ struct PushGuideView: View {
             .padding(.bottom, 32)
         }
         .pageBackground()
-        .navigationTitle("推送指南")
+        .navigationTitle(L10n.Push.guideTitle)
         .overlay {
             if !vm.guideLoaded && vm.errorCodes.isEmpty {
                 LoadingView()
@@ -68,16 +68,16 @@ struct PushGuideView: View {
                     }
 
                     if let pros = method.pros, !pros.isEmpty {
-                        tagSection(title: "优点", items: pros, color: .dsAccent)
+                        tagSection(title: L10n.Push.guidePros, items: pros, color: .dsAccent)
                     }
 
                     if let cons = method.cons, !cons.isEmpty {
-                        tagSection(title: "缺点", items: cons, color: .dsAccentPink)
+                        tagSection(title: L10n.Push.guideCons, items: cons, color: .dsAccentPink)
                     }
 
                     if let steps = method.steps, !steps.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("配置步骤")
+                            Text(L10n.Push.guideSteps)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(Color.dsMuted)
                             ForEach(Array(steps.enumerated()), id: \.offset) { idx, step in
@@ -104,7 +104,7 @@ struct PushGuideView: View {
                 .padding(.horizontal, 16)
             }
         } else {
-            emptyPlaceholder("暂无推送配置指南")
+            emptyPlaceholder(L10n.Push.guideEmptyMethods)
         }
     }
 
@@ -156,7 +156,7 @@ struct PushGuideView: View {
             )
             .padding(.horizontal, 16)
         } else {
-            emptyPlaceholder("暂无常用服务信息")
+            emptyPlaceholder(L10n.Push.guideEmptyServices)
         }
     }
 
@@ -200,7 +200,7 @@ struct PushGuideView: View {
             )
             .padding(.horizontal, 16)
         } else {
-            emptyPlaceholder("暂无错误码信息")
+            emptyPlaceholder(L10n.Push.guideEmptyErrors)
         }
     }
 

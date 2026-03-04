@@ -41,7 +41,7 @@ struct HealthCheckView: View {
             .padding(.bottom, 20)
         }
         .pageBackground()
-        .navigationTitle("健康检查")
+        .navigationTitle(L10n.HealthCheck.title)
         .task { await vm.loadAccounts() }
     }
 
@@ -56,9 +56,9 @@ struct HealthCheckView: View {
     // MARK: - Mode Selector
 
     private var modeSelector: some View {
-        Picker("检查类型", selection: $checkMode) {
-            Text("本地检查").tag(0)
-            Text("远程检查").tag(1)
+        Picker("", selection: $checkMode) {
+            Text(L10n.HealthCheck.localCheck).tag(0)
+            Text(L10n.HealthCheck.remoteCheck).tag(1)
         }
         .pickerStyle(.segmented)
     }
@@ -69,7 +69,7 @@ struct HealthCheckView: View {
                 HStack {
                     HIcon(AppIcon.warning)
                         .foregroundStyle(Color.dsAccentOrange)
-                    Text("请先添加开发者账号")
+                    Text(L10n.HealthCheck.addAccount)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsMuted)
                 }
@@ -82,7 +82,7 @@ struct HealthCheckView: View {
                 )
             } else {
                 HStack {
-                    Text("账号")
+                    Text(L10n.account)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsMuted)
                     Spacer()
@@ -121,7 +121,7 @@ struct HealthCheckView: View {
                 } else {
                     HIcon(AppIcon.health).font(.body)
                 }
-                Text("开始检查")
+                Text(L10n.HealthCheck.startCheck)
                     .fontWeight(.semibold)
             }
             .frame(maxWidth: .infinity)
@@ -141,14 +141,14 @@ struct HealthCheckView: View {
 
     private func summarySection(_ result: HealthCheckResult) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("检查概要")
+            sectionHeader(L10n.HealthCheck.summary)
 
             if let summary = result.summary {
                 LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: 10), count: 4), spacing: 10) {
-                    SummaryBadge(label: "严重", count: summary.critical ?? 0, color: .dsAccentPink)
-                    SummaryBadge(label: "警告", count: summary.warning ?? 0, color: .dsAccentOrange)
-                    SummaryBadge(label: "提示", count: summary.info ?? 0, color: .dsAccentBlue)
-                    SummaryBadge(label: "正常", count: summary.ok ?? 0, color: .dsAccent)
+                    SummaryBadge(label: NSLocalizedString("health.critical", comment: ""), count: summary.critical ?? 0, color: .dsAccentPink)
+                    SummaryBadge(label: NSLocalizedString("health.warning", comment: ""), count: summary.warning ?? 0, color: .dsAccentOrange)
+                    SummaryBadge(label: NSLocalizedString("health.info", comment: ""), count: summary.info ?? 0, color: .dsAccentBlue)
+                    SummaryBadge(label: NSLocalizedString("health.ok", comment: ""), count: summary.ok ?? 0, color: .dsAccent)
                 }
             }
         }
@@ -160,7 +160,7 @@ struct HealthCheckView: View {
         Group {
             if let issues = result.issues, !issues.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader("发现的问题")
+                    sectionHeader(L10n.HealthCheck.issues)
 
                     VStack(spacing: 0) {
                         ForEach(Array(issues.enumerated()), id: \.element.id) { index, issue in
@@ -204,16 +204,16 @@ struct HealthCheckView: View {
         Group {
             if let certs = result.certificates, !certs.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader("证书状态")
+                    sectionHeader(L10n.HealthCheck.certStatus)
 
                     VStack(spacing: 0) {
                         ForEach(Array(certs.enumerated()), id: \.element.id) { index, cert in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(cert.name ?? "未命名")
+                                    Text(cert.name ?? L10n.unnamed)
                                         .font(.subheadline)
                                         .foregroundStyle(Color.dsText)
-                                    Text(cert.type ?? "")
+                                    Text(Localized.certType(cert.type ?? ""))
                                         .font(.caption)
                                         .foregroundStyle(Color.dsMuted)
                                 }
@@ -244,7 +244,7 @@ struct HealthCheckView: View {
     }
 
     private func certStatusBadge(_ cert: HealthCertInfo) -> some View {
-        let text = cert.label ?? cert.status ?? "未知"
+        let text = cert.label ?? cert.status ?? L10n.unknown
         let color: Color = {
             if let days = cert.days_left {
                 if days < 0 { return .dsAccentPink }
@@ -262,16 +262,16 @@ struct HealthCheckView: View {
         Group {
             if let profiles = result.profiles, !profiles.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader("描述文件状态")
+                    sectionHeader(L10n.HealthCheck.profileStatus)
 
                     VStack(spacing: 0) {
                         ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(profile.name ?? "未命名")
+                                    Text(profile.name ?? L10n.unnamed)
                                         .font(.subheadline)
                                         .foregroundStyle(Color.dsText)
-                                    Text(profile.type ?? "")
+                                    Text(Localized.profileType(profile.type ?? ""))
                                         .font(.caption)
                                         .foregroundStyle(Color.dsMuted)
                                 }
@@ -297,7 +297,7 @@ struct HealthCheckView: View {
     }
 
     private func profileStatusBadge(_ profile: HealthProfileInfo) -> some View {
-        let text = profile.label ?? profile.state ?? profile.status ?? "未知"
+        let text = profile.label ?? profile.state ?? profile.status ?? L10n.unknown
         let color: Color = {
             if let days = profile.days_left {
                 if days < 0 { return .dsAccentPink }

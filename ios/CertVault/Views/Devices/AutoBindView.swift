@@ -143,11 +143,11 @@ struct AutoBindView: View {
                     formView
                 }
             }
-            .navigationTitle("一键绑定")
+            .navigationTitle(L10n.Device.autoBind)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(vm.bindResult != nil ? "完成" : "取消") { dismiss() }
+                    Button(vm.bindResult != nil ? L10n.done : L10n.cancel) { dismiss() }
                 }
             }
         }
@@ -187,8 +187,8 @@ struct AutoBindView: View {
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("账号", icon: AppIcon.account, color: .dsAccentBlue)
-            Picker("选择账号", selection: $vm.selectedAccountId) {
+            sectionHeader(L10n.account, icon: AppIcon.account, color: .dsAccentBlue)
+            Picker(L10n.select, selection: $vm.selectedAccountId) {
                 ForEach(vm.accounts) { acc in
                     Text(acc.displayName).tag(acc.id)
                 }
@@ -203,9 +203,9 @@ struct AutoBindView: View {
 
     private var bindTypeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("绑定类型", icon: AppIcon.certificate, color: .dsAccentPurple)
+            sectionHeader(NSLocalizedString("autoBind.section.bindType", comment: ""), icon: AppIcon.certificate, color: .dsAccentPurple)
 
-            Text("选择要创建的证书和描述文件类型")
+            Text(L10n.AutoBind.desc)
                 .font(.caption)
                 .foregroundStyle(Color.dsMuted)
 
@@ -273,11 +273,11 @@ struct AutoBindView: View {
 
     private var deviceInfoSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("设备信息", icon: AppIcon.device, color: .dsAccent)
+            sectionHeader(NSLocalizedString("autoBind.section.deviceInfo", comment: ""), icon: AppIcon.device, color: .dsAccent)
             VStack(spacing: 0) {
-                inputRow("设备名称", text: $deviceName, placeholder: "iPhone 15 Pro")
+                inputRow(L10n.Device.formName, text: $deviceName, placeholder: "iPhone 15 Pro")
                 Divider()
-                inputRow("UDID", text: $udid, placeholder: "00008030-001A29D82280802E", monospaced: true)
+                inputRow(L10n.Device.formUdid, text: $udid, placeholder: "00008030-001A29D82280802E", monospaced: true)
             }
             .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
         }
@@ -288,11 +288,11 @@ struct AutoBindView: View {
 
     private var appInfoSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("应用信息", icon: AppIcon.bundleID, color: .dsAccentOrange)
+            sectionHeader(NSLocalizedString("autoBind.section.appInfo", comment: ""), icon: AppIcon.bundleID, color: .dsAccentOrange)
             VStack(spacing: 0) {
-                inputRow("Bundle ID", text: $bundleId, placeholder: "com.example.app", monospaced: true)
+                inputRow(L10n.Profile.bundleId, text: $bundleId, placeholder: "com.example.app", monospaced: true)
                 Divider()
-                inputRow("应用名称", text: $bundleName, placeholder: "MyApp")
+                inputRow(NSLocalizedString("autoBind.appName", comment: ""), text: $bundleName, placeholder: "MyApp")
             }
             .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
         }
@@ -303,8 +303,8 @@ struct AutoBindView: View {
 
     private var passwordSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("P12 密码", icon: AppIcon.lock, color: .dsAccentPink)
-            inputRow("密码", text: $password, placeholder: "123456", monospaced: true)
+            sectionHeader(L10n.Cert.password, icon: AppIcon.lock, color: .dsAccentPink)
+            inputRow(NSLocalizedString("autoBind.password", comment: ""), text: $password, placeholder: "123456", monospaced: true)
                 .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
         }
         .cardStyle()
@@ -328,7 +328,7 @@ struct AutoBindView: View {
             } label: {
                 HStack(spacing: 8) {
                     HIcon(AppIcon.link).font(.body)
-                    Text("开始一键绑定")
+                    Text(L10n.AutoBind.start)
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -346,12 +346,12 @@ struct AutoBindView: View {
             .opacity(isValid ? 1 : 0.5)
 
             HStack(spacing: 4) {
-                Text("将创建")
+                Text(L10n.AutoBind.willCreate)
                     .foregroundStyle(Color.dsMuted)
                 Text(selectedBindType.label)
                     .foregroundStyle(selectedBindType.color)
                     .fontWeight(.medium)
-                Text("类型证书")
+                Text(L10n.AutoBind.typeCert)
                     .foregroundStyle(Color.dsMuted)
             }
             .font(.caption)
@@ -366,7 +366,7 @@ struct AutoBindView: View {
                 ProgressView()
                     .controlSize(.large)
                     .padding(.top, 40)
-                Text("正在执行一键绑定...")
+                Text(L10n.AutoBind.running)
                     .font(.headline)
             }
 
@@ -390,9 +390,9 @@ struct AutoBindView: View {
                 HIcon(AppIcon.check)
                     .font(.system(size: 56))
                     .foregroundStyle(.green)
-                Text("绑定成功！")
+                Text(L10n.AutoBind.success)
                     .font(.title2.bold())
-                Text("设备已注册，证书和描述文件已生成")
+                Text(L10n.AutoBind.successDesc)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -401,7 +401,7 @@ struct AutoBindView: View {
                 HIcon(AppIcon.close)
                     .font(.system(size: 56))
                     .foregroundStyle(.red)
-                Text("绑定失败")
+                Text(L10n.AutoBind.failed)
                     .font(.title2.bold())
                 Text(error)
                     .font(.subheadline)

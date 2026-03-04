@@ -48,12 +48,26 @@ async function syncDeviceResources(api, db, account_id) {
       .run(bId, account_id, bId, b.attributes.identifier, b.attributes.name, b.attributes.platform);
   }
 
+  const deletedCertRows = await db.prepare('SELECT apple_id FROM deleted_apple_certs WHERE account_id = ?').all(account_id);
+  const deletedCertIds = new Set(deletedCertRows.map(r => r.apple_id));
+
   for (const [cId, c] of Object.entries(certsMap)) {
-    await db.prepare(`INSERT INTO certificates (id, account_id, apple_id, type, name, cert_content, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
-      name=excluded.name, cert_content=COALESCE(excluded.cert_content, certificates.cert_content), expires_at=excluded.expires_at`)
-      .run(cId, account_id, cId, c.attributes.certificateType, c.attributes.name || c.attributes.certificateType,
-        c.attributes.certificateContent || null, c.attributes.expirationDate || null);
+    if (deletedCertIds.has(cId)) continue;
+    const existingByApple = await db.prepare(
+      'SELECT id FROM certificates WHERE apple_id = ? AND id != ?'
+    ).get(cId, cId);
+    if (existingByApple) {
+      await db.prepare(
+        'UPDATE certificates SET name = ?, cert_content = COALESCE(?, cert_content), expires_at = ? WHERE id = ?'
+      ).run(c.attributes.name || c.attributes.certificateType, c.attributes.certificateContent || null,
+        c.attributes.expirationDate || null, existingByApple.id);
+    } else {
+      await db.prepare(`INSERT INTO certificates (id, account_id, apple_id, type, name, cert_content, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
+        name=excluded.name, cert_content=COALESCE(excluded.cert_content, certificates.cert_content), expires_at=excluded.expires_at`)
+        .run(cId, account_id, cId, c.attributes.certificateType, c.attributes.name || c.attributes.certificateType,
+          c.attributes.certificateContent || null, c.attributes.expirationDate || null);
+    }
   }
 
   for (const p of profiles) {
@@ -74,15 +88,29 @@ async function syncDeviceResources(api, db, account_id) {
       }
     }
 
-    await db.prepare(`INSERT INTO profiles (id, account_id, apple_id, name, type, bundle_id, profile_content, profile_path, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
-      name=excluded.name, type=excluded.type, bundle_id=COALESCE(excluded.bundle_id, profiles.bundle_id),
-      profile_content=COALESCE(excluded.profile_content, profiles.profile_content),
-      profile_path=COALESCE(excluded.profile_path, profiles.profile_path), expires_at=excluded.expires_at`)
-      .run(p.id, account_id, p.id, p.attributes.name || p.attributes.profileType,
+    const existingProfile = await db.prepare(
+      'SELECT id FROM profiles WHERE apple_id = ? AND id != ?'
+    ).get(p.id, p.id);
+    if (existingProfile) {
+      await db.prepare(
+        `UPDATE profiles SET name = ?, type = ?, bundle_id = COALESCE(?, bundle_id),
+         profile_content = COALESCE(?, profile_content),
+         profile_path = COALESCE(?, profile_path), expires_at = ? WHERE id = ?`
+      ).run(p.attributes.name || p.attributes.profileType,
         p.attributes.profileType, bundleAppleId,
         p.attributes.profileContent || null, profilePath,
-        p.attributes.expirationDate || null);
+        p.attributes.expirationDate || null, existingProfile.id);
+    } else {
+      await db.prepare(`INSERT INTO profiles (id, account_id, apple_id, name, type, bundle_id, profile_content, profile_path, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
+        name=excluded.name, type=excluded.type, bundle_id=COALESCE(excluded.bundle_id, profiles.bundle_id),
+        profile_content=COALESCE(excluded.profile_content, profiles.profile_content),
+        profile_path=COALESCE(excluded.profile_path, profiles.profile_path), expires_at=excluded.expires_at`)
+        .run(p.id, account_id, p.id, p.attributes.name || p.attributes.profileType,
+          p.attributes.profileType, bundleAppleId,
+          p.attributes.profileContent || null, profilePath,
+          p.attributes.expirationDate || null);
+    }
   }
 
   const localCertsRows = await db.prepare('SELECT id, apple_id FROM certificates WHERE account_id = ?').all(account_id);
@@ -335,13 +363,39 @@ router.get('/:deviceId/detail', async (req, res, next) => {
       profileCertLinks.forEach(l => certIdSet.add(l.cert_id));
     }
 
-    let certs = [];
+    let rawCerts = [];
     if (certIdSet.size > 0) {
       const cIds = [...certIdSet];
       const ph = cIds.map((_, i) => `$${i + 1}`).join(',');
-      certs = await db.prepare(
-        `SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${ph}) ORDER BY created_at DESC`
+      rawCerts = await db.prepare(
+        `SELECT id, name, type, apple_id, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${ph}) ORDER BY created_at DESC`
       ).all(...cIds);
+    }
+
+    const seenCerts = new Map();
+    const certs = [];
+    for (const c of rawCerts) {
+      const key = c.apple_id || c.id;
+      if (seenCerts.has(key)) {
+        const prev = seenCerts.get(key);
+        if (!prev.p12_path && c.p12_path) {
+          certs[certs.indexOf(prev)] = c;
+          seenCerts.set(key, c);
+        }
+        continue;
+      }
+      seenCerts.set(key, c);
+      certs.push(c);
+    }
+
+    const seenProfiles = new Map();
+    const dedupedProfiles = [];
+    for (const p of matchedProfiles) {
+      const key = p.apple_id || p.id;
+      if (!seenProfiles.has(key)) {
+        seenProfiles.set(key, true);
+        dedupedProfiles.push(p);
+      }
     }
 
     res.json({
@@ -349,7 +403,7 @@ router.get('/:deviceId/detail', async (req, res, next) => {
       data: {
         ...device,
         certificates: certs.map(c => ({ ...c, has_p12: !!c.p12_path })),
-        profiles: matchedProfiles,
+        profiles: dedupedProfiles,
       }
     });
   } catch (err) {

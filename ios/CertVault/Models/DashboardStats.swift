@@ -14,6 +14,16 @@ struct DashboardStats: Decodable {
     let profiles: Int
     let bundle_ids: Int?
 
+    init(accounts: Int, devices: Int, certificates: Int,
+         certs_with_p12: Int?, profiles: Int, bundle_ids: Int?) {
+        self.accounts = accounts
+        self.devices = devices
+        self.certificates = certificates
+        self.certs_with_p12 = certs_with_p12
+        self.profiles = profiles
+        self.bundle_ids = bundle_ids
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         accounts = Self.decodeFlexInt(c, .accounts)

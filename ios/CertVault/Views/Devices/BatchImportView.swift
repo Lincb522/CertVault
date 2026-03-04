@@ -12,8 +12,8 @@ struct BatchImportView: View {
         NavigationStack {
             Form {
                 if vm.accounts.count > 1 {
-                    Section("账号") {
-                        Picker("选择账号", selection: $vm.selectedAccountId) {
+                    Section(L10n.account) {
+                        Picker(L10n.select, selection: $vm.selectedAccountId) {
                             ForEach(vm.accounts) { acc in
                                 Text(acc.displayName).tag(acc.id)
                             }
@@ -26,30 +26,30 @@ struct BatchImportView: View {
                         .font(.system(.caption, design: .monospaced))
                         .frame(minHeight: 200)
                 } header: {
-                    Text("设备列表")
+                    Text(L10n.BatchImport.section)
                 } footer: {
-                    Text("每行一个设备，格式：UDID,设备名称\n例如：\n00008030-001A1234567890,iPhone 15 Pro\n00008030-001B5678901234,iPad Air")
+                    Text(L10n.BatchImport.hint)
                 }
 
                 if let err = errorMsg {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("批量导入设备")
+            .navigationTitle(L10n.BatchImport.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("导入") { doImport() }
+                    Button(L10n.import) { doImport() }
                         .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
                 }
             }
-            .alert("导入成功", isPresented: $success) {
-                Button("好") { dismiss() }
+            .alert(L10n.BatchImport.successTitle, isPresented: $success) {
+                Button(L10n.ok) { dismiss() }
             } message: {
-                Text("设备已批量注册")
+                Text(L10n.BatchImport.successMessage)
             }
         }
     }

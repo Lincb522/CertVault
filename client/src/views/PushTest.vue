@@ -6,7 +6,7 @@
     </div>
 
     <el-row :gutter="20">
-      <el-col :span="14">
+      <el-col :xs="24" :sm="14">
         <div class="content-card">
           <div class="card-header"><h3>发送推送</h3></div>
 
@@ -132,7 +132,7 @@
         </div>
       </el-col>
 
-      <el-col :span="10">
+      <el-col :xs="24" :sm="10">
         <!-- 自建推送说明 -->
         <div class="content-card">
           <div class="card-header"><h3>自建推送原理</h3></div>

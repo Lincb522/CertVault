@@ -119,6 +119,7 @@ async function handleLogin() {
 
 .auth-card {
   width: 420px;
+  max-width: calc(100vw - 32px);
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -205,5 +206,12 @@ async function handleLogin() {
   color: rgba(255,255,255,0.25);
   font-size: 12px;
   z-index: 1;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 32px 24px 28px;
+    border-radius: 16px;
+  }
 }
 </style>

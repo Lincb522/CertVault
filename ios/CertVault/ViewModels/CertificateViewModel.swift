@@ -51,14 +51,14 @@ final class CertificateViewModel: ObservableObject {
         errorMessage = nil
 
         if let cached = try? db.fetchCertificates(accountId: selectedAccountId), !cached.isEmpty {
-            certificates = cached
+            certificates = Self.deduplicate(cached)
         }
 
         do {
             async let certs = service.list(accountId: selectedAccountId)
             async let types = service.types()
             let freshCerts = try await certs
-            certificates = freshCerts
+            certificates = Self.deduplicate(freshCerts)
             certTypes = try await types
             try? db.saveCertificates(freshCerts, accountId: selectedAccountId)
             AppLogger.data.info("🔏 Loaded \(self.certificates.count) certs, \(self.certTypes.count) types")
@@ -71,6 +71,24 @@ final class CertificateViewModel: ObservableObject {
             }
         }
         if !Task.isCancelled { isLoading = false }
+    }
+
+    private static func deduplicate(_ certs: [Certificate]) -> [Certificate] {
+        var seen: [String: Int] = [:]
+        var result: [Certificate] = []
+        for cert in certs {
+            let key = cert.apple_id ?? cert.id
+            if let existingIdx = seen[key] {
+                let existing = result[existingIdx]
+                if existing.p12_path == nil && cert.p12_path != nil {
+                    result[existingIdx] = cert
+                }
+            } else {
+                seen[key] = result.count
+                result.append(cert)
+            }
+        }
+        return result
     }
 
     func loadQuota() async {

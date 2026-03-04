@@ -79,7 +79,7 @@
     </div>
 
     <el-row :gutter="20">
-      <el-col :span="12">
+      <el-col :xs="24" :sm="12">
         <div class="content-card">
           <div class="card-header"><h3>最近证书</h3></div>
           <el-table :data="recentCerts" size="small" empty-text="暂无证书" :header-cell-style="{ background: 'var(--cv-surface-hover)' }">
@@ -93,7 +93,7 @@
           </el-table>
         </div>
       </el-col>
-      <el-col :span="12">
+      <el-col :xs="24" :sm="12">
         <div class="content-card">
           <div class="card-header"><h3>使用指南</h3></div>
           <el-timeline>

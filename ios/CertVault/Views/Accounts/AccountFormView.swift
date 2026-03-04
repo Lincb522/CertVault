@@ -20,8 +20,8 @@ struct AccountFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本信息") {
-                    TextField("账号名称", text: $name)
+                Section(L10n.Account.formSectionBasic) {
+                    TextField(L10n.Account.formName, text: $name)
                     TextField("Issuer ID", text: $issuerID)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -35,9 +35,9 @@ struct AccountFormView: View {
                         .font(.system(.caption, design: .monospaced))
                         .frame(minHeight: 120)
                 } header: {
-                    Text("P8 私钥内容")
+                    Text(L10n.Account.formP8Content)
                 } footer: {
-                    Text("粘贴 .p8 文件的完整内容，包含 BEGIN/END PRIVATE KEY")
+                    Text(L10n.Account.formP8Hint)
                 }
 
                 if let err = errorMsg {
@@ -46,14 +46,14 @@ struct AccountFormView: View {
                     }
                 }
             }
-            .navigationTitle(isEdit ? "编辑账号" : "添加账号")
+            .navigationTitle(isEdit ? L10n.Account.edit : L10n.Account.add)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isEdit ? "保存" : "创建") { save() }
+                    Button(isEdit ? L10n.save : L10n.create) { save() }
                         .disabled(!isValid || isLoading)
                 }
             }

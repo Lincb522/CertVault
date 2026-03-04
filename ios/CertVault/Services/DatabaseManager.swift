@@ -242,6 +242,93 @@ final class DatabaseManager {
         }
     }
 
+    // MARK: - Dashboard Stats (from local cache)
+
+    func computeLocalStats() throws -> DashboardStats? {
+        try dbQueue.read { db in
+            let accounts = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM accounts") ?? 0
+            let devices = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM devices") ?? 0
+            let certificates = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM certificates") ?? 0
+            let profiles = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM profiles") ?? 0
+            let bundleIds = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM bundleIds") ?? 0
+            if accounts == 0 && devices == 0 && certificates == 0 { return nil }
+            return DashboardStats(
+                accounts: accounts, devices: devices,
+                certificates: certificates, certs_with_p12: nil,
+                profiles: profiles, bundle_ids: bundleIds
+            )
+        }
+    }
+
+    func fetchRecentCertificatesLocal(limit: Int = 5) throws -> [RecentCertificate] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql:
+                "SELECT id, name, type, expires_at, created_at FROM certificates ORDER BY created_at DESC LIMIT ?",
+                arguments: [limit]
+            )
+            return rows.map { row in
+                RecentCertificate(
+                    id: row["id"], name: row["name"],
+                    type: row["type"], expires_at: row["expires_at"],
+                    created_at: row["created_at"]
+                )
+            }
+        }
+    }
+
+    func fetchRecentDevicesLocal(limit: Int = 5) throws -> [RecentDevice] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql:
+                "SELECT id, name, udid, platform, created_at FROM devices ORDER BY created_at DESC LIMIT ?",
+                arguments: [limit]
+            )
+            return rows.map { row in
+                RecentDevice(
+                    id: row["id"], name: row["name"],
+                    udid: row["udid"], platform: row["platform"],
+                    created_at: row["created_at"]
+                )
+            }
+        }
+    }
+
+    // MARK: - Cache Info
+
+    func cacheSize() -> Int64 {
+        do {
+            let appSupport = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: false
+            )
+            let dbPath = appSupport.appendingPathComponent("certvault.sqlite").path
+            var total: Int64 = 0
+            for suffix in ["", "-wal", "-shm"] {
+                let path = dbPath + suffix
+                if let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+                   let size = attrs[.size] as? Int64 {
+                    total += size
+                }
+            }
+            return total
+        } catch {
+            return 0
+        }
+    }
+
+    func cacheRecordCount() throws -> (accounts: Int, devices: Int, certificates: Int, profiles: Int, bundleIds: Int, pushKeys: Int) {
+        try dbQueue.read { db in
+            let a = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM accounts") ?? 0
+            let d = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM devices") ?? 0
+            let c = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM certificates") ?? 0
+            let p = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM profiles") ?? 0
+            let b = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM bundleIds") ?? 0
+            let pk = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pushKeys") ?? 0
+            return (a, d, c, p, b, pk)
+        }
+    }
+
     // MARK: - Clear
 
     func clearAll() throws {

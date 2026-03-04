@@ -16,8 +16,8 @@ struct CreateCertView: View {
         NavigationStack {
             Form {
                 if vm.accounts.count > 1 {
-                    Section("账号") {
-                        Picker("选择账号", selection: $vm.selectedAccountId) {
+                    Section(L10n.account) {
+                        Picker(L10n.select, selection: $vm.selectedAccountId) {
                             ForEach(vm.accounts) { acc in
                                 Text(acc.displayName).tag(acc.id)
                             }
@@ -26,7 +26,7 @@ struct CreateCertView: View {
                 }
 
                 Section {
-                    Picker("证书类型", selection: $selectedType) {
+                    Picker(L10n.Cert.type, selection: $selectedType) {
                         ForEach(vm.certTypes) { type in
                             VStack(alignment: .leading) {
                                 Text(type.label)
@@ -35,28 +35,28 @@ struct CreateCertView: View {
                         }
                     }
                 } header: {
-                    Text("证书类型")
+                    Text(L10n.Cert.type)
                 } footer: {
                     if let type = vm.certTypes.first(where: { $0.value == selectedType }) {
                         Text(type.desc ?? "")
                     }
                 }
 
-                Section("证书信息") {
-                    TextField("证书名称（可选）", text: $name)
+                Section(NSLocalizedString("cert.form.section", comment: "")) {
+                    TextField(NSLocalizedString("cert.form.name", comment: ""), text: $name)
                     HStack {
-                        Text("P12 密码")
+                        Text(L10n.Cert.password)
                         Spacer()
-                        TextField("密码", text: $password)
+                        TextField(L10n.Register.password, text: $password)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 120)
                     }
                 }
 
                 if let quota = vm.quotas[selectedType] {
-                    Section("配额信息") {
+                    Section(L10n.Cert.quotaTitle) {
                         HStack {
-                            Text("已使用")
+                            Text(L10n.Cert.quotaUsed)
                             Spacer()
                             Text("\(quota.used) / \(quota.limit)")
                                 .foregroundStyle(quota.available > 0 ? .green : .red)
@@ -65,7 +65,7 @@ struct CreateCertView: View {
                             HStack {
                                 HIcon(AppIcon.warning)
                                     .foregroundStyle(.orange)
-                                Text("配额已满，创建时将自动撤销最旧的同类证书")
+                                Text(L10n.Cert.quotaFull)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -77,22 +77,22 @@ struct CreateCertView: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("创建证书")
+            .navigationTitle(L10n.Cert.create)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("创建") { create(revokeAndRecreate: false) }
+                    Button(L10n.create) { create(revokeAndRecreate: false) }
                         .disabled(isLoading)
                 }
             }
-            .alert("证书配额已满", isPresented: $showRevokeConfirm) {
-                Button("撤销并重建", role: .destructive) {
+            .alert(L10n.Cert.quotaTitle, isPresented: $showRevokeConfirm) {
+                Button(NSLocalizedString("cert.revokeAndRecreate", comment: ""), role: .destructive) {
                     create(revokeAndRecreate: true)
                 }
-                Button("取消", role: .cancel) {}
+                Button(L10n.cancel, role: .cancel) {}
             } message: {
                 Text(conflictMessage)
             }

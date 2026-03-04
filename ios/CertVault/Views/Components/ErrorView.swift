@@ -17,7 +17,7 @@ struct ErrorView: View {
             }
 
             VStack(spacing: 8) {
-                Text("出错了")
+                Text(L10n.error)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Text(message)
@@ -31,7 +31,7 @@ struct ErrorView: View {
                 Button(action: retry) {
                     HStack(spacing: 6) {
                         HIcon(AppIcon.refresh).font(.caption)
-                        Text("重试")
+                        Text(L10n.retry)
                             .font(.subheadline.weight(.semibold))
                     }
                     .padding(.horizontal, 24)

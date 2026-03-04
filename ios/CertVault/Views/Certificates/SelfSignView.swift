@@ -18,9 +18,9 @@ struct SelfSignView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Picker("操作", selection: $mode) {
-                    Text("自签证书").tag(0)
-                    Text("生成 CA").tag(1)
+                Picker("", selection: $mode) {
+                    Text(L10n.Cert.selfSign).tag(0)
+                    Text(L10n.Cert.generateCA).tag(1)
                 }
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)
@@ -37,32 +37,32 @@ struct SelfSignView: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle(mode == 0 ? "自签证书" : "生成 CA")
+            .navigationTitle(mode == 0 ? L10n.Cert.selfSign : L10n.Cert.generateCA)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(mode == 0 ? "生成" : "创建 CA") { submit() }
+                    Button(mode == 0 ? NSLocalizedString("cert.selfSign.generate", comment: "") : NSLocalizedString("cert.ca.create", comment: "")) { submit() }
                         .disabled(isLoading || !isValid)
                 }
             }
-            .alert("操作成功", isPresented: $success) {
-                Button("好") { dismiss() }
+            .alert(L10n.success, isPresented: $success) {
+                Button(L10n.ok) { dismiss() }
             }
         }
     }
 
     private var selfSignForm: some View {
         Group {
-            Section("证书信息") {
-                TextField("证书名称", text: $name)
-                TextField("P12 密码", text: $password)
+            Section(NSLocalizedString("cert.form.section", comment: "")) {
+                TextField(NSLocalizedString("cert.form.certName", comment: ""), text: $name)
+                TextField(L10n.Cert.password, text: $password)
             }
-            Section("主题信息") {
-                TextField("通用名称 (CN)", text: $commonName)
-                TextField("邮箱（可选）", text: $email)
+            Section(NSLocalizedString("cert.selfSign.subject", comment: "")) {
+                TextField(NSLocalizedString("cert.selfSign.cn", comment: ""), text: $commonName)
+                TextField(NSLocalizedString("cert.selfSign.email", comment: ""), text: $email)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
             }
@@ -70,10 +70,10 @@ struct SelfSignView: View {
     }
 
     private var caForm: some View {
-        Section("CA 信息") {
-            TextField("通用名称 (CN)", text: $commonName)
-            TextField("组织（可选）", text: $organization)
-            TextField("国家代码", text: $country)
+        Section(NSLocalizedString("cert.ca.section", comment: "")) {
+            TextField(NSLocalizedString("cert.selfSign.cn", comment: ""), text: $commonName)
+            TextField(NSLocalizedString("cert.ca.org", comment: ""), text: $organization)
+            TextField(NSLocalizedString("cert.ca.country", comment: ""), text: $country)
                 .textInputAutocapitalization(.characters)
         }
     }

@@ -16,12 +16,12 @@ struct CreateBundleIDView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 } header: {
-                    Text("Bundle Identifier")
+                    Text(L10n.BundleID.identifier)
                 } footer: {
-                    Text("应用的唯一标识符，如 com.yourcompany.appname")
+                    Text(L10n.BundleID.identifierHint)
                 }
 
-                Section("名称") {
+                Section(NSLocalizedString("common.name", comment: "")) {
                     TextField("My App", text: $name)
                 }
 
@@ -29,14 +29,14 @@ struct CreateBundleIDView: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("创建 Bundle ID")
+            .navigationTitle(L10n.BundleID.create)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("创建") {
+                    Button(L10n.create) {
                         isLoading = true
                         errorMsg = nil
                         Task {

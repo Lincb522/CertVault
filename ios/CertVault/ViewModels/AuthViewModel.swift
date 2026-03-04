@@ -54,6 +54,7 @@ final class AuthViewModel: ObservableObject {
             self.isLoggedIn = true
             UserDefaults.standard.set(result.username, forKey: AppConstants.usernameKey)
             AppLogger.auth.info("✅ Login success | user=\(result.username) | role=\(result.role)")
+            NotificationCenter.default.post(name: DashboardViewModel.didLoginNotification, object: nil)
         } catch {
             errorMessage = error.localizedDescription
             AppLogger.auth.error("❌ Login failed | \(error.localizedDescription)")
@@ -86,6 +87,7 @@ final class AuthViewModel: ObservableObject {
             self.isLoggedIn = true
             UserDefaults.standard.set(result.username, forKey: AppConstants.usernameKey)
             AppLogger.auth.info("✅ Register success | user=\(result.username)")
+            NotificationCenter.default.post(name: DashboardViewModel.didLoginNotification, object: nil)
         } catch {
             errorMessage = error.localizedDescription
             AppLogger.auth.error("❌ Register failed | \(error.localizedDescription)")

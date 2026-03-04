@@ -28,7 +28,7 @@ struct CertificateDetailView: View {
                 LoadingView()
             }
         }
-        .navigationTitle("证书详情")
+        .navigationTitle(L10n.Cert.detail)
         .navigationBarTitleDisplayMode(.inline)
         .task { await vm.loadDetail(id: certId) }
         .sheet(isPresented: $downloadService.showShareSheet) {
@@ -59,9 +59,9 @@ struct CertificateDetailView: View {
                             StatusBadge("P12", color: .dsAccentBlue)
                         }
                         if cert.isExpired {
-                            StatusBadge("已过期", color: .dsAccentPink)
+                            StatusBadge(Localized.status("EXPIRED"), color: .dsAccentPink)
                         } else {
-                            StatusBadge("有效", color: .dsAccent)
+                            StatusBadge(Localized.status("VALID"), color: .dsAccent)
                         }
                     }
                 }
@@ -70,21 +70,21 @@ struct CertificateDetailView: View {
             Divider().overlay(Color.dsBorder)
 
             Group {
-                CertDetailRow(label: "类型", value: cert.type ?? "N/A")
+                CertDetailRow(label: L10n.Cert.typeLabel, value: Localized.certType(cert.type ?? L10n.na))
                 if let platform = cert.platform {
-                    CertDetailRow(label: "平台", value: platform)
+                    CertDetailRow(label: L10n.Cert.platform, value: Localized.platform(platform))
                 }
                 if let serial = cert.serial_number {
-                    CertDetailRow(label: "序列号", value: serial, mono: true)
+                    CertDetailRow(label: L10n.Cert.serial, value: serial, mono: true)
                 }
                 if let expires = cert.expires_at {
-                    CertDetailRow(label: "过期时间", value: String(expires.prefix(19)))
+                    CertDetailRow(label: L10n.Cert.expiresAt, value: String(expires.prefix(19)))
                 }
                 if let created = cert.created_at {
-                    CertDetailRow(label: "创建时间", value: String(created.prefix(19)))
+                    CertDetailRow(label: L10n.Cert.createdAt, value: String(created.prefix(19)))
                 }
                 if let password = cert.password {
-                    CertDetailRow(label: "P12 密码", value: password, mono: true, copiable: true)
+                    CertDetailRow(label: L10n.Cert.password, value: password, mono: true, copiable: true)
                 }
             }
         }
@@ -103,7 +103,7 @@ struct CertificateDetailView: View {
                         } else {
                             HIcon(AppIcon.docDownload).font(.body)
                         }
-                        Text("下载 P12 证书")
+                        Text(L10n.Cert.downloadP12)
                             .fontWeight(.medium)
                     }
                     .frame(maxWidth: .infinity)
@@ -119,7 +119,7 @@ struct CertificateDetailView: View {
             } label: {
                 HStack(spacing: 8) {
                     HIcon(AppIcon.docDownload).font(.body)
-                    Text("下载 CER 证书")
+                    Text(L10n.Cert.downloadCER)
                         .fontWeight(.medium)
                 }
                 .frame(maxWidth: .infinity)

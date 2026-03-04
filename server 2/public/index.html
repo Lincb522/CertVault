@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CertVault - iOS 证书与设备一站式管理平台</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--c1:#667eea;--c2:#764ba2;--c3:#f093fb;--glass:rgba(255,255,255,.08);--glass-border:rgba(255,255,255,.15);--text:#fff;--text-sub:rgba(255,255,255,.7);--radius:16px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--font);color:var(--text);background:#0f0c29;overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+.bg{position:fixed;inset:0;z-index:-1;background:linear-gradient(135deg,#0f0c29 0%,#302b63 50%,#24243e 100%)}
+.bg::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(102,126,234,.2) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(118,75,162,.2) 0%,transparent 50%);animation:bgMove 20s ease-in-out infinite alternate}
+@keyframes bgMove{0%{transform:translate(0,0)}100%{transform:translate(-3%,-3%)}}
+
+.orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:.3;pointer-events:none;z-index:-1}
+.orb-1{width:500px;height:500px;background:var(--c1);top:-10%;right:-10%;animation:float1 15s ease-in-out infinite}
+.orb-2{width:400px;height:400px;background:var(--c2);bottom:-5%;left:-5%;animation:float2 18s ease-in-out infinite}
+.orb-3{width:300px;height:300px;background:var(--c3);top:40%;left:50%;animation:float3 12s ease-in-out infinite}
+@keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,40px)}}
+@keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-30px)}}
+@keyframes float3{0%,100%{transform:translate(0,0)}50%{transform:translate(-20px,20px)}}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(15,12,41,.6);border-bottom:1px solid var(--glass-border);transition:all .3s}
+nav.scrolled{background:rgba(15,12,41,.9)}
+.logo{display:flex;align-items:center;gap:.6rem;font-size:1.3rem;font-weight:700;text-decoration:none;color:var(--text)}
+.logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--c1),var(--c2));display:flex;align-items:center;justify-content:center;font-size:1rem}
+.nav-links{display:flex;gap:1.5rem;align-items:center}
+.nav-links a{color:var(--text-sub);text-decoration:none;font-size:.9rem;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.mobile-menu-btn{display:none;background:none;border:none;color:var(--text);font-size:1.5rem;cursor:pointer;padding:.2rem}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.4rem;border-radius:10px;font-size:.9rem;font-weight:600;text-decoration:none;transition:all .3s;border:none;cursor:pointer}
+.btn-primary{background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;box-shadow:0 4px 20px rgba(102,126,234,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(102,126,234,.5)}
+.btn-ghost{background:var(--glass);color:#fff;border:1px solid var(--glass-border);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.btn-ghost:hover{background:rgba(255,255,255,.15)}
+.btn-lg{padding:.85rem 2.2rem;font-size:1.05rem}
+.btn-download{background:linear-gradient(135deg,#4ade80,#22c55e);color:#fff;box-shadow:0 4px 20px rgba(74,222,128,.3)}
+.btn-download:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(74,222,128,.5)}
+
+/* Hero */
+.hero{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:7rem 1.5rem 4rem}
+.hero-inner{max-width:800px;width:100%}
+.badge{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem 1rem;border-radius:99px;background:var(--glass);border:1px solid var(--glass-border);font-size:.8rem;color:var(--text-sub);margin-bottom:1.5rem;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-size:clamp(2rem,5vw,4rem);font-weight:800;line-height:1.15;margin-bottom:1rem;background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,.8) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero h1 span{background:linear-gradient(135deg,var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text}
+.hero p{font-size:clamp(.95rem,2.5vw,1.15rem);color:var(--text-sub);max-width:560px;margin:0 auto 2.5rem;line-height:1.7;padding:0 .5rem}
+.hero-buttons{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap}
+
+/* Stats bar */
+.stats-bar{display:flex;justify-content:center;gap:2rem;padding:2rem 0;flex-wrap:wrap}
+.stat{text-align:center;min-width:60px}
+.stat-num{font-size:1.6rem;font-weight:700;background:linear-gradient(135deg,var(--c1),var(--c3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-label{font-size:.75rem;color:var(--text-sub);margin-top:.2rem}
+
+/* Section */
+section{padding:4rem 1.5rem}
+.section-header{text-align:center;max-width:600px;margin:0 auto 3rem;padding:0 .5rem}
+.section-header h2{font-size:clamp(1.5rem,4vw,2rem);font-weight:700;margin-bottom:.8rem}
+.section-header p{color:var(--text-sub);font-size:clamp(.9rem,2.5vw,1rem)}
+
+/* Features */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.2rem;max-width:1100px;margin:0 auto}
+.feature-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);padding:1.8rem;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:all .4s;opacity:0;transform:translateY(30px)}
+.feature-card.visible{opacity:1;transform:translateY(0)}
+.feature-card:hover{transform:translateY(-4px);border-color:rgba(102,126,234,.4);box-shadow:0 8px 40px rgba(102,126,234,.15)}
+.feature-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:1rem}
+.fi-cert{background:linear-gradient(135deg,#667eea20,#667eea40);color:#667eea}
+.fi-device{background:linear-gradient(135deg,#4ade8020,#4ade8040);color:#4ade80}
+.fi-profile{background:linear-gradient(135deg,#f59e0b20,#f59e0b40);color:#f59e0b}
+.fi-push{background:linear-gradient(135deg,#f093fb20,#f093fb40);color:#f093fb}
+.fi-bundle{background:linear-gradient(135deg,#06b6d420,#06b6d440);color:#06b6d4}
+.fi-multi{background:linear-gradient(135deg,#fb718520,#fb718540);color:#fb7185}
+.feature-card h3{font-size:1.05rem;font-weight:600;margin-bottom:.4rem}
+.feature-card p{font-size:.88rem;color:var(--text-sub);line-height:1.6}
+
+/* Download */
+.download-section{max-width:960px;margin:0 auto}
+.download-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:2.5rem;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:center;gap:2.5rem;opacity:0;transform:translateY(30px);transition:all .6s}
+.download-card.visible{opacity:1;transform:translateY(0)}
+
+.phone-frame{flex-shrink:0;width:220px;position:relative}
+.phone-frame-inner{border-radius:28px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 2px rgba(255,255,255,.1);position:relative;background:#000}
+.phone-frame-inner::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:100px;height:28px;background:#000;border-radius:0 0 16px 16px;z-index:2}
+.phone-frame-inner img{width:100%;display:block;position:relative;z-index:1}
+
+.download-info{flex:1}
+.download-info h3{font-size:clamp(1.3rem,3vw,1.6rem);font-weight:700;margin-bottom:.6rem}
+.download-info>p{color:var(--text-sub);margin-bottom:1.5rem;line-height:1.7;font-size:.95rem}
+.download-steps{list-style:none;counter-reset:step;margin-bottom:2rem}
+.download-steps li{counter-increment:step;padding:.55rem 0;color:var(--text-sub);font-size:.88rem;display:flex;align-items:flex-start;gap:.8rem;line-height:1.5}
+.download-steps li::before{content:counter(step);flex-shrink:0;width:24px;height:24px;border-radius:8px;background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.download-buttons{display:flex;gap:.8rem;flex-wrap:wrap}
+
+/* Footer */
+footer{text-align:center;padding:2.5rem 1.5rem;border-top:1px solid var(--glass-border);color:var(--text-sub);font-size:.85rem}
+footer a{color:var(--c1);text-decoration:none}
+
+/* Mobile nav overlay */
+.nav-overlay{display:none;position:fixed;inset:0;z-index:99;background:rgba(15,12,41,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;gap:2rem}
+.nav-overlay.open{display:flex}
+.nav-overlay a{color:var(--text);text-decoration:none;font-size:1.2rem;font-weight:500}
+.nav-overlay .btn{font-size:1.1rem;padding:.8rem 2.5rem}
+
+/* Responsive */
+@media(max-width:768px){
+  nav{padding:.7rem 1rem}
+  .nav-links{display:none}
+  .mobile-menu-btn{display:block}
+  .hero{padding:6rem 1rem 3rem;min-height:auto}
+  .hero-buttons{flex-direction:column;align-items:center}
+  .hero-buttons .btn{width:100%;max-width:280px;justify-content:center}
+  .stats-bar{gap:1.2rem;padding:1.5rem 0}
+  .stat-num{font-size:1.3rem}
+  section{padding:3rem 1rem}
+  .section-header{margin-bottom:2rem}
+  .features-grid{grid-template-columns:1fr;max-width:100%;gap:1rem}
+  .feature-card{padding:1.5rem}
+  .feature-card:hover{transform:none}
+  .download-card{flex-direction:column;text-align:center;padding:1.5rem;gap:1.5rem}
+  .phone-frame{width:180px}
+  .download-info h3{font-size:1.3rem}
+  .download-steps{text-align:left}
+  .download-buttons{justify-content:center}
+  footer{padding:2rem 1rem}
+}
+
+@media(max-width:380px){
+  .hero h1{font-size:1.7rem}
+  .stats-bar{gap:.8rem}
+  .stat{min-width:50px}
+  .stat-num{font-size:1.1rem}
+  .stat-label{font-size:.7rem}
+  .feature-card{padding:1.2rem}
+}
+
+/* Touch feedback */
+@media(hover:none){
+  .feature-card:hover{transform:none;border-color:var(--glass-border);box-shadow:none}
+  .btn:active{transform:scale(.97)}
+}
+
+.fade-in{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<nav id="nav">
+  <a href="/" class="logo">
+    <div class="logo-icon">C</div>
+    CertVault
+  </a>
+  <div class="nav-links">
+    <a href="#features">功能特性</a>
+    <a href="#download">安装 App</a>
+    <a href="/admin" class="btn btn-primary">管理后台</a>
+  </div>
+  <button class="mobile-menu-btn" id="menuBtn" aria-label="菜单">&#9776;</button>
+</nav>
+
+<div class="nav-overlay" id="navOverlay">
+  <a href="#features" onclick="closeMenu()">功能特性</a>
+  <a href="#download" onclick="closeMenu()">安装 App</a>
+  <a href="/admin" class="btn btn-primary">管理后台</a>
+</div>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      服务运行中
+    </div>
+    <h1>iOS 证书与设备<br><span>一站式管理平台</span></h1>
+    <p>CertVault 帮助你高效管理 Apple 开发者证书、设备注册、描述文件和推送通知，使用自签证书轻松安装 IPA。</p>
+    <div class="hero-buttons">
+      <a href="/admin" class="btn btn-primary btn-lg">进入管理后台 &rarr;</a>
+      <a href="#download" class="btn btn-ghost btn-lg">安装 iOS App</a>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num">P12</div><div class="stat-label">证书导出</div></div>
+      <div class="stat"><div class="stat-num">UDID</div><div class="stat-label">设备注册</div></div>
+      <div class="stat"><div class="stat-num">APNs</div><div class="stat-label">推送测试</div></div>
+      <div class="stat"><div class="stat-num">IPA</div><div class="stat-label">自签安装</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="section-header fade-in">
+    <h2>强大的功能特性</h2>
+    <p>覆盖 iOS 开发全链路的证书与设备管理工具</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon fi-cert">&#9919;</div>
+      <h3>证书管理</h3>
+      <p>一键创建开发/发布证书，支持 P12 导出与下载，到期自动提醒，轻松管理证书生命周期。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-device">&#9881;</div>
+      <h3>设备管理</h3>
+      <p>注册设备 UDID，支持批量导入，一键绑定证书与描述文件，快速完成真机调试配置。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-profile">&#9776;</div>
+      <h3>描述文件</h3>
+      <p>自动生成 Provisioning Profile，关联证书与设备，支持开发、分发多种类型配置。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-push">&#9993;</div>
+      <h3>推送通知</h3>
+      <p>APNs 推送测试工具，管理 P8 密钥，支持沙箱与生产环境，快速验证推送功能。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-bundle">&#10070;</div>
+      <h3>Bundle ID 管理</h3>
+      <p>创建与管理 App 标识符，灵活配置权限能力，查看关联的设备与证书信息。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-multi">&#9734;</div>
+      <h3>多账号支持</h3>
+      <p>同时管理多个 Apple 开发者账号，独立隔离数据，团队协作更高效。</p>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="section-header fade-in">
+    <h2>安装 CertVault App</h2>
+    <p>使用自签证书安装 CertVault iOS 客户端，随时管理你的证书与设备</p>
+  </div>
+  <div class="download-section">
+    <div class="download-card">
+      <div class="phone-frame">
+        <div class="phone-frame-inner">
+          <img src="/app-screenshot.png" alt="CertVault App" loading="lazy">
+        </div>
+      </div>
+      <div class="download-info">
+        <h3>CertVault for iOS</h3>
+        <p>原生 SwiftUI 构建，支持离线缓存。证书管理、设备绑定、推送测试，所有功能尽在掌中。</p>
+        <ul class="download-steps">
+          <li>在管理后台完成一键绑定，获取证书与描述文件</li>
+          <li>使用自签证书对 CertVault IPA 进行签名</li>
+          <li>通过 AltStore / 爱思助手 / 巨魔 安装到设备</li>
+          <li>打开 App，使用管理后台账号登录即可</li>
+        </ul>
+        <div class="download-buttons">
+          <a href="/admin" class="btn btn-primary">前往管理后台</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>&copy; 2026 CertVault &mdash; iOS 证书与设备管理平台 &nbsp;|&nbsp; <a href="/admin">管理后台</a></p>
+</footer>
+
+<script>
+const nav = document.getElementById('nav');
+const menuBtn = document.getElementById('menuBtn');
+const overlay = document.getElementById('navOverlay');
+
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+});
+
+menuBtn.addEventListener('click', () => {
+  overlay.classList.toggle('open');
+  menuBtn.textContent = overlay.classList.contains('open') ? '\u2715' : '\u2630';
+});
+
+function closeMenu() {
+  overlay.classList.remove('open');
+  menuBtn.textContent = '\u2630';
+}
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+
+document.querySelectorAll('.feature-card, .download-card, .fade-in').forEach((el) => {
+  observer.observe(el);
+});
+</script>
+</body>
+</html>

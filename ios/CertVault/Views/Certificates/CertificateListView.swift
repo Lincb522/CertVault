@@ -29,15 +29,15 @@ struct CertificateListView: View {
             if !vm.isLoading && vm.accounts.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.account,
-                    title: "暂无开发者账号",
-                    message: "请先在「账号」页面添加 Apple Developer API Key"
+                    title: L10n.Cert.noAccountTitle,
+                    message: L10n.Cert.noAccountMessage
                 )
             } else if vm.certificates.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.certificate,
-                    title: "暂无证书",
-                    message: "创建签名证书开始使用",
-                    actionTitle: "创建证书"
+                    title: L10n.Cert.emptyTitle,
+                    message: L10n.Cert.emptyMessage,
+                    actionTitle: L10n.Cert.create
                 ) { showCreate = true }
             } else {
                 ScrollView {
@@ -62,22 +62,22 @@ struct CertificateListView: View {
                     .padding(.bottom, 20)
                 }
                 .pageBackground()
-                .searchable(text: $searchText, prompt: "搜索证书")
+                .searchable(text: $searchText, prompt: L10n.Cert.search)
                 .refreshable {
                     await vm.loadCertificates()
                     await vm.loadQuota()
                 }
             }
         }
-        .navigationTitle("证书管理")
+        .navigationTitle(L10n.Cert.title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button { showCreate = true } label: {
-                        Label { Text("创建证书") } icon: { HIcon(AppIcon.addCircle) }
+                        Label { Text(L10n.Cert.create) } icon: { HIcon(AppIcon.addCircle) }
                     }
                     Button { showSelfSign = true } label: {
-                        Label { Text("自签证书") } icon: { HIcon(AppIcon.pen) }
+                        Label { Text(L10n.Cert.selfSign) } icon: { HIcon(AppIcon.pen) }
                     }
                 } label: {
                     HIcon(AppIcon.addCircle)
@@ -101,18 +101,18 @@ struct CertificateListView: View {
                 ShareSheet(items: [url])
             }
         }
-        .alert("确认删除", isPresented: .init(
+        .alert(L10n.Cert.deleteTitle, isPresented: .init(
             get: { certToDelete != nil },
             set: { if !$0 { certToDelete = nil } }
         )) {
-            Button("删除并撤销", role: .destructive) {
+            Button(L10n.delete, role: .destructive) {
                 if let cert = certToDelete {
                     Task { try? await vm.delete(id: cert.id) }
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
-            Text("该证书将从 Apple 撤销并从本地删除")
+            Text(L10n.Cert.deleteMessage)
         }
     }
 
@@ -120,7 +120,7 @@ struct CertificateListView: View {
 
     private var accountPicker: some View {
         HStack {
-            Text("账号")
+            Text(L10n.account)
                 .font(.subheadline)
                 .foregroundStyle(Color.dsMuted)
             Spacer()
@@ -200,12 +200,12 @@ struct CertificateListView: View {
                             : "/certificates/\(cert.id)/download-cer"
                         Task { await downloadService.download(endpoint: endpoint) }
                     } label: {
-                        Label { Text("下载") } icon: { HIcon(AppIcon.download) }
+                        Label { Text(L10n.download) } icon: { HIcon(AppIcon.download) }
                     }
                     Button(role: .destructive) {
                         certToDelete = cert
                     } label: {
-                        Label { Text("删除") } icon: { HIcon(AppIcon.delete) }
+                        Label { Text(L10n.delete) } icon: { HIcon(AppIcon.delete) }
                     }
                 }
 
@@ -245,7 +245,7 @@ private struct CertRow: View {
                     .foregroundStyle(Color.dsText)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(cert.type ?? "")
+                    Text(Localized.certType(cert.type ?? ""))
                         .font(.caption)
                         .foregroundStyle(Color.dsMuted)
                     if cert.canDownloadP12 {
@@ -259,7 +259,7 @@ private struct CertRow: View {
             Spacer()
 
             if cert.isExpired {
-                StatusBadge("已过期", color: .dsAccentPink)
+                StatusBadge(Localized.status("EXPIRED"), color: .dsAccentPink)
             }
 
             HIcon(AppIcon.chevronRight)

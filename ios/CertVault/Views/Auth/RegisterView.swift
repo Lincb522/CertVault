@@ -59,11 +59,11 @@ struct RegisterView: View {
                 .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
 
             VStack(spacing: 6) {
-                Text("创建账号")
+                Text(L10n.Register.title)
                     .font(.title.bold())
                     .foregroundStyle(Color.dsText)
 
-                Text("注册后即可使用 CertVault")
+                Text(L10n.Register.subtitle)
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
             }
@@ -75,16 +75,16 @@ struct RegisterView: View {
     private var registerCard: some View {
         VStack(spacing: 16) {
             VStack(spacing: 12) {
-                inputField(icon: AppIcon.user, placeholder: "用户名") {
-                    TextField("", text: $username, prompt: Text("用户名（至少 3 个字符）").foregroundColor(.dsMuted.opacity(0.6)))
+                inputField(icon: AppIcon.user, placeholder: L10n.Register.username) {
+                    TextField("", text: $username, prompt: Text(L10n.Register.usernameHint).foregroundColor(.dsMuted.opacity(0.6)))
                         .textContentType(.username)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .foregroundStyle(Color.dsText)
                 }
 
-                inputField(icon: AppIcon.email, placeholder: "邮箱") {
-                    TextField("", text: $email, prompt: Text("邮箱地址").foregroundColor(.dsMuted.opacity(0.6)))
+                inputField(icon: AppIcon.email, placeholder: L10n.Register.email) {
+                    TextField("", text: $email, prompt: Text(L10n.Register.emailHint).foregroundColor(.dsMuted.opacity(0.6)))
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
@@ -94,14 +94,14 @@ struct RegisterView: View {
 
                 codeField
 
-                inputField(icon: AppIcon.lock, placeholder: "密码") {
-                    SecureField("", text: $password, prompt: Text("密码（至少 6 位）").foregroundColor(.dsMuted.opacity(0.6)))
+                inputField(icon: AppIcon.lock, placeholder: L10n.Register.password) {
+                    SecureField("", text: $password, prompt: Text(L10n.Register.passwordHint).foregroundColor(.dsMuted.opacity(0.6)))
                         .textContentType(.newPassword)
                         .foregroundStyle(Color.dsText)
                 }
 
-                inputField(icon: AppIcon.lock, placeholder: "确认密码") {
-                    SecureField("", text: $confirmPassword, prompt: Text("再次输入密码").foregroundColor(.dsMuted.opacity(0.6)))
+                inputField(icon: AppIcon.lock, placeholder: L10n.Register.confirmPassword) {
+                    SecureField("", text: $confirmPassword, prompt: Text(L10n.Register.confirmPasswordHint).foregroundColor(.dsMuted.opacity(0.6)))
                         .textContentType(.newPassword)
                         .foregroundStyle(Color.dsText)
                 }
@@ -137,7 +137,7 @@ struct RegisterView: View {
                 HIcon(AppIcon.code)
                     .foregroundStyle(Color.dsMuted)
                     .frame(width: 20)
-                TextField("", text: $code, prompt: Text("验证码").foregroundColor(.dsMuted.opacity(0.6)))
+                TextField("", text: $code, prompt: Text(L10n.Register.verifyCode).foregroundColor(.dsMuted.opacity(0.6)))
                     .keyboardType(.numberPad)
                     .foregroundStyle(Color.dsText)
             }
@@ -152,7 +152,7 @@ struct RegisterView: View {
             Button {
                 Task { await authVM.sendCode(email: email) }
             } label: {
-                Text(authVM.codeCooldown > 0 ? "\(authVM.codeCooldown)s" : "获取验证码")
+                Text(authVM.codeCooldown > 0 ? L10n.Register.codeCooldown(authVM.codeCooldown) : L10n.Register.getCode)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
@@ -189,7 +189,7 @@ struct RegisterView: View {
     private var registerButton: some View {
         Button {
             guard password == confirmPassword else {
-                authVM.errorMessage = "两次密码输入不一致"
+                authVM.errorMessage = L10n.Register.passwordMismatch
                 return
             }
             Task {
@@ -200,7 +200,7 @@ struct RegisterView: View {
                 if authVM.isLoading {
                     ProgressView().tint(.white)
                 } else {
-                    Text("注  册")
+                    Text(L10n.Register.submit)
                         .font(.body.weight(.semibold))
                 }
             }
@@ -225,14 +225,14 @@ struct RegisterView: View {
 
     private var loginLink: some View {
         HStack(spacing: 4) {
-            Text("已有账号？")
+            Text(L10n.Register.hasAccount)
                 .font(.footnote)
                 .foregroundStyle(Color.dsMuted)
             Button {
                 authVM.errorMessage = nil
                 dismiss()
             } label: {
-                Text("去登录")
+                Text(L10n.Register.goLogin)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Color.dsAccentBlue)
             }

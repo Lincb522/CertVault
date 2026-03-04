@@ -29,7 +29,7 @@ struct AccountDetailView: View {
                 LoadingView()
             }
         }
-        .navigationTitle("账号详情")
+        .navigationTitle(L10n.Account.detail)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if vm.selectedAccount != nil {
@@ -69,7 +69,7 @@ struct AccountDetailView: View {
                         .font(.title3.bold())
                         .foregroundStyle(Color.dsText)
                     if account.remote_synced == true {
-                        StatusBadge("已同步", color: .dsAccent)
+                        StatusBadge(L10n.Account.synced, color: .dsAccent)
                     }
                 }
             }
@@ -80,7 +80,7 @@ struct AccountDetailView: View {
                 InfoRow(label: "Issuer ID", value: account.issuer_id ?? "N/A")
                 InfoRow(label: "Key ID", value: account.key_id ?? "N/A")
                 if let date = account.created_at {
-                    InfoRow(label: "创建时间", value: String(date.prefix(19)))
+                    InfoRow(label: L10n.Cert.createdAt, value: String(date.prefix(19)))
                 }
             }
         }
@@ -91,14 +91,14 @@ struct AccountDetailView: View {
 
     private func statsSection(_ account: Account) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            sectionHeader("资源统计")
+            sectionHeader(NSLocalizedString("account.stats", comment: ""))
 
             if let stats = account.stats {
                 LazyVGrid(columns: [.init(.flexible(), spacing: 10), .init(.flexible(), spacing: 10)], spacing: 10) {
-                    MiniStatCard(icon: AppIcon.certificate, title: "证书", value: "\(stats.certificates ?? 0)", color: .dsAccentPurple)
-                    MiniStatCard(icon: AppIcon.device, title: "设备", value: "\(stats.devices ?? 0)", color: .dsAccent)
+                    MiniStatCard(icon: AppIcon.certificate, title: NSLocalizedString("account.stat.certs", comment: ""), value: "\(stats.certificates ?? 0)", color: .dsAccentPurple)
+                    MiniStatCard(icon: AppIcon.device, title: NSLocalizedString("account.stat.devices", comment: ""), value: "\(stats.devices ?? 0)", color: .dsAccent)
                     MiniStatCard(icon: AppIcon.bundleID, title: "Bundle ID", value: "\(stats.bundle_ids ?? 0)", color: .dsAccentCyan)
-                    MiniStatCard(icon: AppIcon.profile, title: "描述文件", value: "\(stats.profiles ?? 0)", color: .dsAccentOrange)
+                    MiniStatCard(icon: AppIcon.profile, title: NSLocalizedString("account.stat.profiles", comment: ""), value: "\(stats.profiles ?? 0)", color: .dsAccentOrange)
                 }
             }
         }
@@ -117,7 +117,7 @@ struct AccountDetailView: View {
                     } else {
                         HIcon(AppIcon.wifi).font(.body)
                     }
-                    Text("测试连接")
+                    Text(L10n.Account.testConnection)
                         .fontWeight(.medium)
                 }
                 .frame(maxWidth: .infinity)
@@ -140,7 +140,7 @@ struct AccountDetailView: View {
             } label: {
                 HStack(spacing: 8) {
                     HIcon(AppIcon.docDownload).font(.body)
-                    Text("下载 P8 文件")
+                    Text(L10n.Account.downloadP8)
                         .fontWeight(.medium)
                 }
                 .frame(maxWidth: .infinity)

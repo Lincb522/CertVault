@@ -14,9 +14,9 @@ struct AccountListView: View {
             if vm.accounts.isEmpty && !vm.isLoading {
                 EmptyStateView(
                     icon: AppIcon.lock,
-                    title: "暂无账号",
-                    message: "添加 Apple Developer API Key 开始管理证书和描述文件",
-                    actionTitle: "添加账号"
+                    title: L10n.Account.emptyTitle,
+                    message: L10n.Account.emptyMessage,
+                    actionTitle: L10n.Account.add
                 ) { showCreateSheet = true }
             } else {
                 ScrollView {
@@ -32,7 +32,7 @@ struct AccountListView: View {
                                 Button(role: .destructive) {
                                     accountToDelete = account
                                 } label: {
-                                    Label { Text("删除") } icon: { HIcon(AppIcon.delete) }
+                                    Label { Text(L10n.delete) } icon: { HIcon(AppIcon.delete) }
                                 }
                             }
 
@@ -54,18 +54,18 @@ struct AccountListView: View {
                 .refreshable { await vm.loadAccounts() }
             }
         }
-        .navigationTitle("开发者账号")
+        .navigationTitle(L10n.Account.title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button { showCreateSheet = true } label: {
-                        Label { Text("手动添加") } icon: { HIcon(AppIcon.add) }
+                        Label { Text(L10n.Account.manualAdd) } icon: { HIcon(AppIcon.add) }
                     }
                     Button { showImportSheet = true } label: {
-                        Label { Text("快速导入 P8") } icon: { HIcon(AppIcon.download) }
+                        Label { Text(L10n.Account.quickImport) } icon: { HIcon(AppIcon.download) }
                     }
                     Button { showFileImporter = true } label: {
-                        Label { Text("上传 P8 文件") } icon: { HIcon(AppIcon.docUpload) }
+                        Label { Text(L10n.Account.uploadP8) } icon: { HIcon(AppIcon.docUpload) }
                     }
                 } label: {
                     HIcon(AppIcon.addCircle)
@@ -90,18 +90,18 @@ struct AccountListView: View {
         .sheet(isPresented: $showFileImporter) {
             UploadP8Sheet(vm: vm)
         }
-        .alert("确认删除", isPresented: .init(
+        .alert(L10n.Account.deleteTitle, isPresented: .init(
             get: { accountToDelete != nil },
             set: { if !$0 { accountToDelete = nil } }
         )) {
-            Button("删除", role: .destructive) {
+            Button(L10n.delete, role: .destructive) {
                 if let acc = accountToDelete {
                     Task { try? await vm.delete(id: acc.id) }
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
-            Text("删除后无法恢复，该账号关联的所有本地数据将被清除")
+            Text(L10n.Account.deleteMessage)
         }
     }
 }
@@ -128,7 +128,7 @@ private struct AccountRow: View {
                         .font(.caption.monospaced())
                         .foregroundStyle(Color.dsMuted)
                     if account.remote_synced == true {
-                        StatusBadge("已同步", color: .dsAccent)
+                        StatusBadge(L10n.Account.synced, color: .dsAccent)
                     }
                 }
             }
@@ -160,18 +160,18 @@ private struct ImportP8Sheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("P8 密钥内容") {
+                Section(L10n.Account.formP8Content) {
                     TextEditor(text: $p8Content)
                         .font(.system(.caption, design: .monospaced))
                         .frame(minHeight: 120)
                 }
 
-                Section("账号信息") {
-                    TextField("账号名称", text: $name)
-                    TextField("Issuer ID", text: $issuerID)
+                Section(L10n.Account.formSectionBasic) {
+                    TextField(L10n.Account.formName, text: $name)
+                    TextField(L10n.Account.formIssuerId, text: $issuerID)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Key ID", text: $keyID)
+                    TextField(L10n.Account.formKeyId, text: $keyID)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                 }
@@ -182,14 +182,14 @@ private struct ImportP8Sheet: View {
                     }
                 }
             }
-            .navigationTitle("快速导入 P8")
+            .navigationTitle(L10n.Account.importTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("导入") { doImport() }
+                    Button(L10n.import) { doImport() }
                         .disabled(!isValid || isLoading)
                 }
             }
@@ -232,7 +232,7 @@ private struct UploadP8Sheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("选择 P8 文件") {
+                Section(L10n.Account.selectP8) {
                     Button { showFilePicker = true } label: {
                         HStack {
                             HIcon(AppIcon.docUpload)
@@ -240,19 +240,19 @@ private struct UploadP8Sheet: View {
                             if let name = selectedFileName {
                                 Text(name).font(.subheadline)
                             } else {
-                                Text("点击选择 .p8 文件").foregroundStyle(.secondary)
+                                Text(L10n.Account.selectP8).foregroundStyle(.secondary)
                             }
                             Spacer()
                         }
                     }
                 }
 
-                Section("账号信息") {
-                    TextField("账号名称", text: $name)
-                    TextField("Issuer ID", text: $issuerID)
+                Section(L10n.Account.formSectionBasic) {
+                    TextField(L10n.Account.formName, text: $name)
+                    TextField(L10n.Account.formIssuerId, text: $issuerID)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Key ID", text: $keyID)
+                    TextField(L10n.Account.formKeyId, text: $keyID)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                 }
@@ -261,14 +261,14 @@ private struct UploadP8Sheet: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("上传 P8 文件")
+            .navigationTitle(L10n.Account.uploadTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("上传") { doUpload() }
+                    Button(L10n.upload) { doUpload() }
                         .disabled(!isValid || isLoading)
                 }
             }

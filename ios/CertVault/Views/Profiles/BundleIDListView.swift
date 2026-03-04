@@ -11,22 +11,22 @@ struct BundleIDListView: View {
             if !vm.isLoading && vm.accounts.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.account,
-                    title: "暂无开发者账号",
-                    message: "请先在「账号」页面添加 Apple Developer API Key"
+                    title: L10n.Device.noAccountTitle,
+                    message: L10n.Device.noAccountMessage
                 )
             } else if vm.bundleIds.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.bundleID,
-                    title: "暂无 Bundle ID",
-                    message: "创建 Bundle ID 用于应用签名",
-                    actionTitle: "创建 Bundle ID"
+                    title: L10n.BundleID.emptyTitle,
+                    message: L10n.BundleID.emptyMessage,
+                    actionTitle: L10n.BundleID.create
                 ) { showCreate = true }
             } else {
                 ScrollView {
                     VStack(spacing: 12) {
                         if vm.accounts.count > 1 {
                             HStack {
-                                Text("账号")
+                                Text(L10n.account)
                                     .font(.subheadline)
                                     .foregroundStyle(Color.dsMuted)
                                 Spacer()
@@ -89,7 +89,7 @@ struct BundleIDListView: View {
                                     Button(role: .destructive) {
                                         itemToDelete = item
                                     } label: {
-                                        Label("删除", systemImage: "trash")
+                                        Label(L10n.delete, systemImage: "trash")
                                     }
                                 }
 
@@ -130,16 +130,16 @@ struct BundleIDListView: View {
         .sheet(isPresented: $showCreate) {
             CreateBundleIDView(vm: vm)
         }
-        .alert("确认删除", isPresented: .init(
+        .alert(L10n.BundleID.deleteTitle, isPresented: .init(
             get: { itemToDelete != nil },
             set: { if !$0 { itemToDelete = nil } }
         )) {
-            Button("删除", role: .destructive) {
+            Button(L10n.delete, role: .destructive) {
                 if let item = itemToDelete {
                     Task { try? await vm.deleteBundleId(id: item.id) }
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         }
     }
 }

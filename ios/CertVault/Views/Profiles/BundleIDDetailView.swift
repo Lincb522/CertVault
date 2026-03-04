@@ -31,23 +31,23 @@ struct BundleIDDetailView: View {
             .padding(.bottom, 20)
         }
         .pageBackground()
-        .navigationTitle("标识符详情")
+        .navigationTitle(L10n.BundleID.detail)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             async let caps: () = loadCapabilities()
             async let res: () = loadResources()
             _ = await (caps, res)
         }
-        .alert("确认删除", isPresented: $showDeleteConfirm) {
-            Button("删除", role: .destructive) {
+        .alert(L10n.BundleID.deleteTitle, isPresented: $showDeleteConfirm) {
+            Button(L10n.delete, role: .destructive) {
                 Task {
                     await onDelete()
                     dismiss()
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
-            Text("删除后将同时从 Apple Developer 移除，此操作不可撤销。")
+            Text(L10n.BundleID.deleteMessage)
         }
     }
 
@@ -74,11 +74,11 @@ struct BundleIDDetailView: View {
 
             Divider().overlay(Color.dsBorder)
 
-            detailRow("标识符", value: bundleId.identifier ?? "N/A", monospaced: true, copyable: true)
-            detailRow("名称", value: bundleId.name ?? "N/A")
-            detailRow("平台", value: bundleId.platform ?? "N/A")
+            detailRow(L10n.BundleID.identifier, value: bundleId.identifier ?? L10n.na, monospaced: true, copyable: true)
+            detailRow(NSLocalizedString("common.name", comment: ""), value: bundleId.name ?? L10n.na)
+            detailRow(L10n.Cert.platform, value: Localized.platform(bundleId.platform ?? L10n.na))
             if let date = bundleId.created_at {
-                detailRow("创建时间", value: String(date.prefix(19)))
+                detailRow(L10n.Cert.createdAt, value: String(date.prefix(19)))
             }
         }
         .cardStyle()
@@ -91,11 +91,11 @@ struct BundleIDDetailView: View {
             HStack {
                 HIcon(AppIcon.device)
                     .foregroundStyle(Color.dsAccent)
-                Text("关联设备")
+                Text(L10n.BundleID.relatedDevices)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                Text("\(resources?.devices?.count ?? 0) 个")
+                Text(L10n.count(resources?.devices?.count ?? 0))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -144,7 +144,7 @@ struct BundleIDDetailView: View {
                     }
                 }
             } else {
-                Text("暂无关联设备")
+                Text(L10n.BundleID.noDevices)
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
                     .padding(.vertical, 8)
@@ -160,11 +160,11 @@ struct BundleIDDetailView: View {
             HStack {
                 HIcon(AppIcon.certificate)
                     .foregroundStyle(Color.dsAccentPurple)
-                Text("关联证书")
+                Text(L10n.BundleID.relatedCerts)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                Text("\(resources?.certificates?.count ?? 0) 个")
+                Text(L10n.count(resources?.certificates?.count ?? 0))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -192,11 +192,11 @@ struct BundleIDDetailView: View {
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(Color.dsText)
                                     HStack(spacing: 6) {
-                                        Text(cert.type ?? "")
+                                        Text(Localized.certType(cert.type ?? ""))
                                             .font(.caption)
                                             .foregroundStyle(Color.dsMuted)
                                         if let pwd = cert.password {
-                                            Text("密码: \(pwd)")
+                                            Text("\(L10n.Cert.password): \(pwd)")
                                                 .font(.caption.monospaced())
                                                 .foregroundStyle(Color.dsAccentBlue)
                                         }
@@ -219,7 +219,7 @@ struct BundleIDDetailView: View {
                     }
                 }
             } else {
-                Text("暂无关联证书")
+                Text(L10n.BundleID.noCerts)
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
                     .padding(.vertical, 8)
@@ -235,11 +235,11 @@ struct BundleIDDetailView: View {
             HStack {
                 HIcon(AppIcon.profile)
                     .foregroundStyle(Color.dsAccentOrange)
-                Text("关联描述文件")
+                Text(L10n.BundleID.relatedProfiles)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                Text("\(resources?.profiles?.count ?? 0) 个")
+                Text(L10n.count(resources?.profiles?.count ?? 0))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -263,7 +263,7 @@ struct BundleIDDetailView: View {
                                 Text(profile.displayName)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Color.dsText)
-                                Text(profile.type ?? "")
+                                Text(Localized.profileType(profile.type ?? ""))
                                     .font(.caption)
                                     .foregroundStyle(Color.dsMuted)
                             }
@@ -271,7 +271,7 @@ struct BundleIDDetailView: View {
                             Spacer()
 
                             if profile.has_file == true {
-                                StatusBadge("可下载", color: .dsAccent)
+                                StatusBadge(L10n.Profile.downloadable, color: .dsAccent)
                             }
                         }
                         .padding(.vertical, 10)
@@ -282,7 +282,7 @@ struct BundleIDDetailView: View {
                     }
                 }
             } else {
-                Text("暂无关联描述文件")
+                Text(L10n.BundleID.noProfiles)
                     .font(.subheadline)
                     .foregroundStyle(Color.dsMuted)
                     .padding(.vertical, 8)
@@ -298,13 +298,13 @@ struct BundleIDDetailView: View {
             HStack {
                 HIcon(AppIcon.star)
                     .foregroundStyle(Color.dsAccentOrange)
-                Text("已开启权限")
+                Text(L10n.BundleID.enabledCaps)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
 
                 let enabledCount = capabilities.filter(\.isEnabled).count
-                Text("\(enabledCount) 个")
+                Text(L10n.count(enabledCount))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -317,7 +317,7 @@ struct BundleIDDetailView: View {
             } else {
                 let enabled = capabilities.filter(\.isEnabled)
                 if enabled.isEmpty {
-                    Text("暂无已开启的权限")
+                    Text(L10n.BundleID.noCaps)
                         .font(.subheadline)
                         .foregroundStyle(Color.dsMuted)
                         .padding(.vertical, 8)
@@ -358,7 +358,7 @@ struct BundleIDDetailView: View {
         } label: {
             HStack(spacing: 8) {
                 HIcon(AppIcon.close).font(.body)
-                Text("删除 Bundle ID")
+                Text(L10n.BundleID.deleteBundle)
                     .fontWeight(.semibold)
             }
             .frame(maxWidth: .infinity)
@@ -376,7 +376,7 @@ struct BundleIDDetailView: View {
         HStack {
             Spacer()
             ProgressView().controlSize(.small)
-            Text("加载中...")
+            Text(L10n.loading)
                 .font(.subheadline)
                 .foregroundStyle(Color.dsMuted)
             Spacer()

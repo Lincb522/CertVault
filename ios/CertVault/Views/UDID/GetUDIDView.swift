@@ -18,7 +18,7 @@ struct GetUDIDView: View {
             }
             .padding()
         }
-        .navigationTitle("获取 UDID")
+        .navigationTitle(L10n.UDID.title)
         .onDisappear { vm.stopPolling() }
     }
 
@@ -28,14 +28,14 @@ struct GetUDIDView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(Color.accentGradient)
 
-            Text("获取设备 UDID")
+            Text(L10n.UDID.heading)
                 .font(.title2.bold())
-            Text("生成获取链接，在 iPhone 上访问并安装描述文件即可获取 UDID")
+            Text(L10n.UDID.desc)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            GradientButton("生成获取链接", icon: AppIcon.link) {
+            GradientButton(NSLocalizedString("udid.generate", comment: ""), icon: AppIcon.link) {
                 Task { await vm.createRequest() }
             }
             .padding(.horizontal, 40)
@@ -55,9 +55,9 @@ struct GetUDIDView: View {
     private var enrollView: some View {
         VStack(spacing: 20) {
             if let url = vm.enrollURL {
-                Text("请用 iPhone 扫描二维码")
+                Text(L10n.UDID.scanQR)
                     .font(.headline)
-                Text("或在 Safari 中访问以下链接")
+                Text(L10n.UDID.orVisit)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -83,7 +83,7 @@ struct GetUDIDView: View {
                         UIPasteboard.general.string = url
                     } label: {
                         Label {
-                            Text("复制链接")
+                            Text(L10n.UDID.copyLink)
                         } icon: {
                             HIcon(AppIcon.copy)
                         }
@@ -96,14 +96,14 @@ struct GetUDIDView: View {
                 if vm.isPolling {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text("等待设备安装描述文件...")
+                        Text(L10n.UDID.waiting)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top, 8)
                 }
 
-                Button("重新生成") {
+                Button(L10n.UDID.regenerate) {
                     vm.reset()
                 }
                 .font(.caption)
@@ -119,18 +119,18 @@ struct GetUDIDView: View {
                 .font(.system(size: 56))
                 .foregroundStyle(.green)
 
-            Text("获取成功！")
+            Text(L10n.UDID.success)
                 .font(.title2.bold())
 
             VStack(alignment: .leading, spacing: 12) {
-                UDIDInfoRow(label: "UDID", value: result.udid ?? "N/A", mono: true)
-                UDIDInfoRow(label: "设备型号", value: result.product ?? "N/A")
-                UDIDInfoRow(label: "系统版本", value: result.version ?? "N/A")
+                UDIDInfoRow(label: "UDID", value: result.udid ?? L10n.na, mono: true)
+                UDIDInfoRow(label: NSLocalizedString("udid.model", comment: ""), value: result.product ?? L10n.na)
+                UDIDInfoRow(label: NSLocalizedString("udid.version", comment: ""), value: result.version ?? L10n.na)
                 if let name = result.device_name {
-                    UDIDInfoRow(label: "设备名称", value: name)
+                    UDIDInfoRow(label: NSLocalizedString("udid.deviceName", comment: ""), value: name)
                 }
                 if let serial = result.serial {
-                    UDIDInfoRow(label: "序列号", value: serial, mono: true)
+                    UDIDInfoRow(label: L10n.Cert.serial, value: serial, mono: true)
                 }
             }
             .cardStyle()
@@ -142,7 +142,7 @@ struct GetUDIDView: View {
                 UIPasteboard.general.string = text
             } label: {
                 Label {
-                    Text("复制全部信息")
+                    Text(L10n.UDID.copyAll)
                 } icon: {
                     HIcon(AppIcon.copy)
                 }
@@ -150,7 +150,7 @@ struct GetUDIDView: View {
             }
             .buttonStyle(.borderedProminent)
 
-            Button("重新获取") {
+            Button(L10n.UDID.retry) {
                 vm.reset()
             }
             .font(.subheadline)

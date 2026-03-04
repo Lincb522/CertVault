@@ -14,9 +14,9 @@ struct PushKeyListView: View {
             if vm.pushKeys.isEmpty && !vm.isLoading {
                 EmptyStateView(
                     icon: AppIcon.pushKey,
-                    title: "暂无推送密钥",
-                    message: "导入 APNs .p8 密钥以发送推送通知",
-                    actionTitle: "导入密钥"
+                    title: L10n.Push.keysEmptyTitle,
+                    message: L10n.Push.keysEmptyMessage,
+                    actionTitle: NSLocalizedString("push.keys.importAction", comment: "")
                 ) { showCreate = true }
             } else {
                 ScrollView {
@@ -30,15 +30,15 @@ struct PushKeyListView: View {
                                 Button {
                                     Task { await downloadService.download(endpoint: "/push-keys/\(key.id)/download") }
                                 } label: {
-                                    Label { Text("下载 P8") } icon: { HIcon(AppIcon.download) }
+                                    Label { Text(L10n.Push.keysDownloadP8) } icon: { HIcon(AppIcon.download) }
                                 }
                                 Button { keyToEdit = key } label: {
-                                    Label { Text("编辑") } icon: { HIcon(AppIcon.edit) }
+                                    Label { Text(L10n.edit) } icon: { HIcon(AppIcon.edit) }
                                 }
                                 Button(role: .destructive) {
                                     keyToDelete = key
                                 } label: {
-                                    Label { Text("删除") } icon: { HIcon(AppIcon.delete) }
+                                    Label { Text(L10n.delete) } icon: { HIcon(AppIcon.delete) }
                                 }
                             }
 
@@ -60,7 +60,7 @@ struct PushKeyListView: View {
                 .refreshable { await vm.loadKeys() }
             }
         }
-        .navigationTitle("推送密钥")
+        .navigationTitle(L10n.Push.keysTitle)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showCreate = true } label: {
@@ -85,16 +85,16 @@ struct PushKeyListView: View {
                 ShareSheet(items: [url])
             }
         }
-        .alert("确认删除", isPresented: .init(
+        .alert(L10n.Push.keysDeleteTitle, isPresented: .init(
             get: { keyToDelete != nil },
             set: { if !$0 { keyToDelete = nil } }
         )) {
-            Button("删除", role: .destructive) {
+            Button(L10n.delete, role: .destructive) {
                 if let key = keyToDelete {
                     Task { try? await vm.deleteKey(id: key.id) }
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         }
     }
 }
@@ -166,7 +166,7 @@ private struct CreatePushKeySheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("选择 P8 文件") {
+                Section(L10n.Account.selectP8) {
                     Button { showFilePicker = true } label: {
                         HStack {
                             HIcon(AppIcon.docUpload)
@@ -174,27 +174,27 @@ private struct CreatePushKeySheet: View {
                             if let fname = selectedFileName {
                                 Text(fname).font(.subheadline)
                             } else {
-                                Text("点击选择 .p8 文件").foregroundStyle(.secondary)
+                                Text(L10n.Push.keysSelectP8).foregroundStyle(.secondary)
                             }
                             Spacer()
                         }
                     }
                 }
 
-                Section("密钥信息") {
-                    TextField("名称", text: $name)
+                Section(NSLocalizedString("push.keys.section.info", comment: "")) {
+                    TextField(NSLocalizedString("push.keys.field.name", comment: ""), text: $name)
                     TextField("Key ID", text: $keyId)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                     TextField("Team ID", text: $teamId)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                    TextField("Bundle IDs（逗号分隔，留空支持所有标识符）", text: $bundleIds)
+                    TextField(NSLocalizedString("push.keys.field.bundleIds", comment: ""), text: $bundleIds)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
 
-                Section("P8 内容") {
+                Section(NSLocalizedString("push.keys.section.p8", comment: "")) {
                     TextEditor(text: $p8Content)
                         .font(.system(.caption, design: .monospaced))
                         .frame(minHeight: 120)
@@ -204,14 +204,14 @@ private struct CreatePushKeySheet: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("导入推送密钥")
+            .navigationTitle(L10n.Push.keysImport)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("导入") {
+                    Button(L10n.import) {
                         isLoading = true
                         Task {
                             do {
@@ -279,15 +279,15 @@ private struct EditPushKeySheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("密钥信息") {
-                    TextField("名称", text: $name)
+                Section(NSLocalizedString("push.keys.section.info", comment: "")) {
+                    TextField(NSLocalizedString("push.keys.field.name", comment: ""), text: $name)
                     TextField("Key ID", text: $keyId)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                     TextField("Team ID", text: $teamId)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                    TextField("Bundle IDs（逗号分隔，留空支持所有标识符）", text: $bundleIds)
+                    TextField(NSLocalizedString("push.keys.field.bundleIds", comment: ""), text: $bundleIds)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
@@ -296,14 +296,14 @@ private struct EditPushKeySheet: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("编辑推送密钥")
+            .navigationTitle(L10n.Push.keysEdit)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button(L10n.save) {
                         isLoading = true
                         errorMsg = nil
                         Task {

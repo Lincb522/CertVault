@@ -23,7 +23,7 @@ struct ProfileDetailView: View {
                 contentView(d)
             }
         }
-        .navigationTitle("描述文件详情")
+        .navigationTitle(L10n.Profile.detail)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadDetail() }
         .sheet(isPresented: $downloadService.showShareSheet) {
@@ -31,16 +31,16 @@ struct ProfileDetailView: View {
                 ShareSheet(items: [url])
             }
         }
-        .alert("确认删除", isPresented: $showDeleteConfirm) {
-            Button("删除", role: .destructive) {
+        .alert(L10n.Profile.deleteTitle, isPresented: $showDeleteConfirm) {
+            Button(L10n.delete, role: .destructive) {
                 Task {
                     await onDelete()
                     dismiss()
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
-            Text("删除后将同时从 Apple Developer 移除，此操作不可撤销。")
+            Text(L10n.Profile.deleteMessage)
         }
     }
 
@@ -92,7 +92,7 @@ struct ProfileDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 )
 
-            Text(d.name ?? "未命名")
+            Text(d.name ?? L10n.unnamed)
                 .font(.headline)
                 .foregroundStyle(Color.dsText)
                 .multilineTextAlignment(.center)
@@ -102,10 +102,10 @@ struct ProfileDetailView: View {
                     StatusBadge(profileTypeLabel(type), color: .dsAccentBlue)
                 }
                 if d.has_file == true {
-                    StatusBadge("可下载", color: .dsAccent)
+                    StatusBadge(L10n.Profile.downloadable, color: .dsAccent)
                 }
                 if let exp = d.expires_at, isExpired(exp) {
-                    StatusBadge("已过期", color: .dsAccentPink)
+                    StatusBadge(Localized.status("EXPIRED"), color: .dsAccentPink)
                 }
             }
         }
@@ -119,19 +119,19 @@ struct ProfileDetailView: View {
 
     private func infoCard(_ d: ProfileDetail) -> some View {
         VStack(spacing: 0) {
-            infoRow(label: "名称", value: d.name ?? "-")
+            infoRow(label: NSLocalizedString("common.name", comment: ""), value: d.name ?? "-")
             Divider().padding(.leading, 16)
-            infoRow(label: "类型", value: profileTypeLabel(d.type ?? ""))
+            infoRow(label: L10n.Cert.typeLabel, value: Localized.profileType(d.type ?? ""))
             Divider().padding(.leading, 16)
-            infoRow(label: "证书类型", value: certTypeForProfile(d.type ?? ""))
+            infoRow(label: L10n.Cert.type, value: certTypeForProfile(d.type ?? ""))
             Divider().padding(.leading, 16)
-            infoRow(label: "Bundle ID", value: d.bundle_id ?? "-")
+            infoRow(label: L10n.Profile.bundleId, value: d.bundle_id ?? "-")
             Divider().padding(.leading, 16)
             infoRow(label: "Apple ID", value: d.apple_id ?? "-")
             Divider().padding(.leading, 16)
-            infoRow(label: "过期时间", value: formatDate(d.expires_at))
+            infoRow(label: L10n.Cert.expiresAt, value: formatDate(d.expires_at))
             Divider().padding(.leading, 16)
-            infoRow(label: "创建时间", value: formatDate(d.created_at))
+            infoRow(label: L10n.Cert.createdAt, value: formatDate(d.created_at))
         }
         .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
@@ -144,20 +144,20 @@ struct ProfileDetailView: View {
             HStack {
                 HIcon(AppIcon.bundleID)
                     .foregroundStyle(Color.dsAccentPurple)
-                Text("Bundle ID")
+                Text(L10n.Profile.bundleId)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
             }
 
             VStack(spacing: 0) {
                 if let name = bundle.name {
-                    infoRow(label: "名称", value: name)
+                    infoRow(label: NSLocalizedString("common.name", comment: ""), value: name)
                     Divider().padding(.leading, 16)
                 }
-                infoRow(label: "标识符", value: bundle.identifier ?? "-")
+                infoRow(label: L10n.BundleID.identifier, value: bundle.identifier ?? "-")
                 if let platform = bundle.platform {
                     Divider().padding(.leading, 16)
-                    infoRow(label: "平台", value: platform)
+                    infoRow(label: L10n.Cert.platform, value: Localized.platform(platform))
                 }
             }
         }
@@ -171,11 +171,11 @@ struct ProfileDetailView: View {
             HStack {
                 HIcon(AppIcon.certificate)
                     .foregroundStyle(Color.dsAccentBlue)
-                Text("关联证书")
+                Text(L10n.Profile.relatedCerts)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                Text("\(certs.count) 个")
+                Text(L10n.count(certs.count))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -187,7 +187,7 @@ struct ProfileDetailView: View {
                 ForEach(Array(certs.enumerated()), id: \.element.id) { index, cert in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(cert.name ?? "未命名")
+                            Text(cert.name ?? L10n.unnamed)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Color.dsText)
                             HStack(spacing: 6) {
@@ -220,11 +220,11 @@ struct ProfileDetailView: View {
             HStack {
                 HIcon(AppIcon.device)
                     .foregroundStyle(Color.dsAccent)
-                Text("绑定设备")
+                Text(L10n.Profile.boundDevices)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                Text("\(devices.count) 台")
+                Text(L10n.unitDevice(devices.count))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.dsMuted)
                     .padding(.horizontal, 8)
@@ -238,7 +238,7 @@ struct ProfileDetailView: View {
                     VStack(spacing: 6) {
                         HIcon(AppIcon.device)
                             .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        Text("暂无绑定设备")
+                        Text(L10n.Profile.noDevices)
                             .font(.subheadline)
                             .foregroundStyle(Color.dsMuted)
                     }
@@ -302,7 +302,7 @@ struct ProfileDetailView: View {
                     }
                 } label: {
                     Label {
-                        Text("下载描述文件").fontWeight(.medium)
+                        Text(L10n.Profile.download).fontWeight(.medium)
                     } icon: {
                         HIcon(AppIcon.docDownload)
                     }
@@ -318,7 +318,7 @@ struct ProfileDetailView: View {
                 showDeleteConfirm = true
             } label: {
                 Label {
-                    Text("删除描述文件").fontWeight(.medium)
+                    Text(L10n.Profile.deleteProfile).fontWeight(.medium)
                 } icon: {
                     HIcon(AppIcon.delete)
                 }
@@ -352,53 +352,29 @@ struct ProfileDetailView: View {
     }
 
     private func profileTypeLabel(_ type: String) -> String {
-        let map: [String: String] = [
-            "IOS_APP_DEVELOPMENT": "iOS 开发",
-            "IOS_APP_STORE": "App Store",
-            "IOS_APP_ADHOC": "Ad Hoc",
-            "IOS_APP_INHOUSE": "企业内部",
-            "MAC_APP_DEVELOPMENT": "macOS 开发",
-            "MAC_APP_STORE": "Mac App Store",
-            "MAC_APP_DIRECT": "macOS 直接分发",
-            "TVOS_APP_DEVELOPMENT": "tvOS 开发",
-            "TVOS_APP_STORE": "tvOS App Store",
-            "TVOS_APP_ADHOC": "tvOS Ad Hoc",
-            "TVOS_APP_INHOUSE": "tvOS 企业",
-        ]
-        return map[type] ?? type
+        Localized.profileType(type)
     }
 
     private func certTypeForProfile(_ profileType: String) -> String {
-        let map: [String: String] = [
-            "IOS_APP_DEVELOPMENT": "iOS 开发证书",
-            "IOS_APP_STORE": "iOS 发布证书",
-            "IOS_APP_ADHOC": "iOS 发布证书",
-            "IOS_APP_INHOUSE": "iOS 发布证书",
-            "MAC_APP_DEVELOPMENT": "macOS 开发证书",
-            "MAC_APP_STORE": "macOS 发布证书",
-            "MAC_APP_DIRECT": "macOS 发布证书",
-            "TVOS_APP_DEVELOPMENT": "iOS 开发证书",
-            "TVOS_APP_STORE": "iOS 发布证书",
-            "TVOS_APP_ADHOC": "iOS 发布证书",
-            "TVOS_APP_INHOUSE": "iOS 发布证书",
+        let certTypeMap: [String: String] = [
+            "IOS_APP_DEVELOPMENT": "IOS_DEVELOPMENT",
+            "IOS_APP_STORE": "IOS_DISTRIBUTION",
+            "IOS_APP_ADHOC": "IOS_DISTRIBUTION",
+            "IOS_APP_INHOUSE": "IOS_DISTRIBUTION",
+            "MAC_APP_DEVELOPMENT": "MAC_APP_DEVELOPMENT",
+            "MAC_APP_STORE": "MAC_APP_DISTRIBUTION",
+            "MAC_APP_DIRECT": "MAC_APP_DISTRIBUTION",
+            "TVOS_APP_DEVELOPMENT": "IOS_DEVELOPMENT",
+            "TVOS_APP_STORE": "IOS_DISTRIBUTION",
+            "TVOS_APP_ADHOC": "IOS_DISTRIBUTION",
+            "TVOS_APP_INHOUSE": "IOS_DISTRIBUTION",
         ]
-        return map[profileType] ?? "-"
+        guard let certType = certTypeMap[profileType] else { return "-" }
+        return Localized.certType(certType)
     }
 
     private func certTypeLabel(_ type: String) -> String {
-        let map: [String: String] = [
-            "IOS_DEVELOPMENT": "开发",
-            "IOS_DISTRIBUTION": "发布",
-            "DEVELOPMENT": "开发",
-            "DISTRIBUTION": "发布",
-            "MAC_APP_DEVELOPMENT": "macOS 开发",
-            "MAC_APP_DISTRIBUTION": "macOS 发布",
-            "MAC_INSTALLER_DISTRIBUTION": "macOS 安装包",
-            "DEVELOPER_ID_APPLICATION": "Developer ID",
-            "DEVELOPER_ID_INSTALLER": "Developer ID 安装器",
-            "DEVELOPER_ID_KEXT": "Developer ID 内核扩展",
-        ]
-        return map[type] ?? type
+        Localized.certType(type)
     }
 
     private func certTypeColor(_ type: String) -> Color {

@@ -13,8 +13,8 @@ struct UserManagementView: View {
             if vm.users.isEmpty && !vm.isLoading {
                 EmptyStateView(
                     icon: AppIcon.group,
-                    title: "暂无用户",
-                    message: "还没有注册用户"
+                    title: L10n.UserMgmt.emptyTitle,
+                    message: L10n.UserMgmt.emptyMessage
                 )
             } else {
                 ScrollView {
@@ -42,46 +42,46 @@ struct UserManagementView: View {
                 .refreshable { await vm.load() }
             }
         }
-        .navigationTitle("用户管理")
+        .navigationTitle(L10n.UserMgmt.title)
         .overlay {
             if vm.isLoading && vm.users.isEmpty {
                 LoadingView()
             }
         }
         .task { await vm.load() }
-        .alert("确认删除", isPresented: .init(
+        .alert(L10n.UserMgmt.deleteTitle, isPresented: .init(
             get: { userToDelete != nil },
             set: { if !$0 { userToDelete = nil } }
         )) {
-            Button("删除", role: .destructive) {
+            Button(L10n.delete, role: .destructive) {
                 if let user = userToDelete {
                     Task {
                         try? await vm.deleteUser(id: user.id)
                     }
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
             if let user = userToDelete {
-                Text("确定删除用户「\(user.username)」？此操作不可恢复。")
+                Text(L10n.UserMgmt.deleteMessage(user.username))
             }
         }
         .sheet(isPresented: $showResetSheet) {
             resetPasswordSheet
         }
-        .alert("操作结果", isPresented: .init(
+        .alert(L10n.UserMgmt.resultTitle, isPresented: .init(
             get: { vm.successMessage != nil },
             set: { if !$0 { vm.successMessage = nil } }
         )) {
-            Button("好") {}
+            Button(L10n.ok) {}
         } message: {
             Text(vm.successMessage ?? "")
         }
-        .alert("错误", isPresented: .init(
+        .alert(L10n.error, isPresented: .init(
             get: { vm.errorMessage != nil },
             set: { if !$0 { vm.errorMessage = nil } }
         )) {
-            Button("好") {}
+            Button(L10n.ok) {}
         } message: {
             Text(vm.errorMessage ?? "")
         }
@@ -106,7 +106,7 @@ struct UserManagementView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.dsText)
                     StatusBadge(
-                        user.role == "superadmin" ? "超级管理员" : "用户",
+                        user.role == "superadmin" ? L10n.UserMgmt.roleSuper : L10n.UserMgmt.roleUser,
                         color: user.role == "superadmin" ? .dsAccentPurple : .dsAccentBlue
                     )
                 }
@@ -134,7 +134,7 @@ struct UserManagementView: View {
                 }
             } label: {
                 Label(
-                    user.role == "user" ? "设为超级管理员" : "设为普通用户",
+                    user.role == "user" ? NSLocalizedString("user.role.setSuper", comment: "") : NSLocalizedString("user.role.setUser", comment: ""),
                     systemImage: user.role == "user" ? "crown" : "person"
                 )
             }
@@ -144,13 +144,13 @@ struct UserManagementView: View {
                 newPassword = ""
                 showResetSheet = true
             } label: {
-                Label("重置密码", systemImage: "key")
+                Label(L10n.UserMgmt.resetPassword, systemImage: "key")
             }
 
             Button(role: .destructive) {
                 userToDelete = user
             } label: {
-                Label("删除用户", systemImage: "trash")
+                Label(L10n.UserMgmt.deleteUser, systemImage: "trash")
             }
         }
     }
@@ -161,24 +161,24 @@ struct UserManagementView: View {
                 if let user = userToResetPwd {
                     Section {
                         HStack {
-                            Text("用户").foregroundStyle(Color.dsMuted)
+                            Text(NSLocalizedString("user.field.user", comment: "")).foregroundStyle(Color.dsMuted)
                             Spacer()
                             Text(user.username).foregroundStyle(Color.dsText)
                         }
                     }
                 }
-                Section("新密码") {
-                    SecureField("输入新密码（至少 6 位）", text: $newPassword)
+                Section(NSLocalizedString("user.newPassword", comment: "")) {
+                    SecureField(NSLocalizedString("user.newPassword.hint", comment: ""), text: $newPassword)
                 }
             }
-            .navigationTitle("重置密码")
+            .navigationTitle(L10n.UserMgmt.resetPasswordTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { showResetSheet = false }
+                    Button(L10n.cancel) { showResetSheet = false }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("确认") {
+                    Button(L10n.confirm) {
                         if let user = userToResetPwd {
                             Task {
                                 try? await vm.resetPassword(id: user.id, newPassword: newPassword)
@@ -220,18 +220,18 @@ final class UserManagementViewModel: ObservableObject {
 
     func updateRole(id: String, role: String) async throws {
         try await service.updateUserRole(id: id, role: role)
-        successMessage = "角色已更新"
+        successMessage = NSLocalizedString("user.roleUpdated", comment: "")
         await load()
     }
 
     func deleteUser(id: String) async throws {
         try await service.deleteUser(id: id)
         users.removeAll { $0.id == id }
-        successMessage = "用户已删除"
+        successMessage = NSLocalizedString("user.deleted", comment: "")
     }
 
     func resetPassword(id: String, newPassword: String) async throws {
         try await service.resetUserPassword(id: id, newPassword: newPassword)
-        successMessage = "密码已重置"
+        successMessage = NSLocalizedString("user.passwordReset", comment: "")
     }
 }

@@ -21,15 +21,15 @@ struct DeviceListView: View {
             if !vm.isLoading && vm.accounts.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.account,
-                    title: "暂无开发者账号",
-                    message: "请先在「账号」页面添加 Apple Developer API Key"
+                    title: L10n.Device.noAccountTitle,
+                    message: L10n.Device.noAccountMessage
                 )
             } else if vm.devices.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.device,
-                    title: "暂无设备",
-                    message: "注册测试设备开始使用",
-                    actionTitle: "添加设备"
+                    title: L10n.Device.emptyTitle,
+                    message: L10n.Device.emptyMessage,
+                    actionTitle: L10n.Device.emptyAction
                 ) { showRegister = true }
             } else {
                 ScrollView {
@@ -65,23 +65,23 @@ struct DeviceListView: View {
                     .padding(.bottom, 20)
                 }
                 .pageBackground()
-                .searchable(text: $searchText, prompt: "搜索设备名称或 UDID")
+                .searchable(text: $searchText, prompt: L10n.Device.search)
                 .refreshable { await vm.loadDevices() }
             }
         }
-        .navigationTitle("设备管理")
+        .navigationTitle(L10n.Device.title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button { showRegister = true } label: {
-                        Label { Text("注册设备") } icon: { HIcon(AppIcon.addSquare) }
+                        Label { Text(L10n.Device.register) } icon: { HIcon(AppIcon.addSquare) }
                     }
                     Button { showBatchImport = true } label: {
-                        Label { Text("批量导入") } icon: { HIcon(AppIcon.copy) }
+                        Label { Text(L10n.Device.batchImport) } icon: { HIcon(AppIcon.copy) }
                     }
                     Divider()
                     Button { showAutoBind = true } label: {
-                        Label { Text("一键绑定") } icon: { HIcon(AppIcon.link) }
+                        Label { Text(L10n.Device.autoBind) } icon: { HIcon(AppIcon.link) }
                     }
                 } label: {
                     HIcon(AppIcon.addCircle)
@@ -110,7 +110,7 @@ struct DeviceListView: View {
 
     private var accountPicker: some View {
         HStack {
-            Text("账号")
+            Text(L10n.account)
                 .font(.subheadline)
                 .foregroundStyle(Color.dsMuted)
             Spacer()
@@ -138,18 +138,22 @@ struct DeviceListView: View {
 private struct DeviceRow: View {
     let device: Device
 
+    private var tintColor: Color {
+        device.isEnabled ? .dsAccent : .dsAccentPink
+    }
+
     var body: some View {
         HStack(spacing: 14) {
             HIcon(iconForDevice)
                 .font(.body)
-                .foregroundStyle(Color.dsAccent)
+                .foregroundStyle(tintColor)
                 .frame(width: 40, height: 40)
-                .background(Color.dsAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                .background(tintColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(device.displayName)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.dsText)
+                    .foregroundStyle(device.isEnabled ? Color.dsText : Color.dsAccentPink)
                 Text(device.udid ?? "N/A")
                     .font(.caption.monospaced())
                     .foregroundStyle(Color.dsMuted)
@@ -197,8 +201,8 @@ struct RegisterDeviceSheet: View {
         NavigationStack {
             Form {
                 if vm.accounts.count > 1 {
-                    Section("账号") {
-                        Picker("选择账号", selection: $vm.selectedAccountId) {
+                    Section(L10n.account) {
+                        Picker(L10n.select, selection: $vm.selectedAccountId) {
                             ForEach(vm.accounts) { acc in
                                 Text(acc.displayName).tag(acc.id)
                             }
@@ -206,12 +210,12 @@ struct RegisterDeviceSheet: View {
                     }
                 }
 
-                Section("设备信息") {
-                    TextField("设备名称", text: $name)
-                    TextField("UDID", text: $udid)
+                Section(NSLocalizedString("device.form.name", comment: "")) {
+                    TextField(L10n.Device.formName, text: $name)
+                    TextField(L10n.Device.formUdid, text: $udid)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    Picker("平台", selection: $platform) {
+                    Picker(L10n.Device.formPlatform, selection: $platform) {
                         ForEach(platforms, id: \.self) { Text($0) }
                     }
                 }
@@ -220,14 +224,14 @@ struct RegisterDeviceSheet: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("注册设备")
+            .navigationTitle(L10n.Device.register)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("注册") {
+                    Button(L10n.Device.register) {
                         isLoading = true
                         errorMsg = nil
                         Task {

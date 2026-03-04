@@ -618,6 +618,18 @@ onMounted(fetchDevices)
   display: flex;
   gap: 12px;
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .result-actions {
+    flex-direction: column;
+  }
+
+  .result-password {
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
 }
 
 .device-profile-item {

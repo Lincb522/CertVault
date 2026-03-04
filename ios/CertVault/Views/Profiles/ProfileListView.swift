@@ -12,22 +12,22 @@ struct ProfileListView: View {
             if !vm.isLoading && vm.accounts.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.account,
-                    title: "暂无开发者账号",
-                    message: "请先在「账号」页面添加 Apple Developer API Key"
+                    title: L10n.Profile.noAccountTitle,
+                    message: L10n.Profile.noAccountMessage
                 )
             } else if vm.profiles.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
                 EmptyStateView(
                     icon: AppIcon.profile,
-                    title: "暂无描述文件",
-                    message: "创建描述文件以进行签名分发",
-                    actionTitle: "创建描述文件"
+                    title: L10n.Profile.emptyTitle,
+                    message: L10n.Profile.emptyMessage,
+                    actionTitle: L10n.Profile.create
                 ) { showCreate = true }
             } else {
                 ScrollView {
                     VStack(spacing: 12) {
                         if vm.accounts.count > 1 {
                             HStack {
-                                Text("账号")
+                                Text(L10n.account)
                                     .font(.subheadline)
                                     .foregroundStyle(Color.dsMuted)
                                 Spacer()
@@ -66,12 +66,12 @@ struct ProfileListView: View {
                                     Button {
                                         Task { await downloadService.download(endpoint: "/profiles/\(profile.id)/download") }
                                     } label: {
-                                        Label { Text("下载") } icon: { HIcon(AppIcon.download) }
+                                        Label { Text(L10n.download) } icon: { HIcon(AppIcon.download) }
                                     }
                                     Button(role: .destructive) {
                                         profileToDelete = profile
                                     } label: {
-                                        Label { Text("删除") } icon: { HIcon(AppIcon.delete) }
+                                        Label { Text(L10n.delete) } icon: { HIcon(AppIcon.delete) }
                                     }
                                 }
 
@@ -95,7 +95,7 @@ struct ProfileListView: View {
                 .refreshable { await vm.loadAll() }
             }
         }
-        .navigationTitle("描述文件")
+        .navigationTitle(L10n.Profile.title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showCreate = true } label: {
@@ -117,16 +117,16 @@ struct ProfileListView: View {
                 ShareSheet(items: [url])
             }
         }
-        .alert("确认删除", isPresented: .init(
+        .alert(L10n.Profile.deleteTitle, isPresented: .init(
             get: { profileToDelete != nil },
             set: { if !$0 { profileToDelete = nil } }
         )) {
-            Button("删除", role: .destructive) {
+            Button(L10n.delete, role: .destructive) {
                 if let p = profileToDelete {
                     Task { try? await vm.deleteProfile(id: p.id) }
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         }
     }
 }
@@ -149,11 +149,11 @@ private struct ProfileRow: View {
                     .foregroundStyle(Color.dsText)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(profile.type ?? "")
+                    Text(Localized.profileType(profile.type ?? ""))
                         .font(.caption)
                         .foregroundStyle(Color.dsMuted)
                     if profile.has_file == true {
-                        StatusBadge("可下载", color: .dsAccent)
+                        StatusBadge(L10n.Profile.downloadable, color: .dsAccent)
                     }
                 }
             }

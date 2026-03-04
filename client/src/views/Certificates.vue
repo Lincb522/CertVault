@@ -110,7 +110,7 @@
             </template>
 
             <el-row :gutter="16">
-              <el-col :span="8">
+              <el-col :xs="24" :sm="8">
                 <h4 class="rel-section-title">Bundle ID</h4>
                 <div v-if="profile.bundle" class="rel-item">
                   <div class="rel-name">{{ profile.bundle.name || '-' }}</div>
@@ -119,7 +119,7 @@
                 <span v-else style="color:#909399">-</span>
               </el-col>
 
-              <el-col :span="8">
+              <el-col :xs="24" :sm="8">
                 <h4 class="rel-section-title">关联证书 ({{ profile.certificates.length }})</h4>
                 <div v-for="cert in profile.certificates" :key="cert.id" class="rel-item">
                   <div class="rel-name">{{ cert.name || cert.id }}</div>
@@ -132,7 +132,7 @@
                 </div>
               </el-col>
 
-              <el-col :span="8">
+              <el-col :xs="24" :sm="8">
                 <h4 class="rel-section-title">关联设备 ({{ profile.device_count }})</h4>
                 <div v-if="profile.devices.length === 0" style="color:#909399;font-size:13px">
                   无设备（App Store / Enterprise 类型）
@@ -161,7 +161,7 @@
         <div v-if="pushGuide" class="push-guide">
           <!-- 两种方式对比 -->
           <el-row :gutter="20" style="margin-bottom: 24px">
-            <el-col :span="12" v-for="method in pushGuide.methods" :key="method.id">
+            <el-col :xs="24" :sm="12" v-for="method in pushGuide.methods" :key="method.id">
               <div class="method-card" :class="{ recommended: method.id === 'p8_key' }">
                 <div class="method-header">
                   <h3>{{ method.name }}</h3>

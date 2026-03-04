@@ -51,7 +51,7 @@ final class ProfileViewModel: ObservableObject {
         errorMessage = nil
 
         if let cachedProfiles = try? db.fetchProfiles(accountId: selectedAccountId), !cachedProfiles.isEmpty {
-            profiles = cachedProfiles
+            profiles = Self.deduplicateProfiles(cachedProfiles)
         }
         if let cachedBundles = try? db.fetchBundleIds(accountId: selectedAccountId), !cachedBundles.isEmpty {
             bundleIds = cachedBundles
@@ -64,7 +64,7 @@ final class ProfileViewModel: ObservableObject {
             let freshProfiles = try await p
             profileTypes = try await t
             let freshBundles = try await b
-            profiles = freshProfiles
+            profiles = Self.deduplicateProfiles(freshProfiles)
             bundleIds = freshBundles
             try? db.saveProfiles(freshProfiles, accountId: selectedAccountId)
             try? db.saveBundleIds(freshBundles, accountId: selectedAccountId)
@@ -85,7 +85,7 @@ final class ProfileViewModel: ObservableObject {
         AppLogger.data.info("📄 Loading profile deps (certs + devices)...")
 
         if let cachedCerts = try? db.fetchCertificates(accountId: selectedAccountId), !cachedCerts.isEmpty {
-            certificates = cachedCerts
+            certificates = Self.deduplicateCerts(cachedCerts)
         }
         if let cachedDevices = try? db.fetchDevices(accountId: selectedAccountId), !cachedDevices.isEmpty {
             devices = cachedDevices
@@ -96,7 +96,7 @@ final class ProfileViewModel: ObservableObject {
             async let d = deviceService.list(accountId: selectedAccountId)
             let freshCerts = try await c
             let freshDevices = try await d
-            certificates = freshCerts
+            certificates = Self.deduplicateCerts(freshCerts)
             devices = freshDevices
             try? db.saveCertificates(freshCerts, accountId: selectedAccountId)
             try? db.saveDevices(freshDevices, accountId: selectedAccountId)
@@ -163,5 +163,41 @@ final class ProfileViewModel: ObservableObject {
         try await service.deleteBundleId(id: id)
         bundleIds.removeAll { $0.id == id }
         try? db.deleteBundleId(id: id)
+    }
+
+    private static func deduplicateProfiles(_ items: [Profile]) -> [Profile] {
+        var seen: [String: Int] = [:]
+        var result: [Profile] = []
+        for item in items {
+            let key = item.apple_id ?? item.id
+            if let idx = seen[key] {
+                let existing = result[idx]
+                if existing.profile_path == nil && item.profile_path != nil {
+                    result[idx] = item
+                }
+            } else {
+                seen[key] = result.count
+                result.append(item)
+            }
+        }
+        return result
+    }
+
+    private static func deduplicateCerts(_ certs: [Certificate]) -> [Certificate] {
+        var seen: [String: Int] = [:]
+        var result: [Certificate] = []
+        for cert in certs {
+            let key = cert.apple_id ?? cert.id
+            if let idx = seen[key] {
+                let existing = result[idx]
+                if existing.p12_path == nil && cert.p12_path != nil {
+                    result[idx] = cert
+                }
+            } else {
+                seen[key] = result.count
+                result.append(cert)
+            }
+        }
+        return result
     }
 }

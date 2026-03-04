@@ -178,28 +178,33 @@ router.get('/', async (req, res, next) => {
 
       const api = new AppleApiService(account);
       let remoteCerts = [];
+      let apiFetchOk = false;
       try {
         const result = await api.listCertificates();
         remoteCerts = result.data || [];
+        apiFetchOk = true;
+        console.log(`[Cert Sync] Apple API returned ${remoteCerts.length} certificates for account ${account_id}`);
       } catch (e) {
-        // API failure - still return local data
+        console.log(`[Cert Sync] Apple API failed for account ${account_id}: ${e.message}`);
       }
 
-      if (remoteCerts.length > 0) {
-        const upsertCert = db.prepare(`INSERT INTO certificates (id, user_id, account_id, apple_id, type, name, cert_content, expires_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
-          name=excluded.name, cert_content=COALESCE(excluded.cert_content, certificates.cert_content), expires_at=excluded.expires_at`);
-        const localIdsRows = await db.prepare('SELECT id FROM certificates WHERE account_id = ?').all(account_id);
-        const localIds = new Set(localIdsRows.map(c => c.id));
-        const localAppleIdsRows = await db.prepare('SELECT apple_id FROM certificates WHERE account_id = ? AND apple_id IS NOT NULL').all(account_id);
-        const localAppleIds = new Set(localAppleIdsRows.map(c => c.apple_id));
+      if (apiFetchOk) {
+        const remoteAppleIds = new Set(remoteCerts.map(c => c.id));
+        const localCertsRows = await db.prepare('SELECT id, apple_id, p12_path FROM certificates WHERE account_id = ?').all(account_id);
+        const localIds = new Set(localCertsRows.map(c => c.id));
+        const localAppleIds = new Set(localCertsRows.filter(c => c.apple_id).map(c => c.apple_id));
 
         const syncRemote = db.transaction(async (txDb) => {
           const txUpsert = txDb.prepare(`INSERT INTO certificates (id, user_id, account_id, apple_id, type, name, cert_content, expires_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
             name=excluded.name, cert_content=COALESCE(excluded.cert_content, certificates.cert_content), expires_at=excluded.expires_at`);
           for (const c of remoteCerts) {
-            if (!localIds.has(c.id) && !localAppleIds.has(c.id)) {
+            if (localAppleIds.has(c.id)) {
+              await txDb.prepare(
+                'UPDATE certificates SET name = ?, cert_content = COALESCE(?, cert_content), expires_at = ? WHERE apple_id = ? AND account_id = ?'
+              ).run(c.attributes.name || c.attributes.certificateType, c.attributes.certificateContent || null,
+                c.attributes.expirationDate, c.id, account_id);
+            } else if (!localIds.has(c.id)) {
               await txUpsert.run(c.id, req.user.id, account_id, c.id, c.attributes.certificateType,
                 c.attributes.name || c.attributes.certificateType,
                 c.attributes.certificateContent || null, c.attributes.expirationDate);
@@ -207,19 +212,59 @@ router.get('/', async (req, res, next) => {
           }
         });
         await syncRemote();
+
+        // Apple 端已不存在的证书，清理本地记录（保留有 P12 文件的）
+        const staleCerts = localCertsRows.filter(c => c.apple_id && !c.p12_path && !remoteAppleIds.has(c.apple_id));
+        for (const stale of staleCerts) {
+          await db.prepare('DELETE FROM certificates WHERE id = ?').run(stale.id);
+        }
+        if (staleCerts.length > 0) {
+          console.log(`[Cert Sync] Cleaned ${staleCerts.length} stale certificates not found in Apple`);
+        }
       }
 
       const allCerts = await db.prepare('SELECT * FROM certificates WHERE account_id = ? ORDER BY created_at DESC').all(account_id);
+      const seen = new Map();
+      const dedupedCerts = [];
+      for (const c of allCerts) {
+        const key = c.apple_id || c.id;
+        if (seen.has(key)) {
+          const prev = seen.get(key);
+          if (!prev.p12_path && c.p12_path) {
+            dedupedCerts[dedupedCerts.indexOf(prev)] = c;
+            seen.set(key, c);
+          }
+          continue;
+        }
+        seen.set(key, c);
+        dedupedCerts.push(c);
+      }
+      console.log(`[Cert Sync] Returning ${dedupedCerts.length} certificates (${allCerts.length} before dedup)`);
       res.json({
         success: true,
-        data: allCerts,
+        data: dedupedCerts,
       });
     } else {
-      let certs;
+      let rawCerts;
       if (req.user.role === 'superadmin') {
-        certs = await db.prepare('SELECT * FROM certificates ORDER BY created_at DESC').all();
+        rawCerts = await db.prepare('SELECT * FROM certificates ORDER BY created_at DESC').all();
       } else {
-        certs = await db.prepare('SELECT * FROM certificates WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+        rawCerts = await db.prepare('SELECT * FROM certificates WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+      }
+      const seen2 = new Map();
+      const certs = [];
+      for (const c of rawCerts) {
+        const key = c.apple_id || c.id;
+        if (seen2.has(key)) {
+          const prev = seen2.get(key);
+          if (!prev.p12_path && c.p12_path) {
+            certs[certs.indexOf(prev)] = c;
+            seen2.set(key, c);
+          }
+          continue;
+        }
+        seen2.set(key, c);
+        certs.push(c);
       }
       res.json({ success: true, data: certs });
     }
@@ -537,6 +582,9 @@ router.delete('/:id', async (req, res, next) => {
       } catch (e) {
         // may fail if already revoked
       }
+      await db.prepare(
+        'INSERT INTO deleted_apple_certs (apple_id, account_id) VALUES (?, ?) ON CONFLICT DO NOTHING'
+      ).run(cert.apple_id, cert.account_id);
     }
 
     if (cert.p12_path) {

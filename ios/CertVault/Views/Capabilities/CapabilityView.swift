@@ -16,7 +16,7 @@ struct CapabilityView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("权限管理")
+        .navigationTitle(L10n.Capability.title)
         .overlay {
             if vm.isLoading {
                 LoadingView()
@@ -26,19 +26,19 @@ struct CapabilityView: View {
             await vm.loadAccounts()
             await vm.loadAvailable()
         }
-        .alert("确认关闭全部", isPresented: $showDisableAllConfirm) {
-            Button("关闭全部", role: .destructive) {
+        .alert(L10n.Capability.disableAllTitle, isPresented: $showDisableAllConfirm) {
+            Button(L10n.Capability.disableAll, role: .destructive) {
                 Task { await vm.disableAll() }
             }
-            Button("取消", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
-            Text("将关闭该 Bundle ID 的所有已开启权限")
+            Text(L10n.Capability.disableAllMessage)
         }
-        .alert("操作失败", isPresented: .init(
+        .alert(L10n.Capability.failedTitle, isPresented: .init(
             get: { vm.errorMessage != nil },
             set: { if !$0 { vm.errorMessage = nil } }
         )) {
-            Button("确定", role: .cancel) {}
+            Button(L10n.ok, role: .cancel) {}
         } message: {
             Text(vm.errorMessage ?? "")
         }
@@ -47,7 +47,7 @@ struct CapabilityView: View {
     private var pickerSection: some View {
         Section {
             if vm.accounts.count > 1 {
-                Picker("选择账号", selection: $vm.selectedAccountId) {
+                Picker(L10n.account, selection: $vm.selectedAccountId) {
                     ForEach(vm.accounts) { acc in
                         Text(acc.displayName).tag(acc.id)
                     }
@@ -57,8 +57,8 @@ struct CapabilityView: View {
                 }
             }
 
-            Picker("选择 Bundle ID", selection: $vm.selectedBundleId) {
-                Text("请选择").tag("")
+            Picker(L10n.Profile.bundleId, selection: $vm.selectedBundleId) {
+                Text(L10n.select).tag("")
                 ForEach(vm.bundleIds) { bid in
                     Text(bid.identifier ?? bid.displayName).tag(bid.id)
                 }
@@ -72,7 +72,7 @@ struct CapabilityView: View {
     private var enabledCountSection: some View {
         Section {
             HStack {
-                Text("已开启权限")
+                Text(L10n.Capability.enabled)
                     .font(.subheadline)
                 Spacer()
                 let count = vm.enabledCapabilities.filter(\.isEnabled).count
@@ -85,7 +85,7 @@ struct CapabilityView: View {
     }
 
     private var presetsSection: some View {
-        Section("预设方案") {
+        Section(NSLocalizedString("capability.presets", comment: "")) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(Array(vm.presets.keys.sorted()), id: \.self) { name in
@@ -113,7 +113,7 @@ struct CapabilityView: View {
                             HIcon(AppIcon.close)
                                 .font(.title3)
                                 .foregroundStyle(.red)
-                            Text("全部关闭")
+                            Text(L10n.Capability.disableAll)
                                 .font(.caption2)
                                 .foregroundStyle(.red)
                         }
@@ -162,12 +162,12 @@ struct CapabilityView: View {
     private var groupedCategories: [(String, [AvailableCapability])] {
         let categoryOrder = ["common", "payment", "media", "device", "network", "security"]
         let categoryLabels: [String: String] = [
-            "common": "常用权限",
-            "payment": "支付",
-            "media": "媒体与内容",
-            "device": "设备与硬件",
-            "network": "网络",
-            "security": "安全与隐私",
+            "common": NSLocalizedString("capability.cat.common", comment: ""),
+            "payment": NSLocalizedString("capability.cat.payment", comment: ""),
+            "media": NSLocalizedString("capability.cat.media", comment: ""),
+            "device": NSLocalizedString("capability.cat.device", comment: ""),
+            "network": NSLocalizedString("capability.cat.network", comment: ""),
+            "security": NSLocalizedString("capability.cat.security", comment: ""),
         ]
 
         var grouped: [String: [AvailableCapability]] = [:]
@@ -200,10 +200,10 @@ struct CapabilityView: View {
 
     private func labelForPreset(_ name: String) -> String {
         switch name.lowercased() {
-        case "basic": return "基础"
-        case "social": return "社交"
-        case "game": return "游戏"
-        case "enterprise": return "企业"
+        case "basic": return NSLocalizedString("capability.preset.basic", comment: "")
+        case "social": return NSLocalizedString("capability.preset.social", comment: "")
+        case "game": return NSLocalizedString("capability.preset.game", comment: "")
+        case "enterprise": return NSLocalizedString("capability.preset.enterprise", comment: "")
         default: return name
         }
     }

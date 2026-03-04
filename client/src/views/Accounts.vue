@@ -232,7 +232,7 @@
 
         <!-- 统计卡片 -->
         <el-row :gutter="12" style="margin-bottom: 20px">
-          <el-col :span="6">
+          <el-col :xs="12" :sm="6">
             <div class="detail-stat">
               <div class="detail-stat-num">{{ detailData.stats.certificates }}</div>
               <div class="detail-stat-label">证书
@@ -242,7 +242,7 @@
               </div>
             </div>
           </el-col>
-          <el-col :span="6">
+          <el-col :xs="12" :sm="6">
             <div class="detail-stat">
               <div class="detail-stat-num">{{ detailData.stats.devices }}</div>
               <div class="detail-stat-label">设备
@@ -250,13 +250,13 @@
               </div>
             </div>
           </el-col>
-          <el-col :span="6">
+          <el-col :xs="12" :sm="6">
             <div class="detail-stat">
               <div class="detail-stat-num">{{ detailData.stats.bundle_ids }}</div>
               <div class="detail-stat-label">Bundle ID</div>
             </div>
           </el-col>
-          <el-col :span="6">
+          <el-col :xs="12" :sm="6">
             <div class="detail-stat">
               <div class="detail-stat-num">{{ detailData.stats.profiles }}</div>
               <div class="detail-stat-label">描述文件

@@ -19,15 +19,16 @@ struct StatusBadge: View {
     }
 
     static func forStatus(_ status: String) -> StatusBadge {
+        let label = Localized.status(status)
         switch status.uppercased() {
         case "ENABLED", "ACTIVE", "VALID":
-            return StatusBadge(status, color: .dsAccent)
+            return StatusBadge(label, color: .dsAccent)
         case "DISABLED", "REVOKED", "EXPIRED":
-            return StatusBadge(status, color: .dsAccentPink)
+            return StatusBadge(label, color: .dsAccentPink)
         case "PROCESSING", "PENDING":
-            return StatusBadge(status, color: .dsAccentOrange)
+            return StatusBadge(label, color: .dsAccentOrange)
         default:
-            return StatusBadge(status, color: .dsMuted)
+            return StatusBadge(label, color: .dsMuted)
         }
     }
 }

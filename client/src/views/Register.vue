@@ -201,6 +201,7 @@ onUnmounted(() => {
 
 .auth-card {
   width: 420px;
+  max-width: calc(100vw - 32px);
   background: rgba(255,255,255,0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -209,6 +210,17 @@ onUnmounted(() => {
   box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.1);
   position: relative;
   z-index: 1;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 20px;
+    border-radius: 16px;
+  }
+  .code-btn {
+    min-width: 90px;
+    font-size: 13px;
+  }
 }
 
 .auth-header {

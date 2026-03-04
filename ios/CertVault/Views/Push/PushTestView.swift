@@ -21,25 +21,25 @@ struct PushTestView: View {
 
     var body: some View {
         Form {
-            Section("认证方式") {
-                Picker("认证", selection: $authMode) {
-                    Text("推送密钥").tag(0)
-                    Text("API 账号").tag(1)
-                    Text("手动填写").tag(2)
+            Section(NSLocalizedString("push.test.section.auth", comment: "")) {
+                Picker("", selection: $authMode) {
+                    Text(L10n.Push.testKeyTab).tag(0)
+                    Text(L10n.Push.testAccountTab).tag(1)
+                    Text(L10n.Push.testManualTab).tag(2)
                 }
                 .pickerStyle(.segmented)
 
                 switch authMode {
                 case 0:
-                    Picker("选择推送密钥", selection: $selectedPushKeyId) {
-                        Text("请选择").tag("")
+                    Picker(L10n.Push.testKeyTab, selection: $selectedPushKeyId) {
+                        Text(L10n.select).tag("")
                         ForEach(vm.pushKeys) { key in
                             Text(key.displayName).tag(key.id)
                         }
                     }
                 case 1:
-                    Picker("选择账号", selection: $selectedAccountId) {
-                        Text("请选择").tag("")
+                    Picker(L10n.account, selection: $selectedAccountId) {
+                        Text(L10n.select).tag("")
                         ForEach(vm.accounts) { acc in
                             Text(acc.displayName).tag(acc.id)
                         }
@@ -57,7 +57,7 @@ struct PushTestView: View {
                 }
             }
 
-            Section("推送目标") {
+            Section(NSLocalizedString("push.test.section.target", comment: "")) {
                 HStack {
                     TextField("Device Token", text: $deviceToken)
                         .textInputAutocapitalization(.never)
@@ -69,7 +69,7 @@ struct PushTestView: View {
                     }
                 }
                 if notificationManager.deviceToken != nil && deviceToken == notificationManager.deviceToken {
-                    Text("已自动填入当前设备 Token")
+                    Text(L10n.Push.testAutoFill)
                         .font(.caption2)
                         .foregroundStyle(Color.dsAccent)
                 } else if deviceToken.isEmpty {
@@ -82,7 +82,7 @@ struct PushTestView: View {
                     } label: {
                         HStack(spacing: 4) {
                             HIcon(AppIcon.pushKey).font(.caption2)
-                            Text(notificationManager.deviceToken != nil ? "填入本机 Token" : "如何获取 Token?")
+                            Text(notificationManager.deviceToken != nil ? NSLocalizedString("push.test.fillToken", comment: "") : NSLocalizedString("push.test.howToGetToken", comment: ""))
                                 .font(.caption2)
                         }
                         .foregroundStyle(Color.dsAccentBlue)
@@ -91,15 +91,15 @@ struct PushTestView: View {
                 TextField("Bundle ID", text: $bundleId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                Toggle("沙盒环境", isOn: $sandbox)
+                Toggle(NSLocalizedString("push.test.sandbox", comment: ""), isOn: $sandbox)
             }
 
-            Section("推送内容") {
-                TextField("标题", text: $title)
-                TextField("内容", text: $messageBody)
-                TextField("角标数字", text: $badge)
+            Section(NSLocalizedString("push.test.section.content", comment: "")) {
+                TextField(NSLocalizedString("push.test.field.title", comment: ""), text: $title)
+                TextField(NSLocalizedString("push.test.field.body", comment: ""), text: $messageBody)
+                TextField(NSLocalizedString("push.test.field.badge", comment: ""), text: $badge)
                     .keyboardType(.numberPad)
-                TextField("提示音", text: $sound)
+                TextField(NSLocalizedString("push.test.field.sound", comment: ""), text: $sound)
             }
 
             Section {
@@ -112,7 +112,7 @@ struct PushTestView: View {
                         } else {
                             HIcon(AppIcon.pushTest).font(.body)
                         }
-                        Text("发送推送")
+                        Text(L10n.Push.testSend)
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -129,14 +129,14 @@ struct PushTestView: View {
             }
 
             if let result = vm.sendResult {
-                Section("发送结果") {
+                Section(NSLocalizedString("push.test.section.result", comment: "")) {
                     Text(result)
                         .font(.subheadline)
                         .foregroundStyle(result.contains("成功") ? Color.dsAccent : Color.dsAccentPink)
                 }
             }
         }
-        .navigationTitle("推送测试")
+        .navigationTitle(L10n.Push.testTitle)
         .sheet(isPresented: $showTokenGuide) {
             TokenGuideSheet()
         }
@@ -198,7 +198,7 @@ private struct TokenGuideSheet: View {
 
                     guideSection(
                         number: "1",
-                        title: "本应用自动获取",
+                        title: NSLocalizedString("push.token.auto.title", comment: ""),
                         color: .dsAccent,
                         steps: [
                             "打开「设置 → 推送通知」，确认权限已开启",
@@ -209,7 +209,7 @@ private struct TokenGuideSheet: View {
 
                     guideSection(
                         number: "2",
-                        title: "通过 Xcode 获取",
+                        title: NSLocalizedString("push.token.xcode.title", comment: ""),
                         color: .dsAccentBlue,
                         steps: [
                             "在 Xcode 中运行你的目标 App",
@@ -221,7 +221,7 @@ private struct TokenGuideSheet: View {
 
                     guideSection(
                         number: "3",
-                        title: "通过代码打印",
+                        title: NSLocalizedString("push.token.code.title", comment: ""),
                         color: .dsAccentPurple,
                         steps: [
                             "在 AppDelegate 的 didRegisterForRemoteNotifications 中打印 token",
@@ -235,11 +235,11 @@ private struct TokenGuideSheet: View {
                 .padding(16)
             }
             .pageBackground()
-            .navigationTitle("获取 Device Token")
+            .navigationTitle(L10n.Push.tokenTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") { dismiss() }
+                    Button(L10n.close) { dismiss() }
                 }
             }
         }
@@ -255,7 +255,7 @@ private struct TokenGuideSheet: View {
                                    startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
 
-            Text("Device Token 是 Apple 为每台设备分配的唯一推送标识，发送远程推送时必须提供。")
+            Text(L10n.Push.tokenDesc)
                 .font(.subheadline)
                 .foregroundStyle(Color.dsMuted)
                 .multilineTextAlignment(.center)
@@ -312,7 +312,7 @@ private struct TokenGuideSheet: View {
                 HIcon(AppIcon.warning)
                     .font(.caption)
                     .foregroundStyle(Color.dsAccentOrange)
-                Text("注意事项")
+                Text(L10n.Push.tokenNotes)
                     .font(.caption.bold())
                     .foregroundStyle(Color.dsAccentOrange)
             }

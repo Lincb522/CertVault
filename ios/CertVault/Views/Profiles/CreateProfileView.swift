@@ -19,22 +19,22 @@ struct CreateProfileView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本信息") {
-                    TextField("描述文件名称", text: $name)
-                    Picker("类型", selection: $selectedType) {
+                Section(L10n.Account.formSectionBasic) {
+                    TextField(NSLocalizedString("profile.title", comment: ""), text: $name)
+                    Picker(L10n.Cert.typeLabel, selection: $selectedType) {
                         ForEach(vm.profileTypes) { type in
                             Text(type.label).tag(type.value)
                         }
                     }
                 }
 
-                Section("Bundle ID") {
+                Section(L10n.Profile.bundleId) {
                     if vm.bundleIds.isEmpty {
-                        Text("暂无 Bundle ID，请先创建")
+                        Text(L10n.Profile.noBundleId)
                             .foregroundStyle(.secondary)
                     } else {
-                        Picker("选择 Bundle ID", selection: $selectedBundleId) {
-                            Text("请选择").tag("")
+                        Picker(L10n.Profile.bundleId, selection: $selectedBundleId) {
+                            Text(L10n.select).tag("")
                             ForEach(vm.bundleIds) { bid in
                                 Text("\(bid.displayName) (\(bid.identifier ?? ""))").tag(bid.id)
                             }
@@ -42,9 +42,9 @@ struct CreateProfileView: View {
                     }
                 }
 
-                Section("证书") {
+                Section(L10n.Tab.certificates) {
                     if vm.certificates.isEmpty {
-                        Text("加载中...")
+                        Text(L10n.loading)
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(vm.certificates) { cert in
@@ -70,12 +70,12 @@ struct CreateProfileView: View {
                 }
 
                 if needsDevices {
-                    Section("设备") {
+                    Section(L10n.Tab.devices) {
                         if vm.devices.isEmpty {
-                            Text("加载中...")
+                            Text(L10n.loading)
                                 .foregroundStyle(.secondary)
                         } else {
-                            Button("全选") {
+                            Button(L10n.selectAll) {
                                 selectedDeviceIds = Set(vm.devices.map(\.id))
                             }
                             .font(.caption)
@@ -112,14 +112,14 @@ struct CreateProfileView: View {
                     Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("创建描述文件")
+            .navigationTitle(L10n.Profile.create)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("创建") { create() }
+                    Button(L10n.create) { create() }
                         .disabled(!isValid || isLoading)
                 }
             }

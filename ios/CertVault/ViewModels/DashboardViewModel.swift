@@ -5,16 +5,46 @@ final class DashboardViewModel: ObservableObject {
     @Published var stats: DashboardStats?
     @Published var recentCerts: [RecentCertificate] = []
     @Published var recentDevices: [RecentDevice] = []
-    @Published var isLoading = false
+    @Published var isLoading = true
     @Published var errorMessage: String?
+    @Published var needsRefresh = false
 
     private let api = APIClient.shared
+    private let db = DatabaseManager.shared
+    private var loginObserver: Any?
+
+    static let didLoginNotification = Notification.Name("DashboardDidLogin")
+
+    func startObserving() {
+        guard loginObserver == nil else { return }
+        loginObserver = NotificationCenter.default.addObserver(
+            forName: Self.didLoginNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.needsRefresh = true
+            }
+        }
+    }
+
+    func loadCached() {
+        if stats != nil { return }
+        do {
+            if let localStats = try db.computeLocalStats() {
+                stats = localStats
+                recentCerts = try db.fetchRecentCertificatesLocal()
+                recentDevices = try db.fetchRecentDevicesLocal()
+                AppLogger.data.info("📊 Dashboard cached | accounts=\(localStats.accounts) devices=\(localStats.devices)")
+            }
+        } catch {
+            AppLogger.data.error("📊 Dashboard cache read failed | \(error.localizedDescription)")
+        }
+    }
 
     func load() async {
         AppLogger.data.info("📊 Dashboard loading...")
-        isLoading = true
+        let hadData = stats != nil
+        if !hadData { isLoading = true }
         errorMessage = nil
-        defer { if !Task.isCancelled { isLoading = false } }
         do {
             let resp: APIResponse<DashboardData> = try await api.request("/dashboard")
             if let data = resp.data {
@@ -27,9 +57,10 @@ final class DashboardViewModel: ObservableObject {
             AppLogger.data.info("📊 Dashboard cancelled")
         } catch {
             if !Task.isCancelled {
-                errorMessage = error.localizedDescription
+                if stats == nil { errorMessage = error.localizedDescription }
                 AppLogger.data.error("📊 Dashboard failed | \(error.localizedDescription)")
             }
         }
+        if !Task.isCancelled { isLoading = false }
     }
 }

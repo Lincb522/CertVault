@@ -22,7 +22,7 @@ struct ContentView: View {
             AppLogger.ui.info("🖼️ isLoggedIn changed → \(newValue)")
         }
         .onChange(of: selectedTab) { newValue in
-            let tabNames = ["仪表盘", "账号", "设备", "证书", "更多"]
+            let tabNames = [L10n.Tab.dashboard, L10n.Tab.accounts, L10n.Tab.devices, L10n.Tab.certificates, L10n.Tab.more]
             let name = newValue < tabNames.count ? tabNames[newValue] : "?\(newValue)"
             AppLogger.ui.info("🖼️ Tab switched → \(name)")
         }
@@ -44,46 +44,46 @@ struct MainTabView: View {
                 Tab(value: 0) {
                     NavigationStack { DashboardView() }
                 } label: {
-                    Label { Text("仪表盘") } icon: { HIcon(AppIcon.dashboard) }
+                    Label { Text(L10n.Tab.dashboard) } icon: { HIcon(AppIcon.dashboard) }
                 }
                 Tab(value: 1) {
                     NavigationStack { AccountListView() }
                 } label: {
-                    Label { Text("账号") } icon: { HIcon(AppIcon.account) }
+                    Label { Text(L10n.Tab.accounts) } icon: { HIcon(AppIcon.account) }
                 }
                 Tab(value: 2) {
                     NavigationStack { DeviceListView() }
                 } label: {
-                    Label { Text("设备") } icon: { HIcon(AppIcon.device) }
+                    Label { Text(L10n.Tab.devices) } icon: { HIcon(AppIcon.device) }
                 }
                 Tab(value: 3) {
                     NavigationStack { CertificateListView() }
                 } label: {
-                    Label { Text("证书") } icon: { HIcon(AppIcon.certificate) }
+                    Label { Text(L10n.Tab.certificates) } icon: { HIcon(AppIcon.certificate) }
                 }
                 Tab(value: 4) {
                     NavigationStack { MoreView() }
                 } label: {
-                    Label { Text("更多") } icon: { HIcon(AppIcon.more) }
+                    Label { Text(L10n.Tab.more) } icon: { HIcon(AppIcon.more) }
                 }
             }
             .tabViewStyle(.sidebarAdaptable)
         } else {
             TabView(selection: $selectedTab) {
                 NavigationStack { DashboardView() }
-                    .tabItem { Label { Text("仪表盘") } icon: { HIcon(AppIcon.dashboard) } }
+                    .tabItem { Label { Text(L10n.Tab.dashboard) } icon: { HIcon(AppIcon.dashboard) } }
                     .tag(0)
                 NavigationStack { AccountListView() }
-                    .tabItem { Label { Text("账号") } icon: { HIcon(AppIcon.account) } }
+                    .tabItem { Label { Text(L10n.Tab.accounts) } icon: { HIcon(AppIcon.account) } }
                     .tag(1)
                 NavigationStack { DeviceListView() }
-                    .tabItem { Label { Text("设备") } icon: { HIcon(AppIcon.device) } }
+                    .tabItem { Label { Text(L10n.Tab.devices) } icon: { HIcon(AppIcon.device) } }
                     .tag(2)
                 NavigationStack { CertificateListView() }
-                    .tabItem { Label { Text("证书") } icon: { HIcon(AppIcon.certificate) } }
+                    .tabItem { Label { Text(L10n.Tab.certificates) } icon: { HIcon(AppIcon.certificate) } }
                     .tag(3)
                 NavigationStack { MoreView() }
-                    .tabItem { Label { Text("更多") } icon: { HIcon(AppIcon.more) } }
+                    .tabItem { Label { Text(L10n.Tab.more) } icon: { HIcon(AppIcon.more) } }
                     .tag(4)
             }
         }
@@ -96,41 +96,41 @@ struct MoreView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                moreSection("资源管理", items: [
-                    MoreItem(icon: AppIcon.profile, title: "描述文件", subtitle: "管理 Provisioning Profiles", color: .dsAccentOrange) {
+                moreSection(L10n.More.sectionResources, items: [
+                    MoreItem(icon: AppIcon.profile, title: NSLocalizedString("more.profiles", comment: ""), subtitle: NSLocalizedString("more.profiles.sub", comment: ""), color: .dsAccentOrange) {
                         AnyView(ProfileListView())
                     },
-                    MoreItem(icon: AppIcon.bundleID, title: "Bundle ID", subtitle: "管理应用标识符", color: .dsAccentCyan) {
+                    MoreItem(icon: AppIcon.bundleID, title: NSLocalizedString("more.bundleId", comment: ""), subtitle: NSLocalizedString("more.bundleId.sub", comment: ""), color: .dsAccentCyan) {
                         AnyView(BundleIDListView())
                     },
-                    MoreItem(icon: AppIcon.capability, title: "权限管理", subtitle: "配置 App Capabilities", color: .dsAccentPurple) {
+                    MoreItem(icon: AppIcon.capability, title: NSLocalizedString("more.capabilities", comment: ""), subtitle: NSLocalizedString("more.capabilities.sub", comment: ""), color: .dsAccentPurple) {
                         AnyView(CapabilityView())
                     },
                 ])
 
-                moreSection("推送服务", items: [
-                    MoreItem(icon: AppIcon.pushKey, title: "推送密钥", subtitle: "APNs Key 管理", color: .dsAccentPink) {
+                moreSection(L10n.More.sectionPush, items: [
+                    MoreItem(icon: AppIcon.pushKey, title: NSLocalizedString("more.pushKeys", comment: ""), subtitle: NSLocalizedString("more.pushKeys.sub", comment: ""), color: .dsAccentPink) {
                         AnyView(PushKeyListView())
                     },
-                    MoreItem(icon: AppIcon.pushTest, title: "推送测试", subtitle: "发送测试推送通知", color: .dsAccentBlue) {
+                    MoreItem(icon: AppIcon.pushTest, title: NSLocalizedString("more.pushTest", comment: ""), subtitle: NSLocalizedString("more.pushTest.sub", comment: ""), color: .dsAccentBlue) {
                         AnyView(PushTestView())
                     },
-                    MoreItem(icon: AppIcon.info, title: "推送指南", subtitle: "配置方式与错误码参考", color: .dsAccentCyan) {
+                    MoreItem(icon: AppIcon.info, title: NSLocalizedString("more.pushGuide", comment: ""), subtitle: NSLocalizedString("more.pushGuide.sub", comment: ""), color: .dsAccentCyan) {
                         AnyView(PushGuideView())
                     },
                 ])
 
-                moreSection("工具", items: [
-                    MoreItem(icon: AppIcon.udid, title: "获取 UDID", subtitle: "通过 Safari 获取设备 UDID", color: .dsAccent) {
+                moreSection(L10n.More.sectionTools, items: [
+                    MoreItem(icon: AppIcon.udid, title: NSLocalizedString("more.udid", comment: ""), subtitle: NSLocalizedString("more.udid.sub", comment: ""), color: .dsAccent) {
                         AnyView(GetUDIDView())
                     },
-                    MoreItem(icon: AppIcon.health, title: "健康检查", subtitle: "检测 API 连接和配置", color: .dsAccentOrange) {
+                    MoreItem(icon: AppIcon.health, title: NSLocalizedString("more.healthCheck", comment: ""), subtitle: NSLocalizedString("more.healthCheck.sub", comment: ""), color: .dsAccentOrange) {
                         AnyView(HealthCheckView())
                     },
                 ])
 
                 moreSection("", items: [
-                    MoreItem(icon: AppIcon.settings, title: "设置", subtitle: "账户与服务器配置", color: .dsMuted) {
+                    MoreItem(icon: AppIcon.settings, title: NSLocalizedString("more.settings", comment: ""), subtitle: NSLocalizedString("more.settings.sub", comment: ""), color: .dsMuted) {
                         AnyView(SettingsView())
                     },
                 ])
@@ -139,7 +139,7 @@ struct MoreView: View {
             .padding(.bottom, 20)
         }
         .pageBackground()
-        .navigationTitle("更多")
+        .navigationTitle(L10n.More.title)
     }
 
     private func moreSection(_ title: String, items: [MoreItem]) -> some View {
