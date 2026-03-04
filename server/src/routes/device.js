@@ -272,6 +272,72 @@ router.post('/batch', async (req, res, next) => {
   }
 });
 
+router.patch('/:deviceId/status', async (req, res, next) => {
+  try {
+    const db = getDb();
+    const { status } = req.body;
+    if (!['ENABLED', 'DISABLED'].includes(status)) {
+      return res.status(400).json({ success: false, message: '无效的状态，仅支持 ENABLED 或 DISABLED' });
+    }
+    const device = await db.prepare('SELECT * FROM devices WHERE id = ? OR apple_id = ?').get(req.params.deviceId, req.params.deviceId);
+    if (!device) return res.status(404).json({ success: false, message: '设备不存在' });
+    if (device.account_id && !await checkAccountOwnership(device.account_id, req.user)) {
+      return res.status(403).json({ success: false, message: '无权操作此账号的设备' });
+    }
+
+    if (device.account_id && device.apple_id) {
+      try {
+        const account = await getDecryptedAccount(device.account_id);
+        const api = new AppleApiService(account);
+        await api.request('PATCH', `/devices/${device.apple_id}`, {
+          data: { type: 'devices', id: device.apple_id, attributes: { status } }
+        });
+      } catch (e) {
+        return res.status(500).json({ success: false, message: `Apple API 操作失败: ${e.message}` });
+      }
+    }
+
+    await db.prepare('UPDATE devices SET status = ? WHERE id = ?').run(status, device.id);
+    const updated = await db.prepare('SELECT * FROM devices WHERE id = ?').get(device.id);
+    res.json({ success: true, data: updated, message: status === 'ENABLED' ? '设备已启用' : '设备已禁用' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/:deviceId/status', async (req, res, next) => {
+  try {
+    const db = getDb();
+    const { status } = req.body;
+    if (!['ENABLED', 'DISABLED'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'status 必须为 ENABLED 或 DISABLED' });
+    }
+    const device = await db.prepare('SELECT * FROM devices WHERE id = ? OR apple_id = ?').get(req.params.deviceId, req.params.deviceId);
+    if (!device) return res.status(404).json({ success: false, message: '设备不存在' });
+    if (device.account_id && !await checkAccountOwnership(device.account_id, req.user)) {
+      return res.status(403).json({ success: false, message: '无权操作此账号的设备' });
+    }
+
+    if (device.account_id && device.apple_id) {
+      try {
+        const account = await getDecryptedAccount(device.account_id);
+        const api = new AppleApiService(account);
+        await api.request('PATCH', `/devices/${device.apple_id}`, {
+          data: { type: 'devices', id: device.apple_id, attributes: { status } }
+        });
+      } catch (e) {
+        return res.status(500).json({ success: false, message: `Apple API 操作失败: ${e.message}` });
+      }
+    }
+
+    await db.prepare('UPDATE devices SET status = ? WHERE id = ?').run(status, device.id);
+    const updated = await db.prepare('SELECT * FROM devices WHERE id = ?').get(device.id);
+    res.json({ success: true, message: status === 'ENABLED' ? '设备已启用' : '设备已禁用', data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/:deviceId', async (req, res, next) => {
   try {
     const db = getDb();

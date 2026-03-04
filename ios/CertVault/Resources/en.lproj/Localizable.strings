@@ -145,6 +145,13 @@
 "device.delete" = "Delete Device";
 "device.deleteConfirm.title" = "Confirm Delete";
 "device.deleteConfirm.message" = "This will disable the device on Apple Developer and remove the local record. This cannot be undone.";
+"device.enable" = "Enable Device";
+"device.disable" = "Disable Device";
+"device.disableConfirm.title" = "Confirm Disable";
+"device.disableConfirm.message" = "This will disable the device on Apple Developer. You can re-enable it anytime.";
+"device.section.enabled" = "Enabled";
+"device.section.disabled" = "Disabled";
+"device.section.ineligible" = "Ineligible";
 "device.empty.title" = "No Devices";
 "device.empty.message" = "Register test devices to get started";
 "device.empty.action" = "Add Device";

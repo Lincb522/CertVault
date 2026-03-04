@@ -7,9 +7,9 @@ struct DeviceDetailView: View {
     @StateObject private var vm = DeviceViewModel()
     @ObservedObject private var downloadService = FileDownloadService.shared
     @State private var copiedText: String?
-    @State private var showDeleteConfirm = false
+    @State private var showDisableConfirm = false
     @State private var showRebind = false
-    @State private var isDeleting = false
+    @State private var isToggling = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -56,29 +56,28 @@ struct DeviceDetailView: View {
                 )
             }
         }
-        .alert(L10n.Device.deleteTitle, isPresented: $showDeleteConfirm) {
+        .alert(L10n.Device.disableTitle, isPresented: $showDisableConfirm) {
             Button(L10n.cancel, role: .cancel) {}
-            Button(L10n.delete, role: .destructive) {
+            Button(L10n.Device.disableDevice, role: .destructive) {
                 Task {
-                    isDeleting = true
+                    isToggling = true
                     do {
-                        try await vm.deleteDevice(deviceId: deviceId)
-                        dismiss()
+                        try await vm.toggleDeviceStatus(deviceId: deviceId, enable: false)
                     } catch {
                         vm.errorMessage = error.localizedDescription
                     }
-                    isDeleting = false
+                    isToggling = false
                 }
             }
         } message: {
-            Text(L10n.Device.deleteMessage)
+            Text(L10n.Device.disableMessage)
         }
     }
 
     // MARK: - Device Info
 
     private func deviceInfoCard(_ device: Device) -> some View {
-        let tint: Color = device.isEnabled ? .dsAccent : .dsAccentPink
+        let tint: Color = device.isEnabled ? .dsAccent : (device.isIneligible ? .dsAccentOrange : .dsAccentPink)
         return VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
                 HIcon(AppIcon.device)
@@ -285,25 +284,61 @@ struct DeviceDetailView: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                showDeleteConfirm = true
-            } label: {
-                HStack(spacing: 8) {
-                    if isDeleting {
-                        ProgressView().controlSize(.small).tint(.white)
-                    } else {
-                        HIcon(AppIcon.close).font(.body)
+            if device.isEnabled {
+                Button {
+                    showDisableConfirm = true
+                } label: {
+                    HStack(spacing: 8) {
+                        if isToggling {
+                            ProgressView().controlSize(.small).tint(.white)
+                        } else {
+                            HIcon(AppIcon.close).font(.body)
+                        }
+                        Text(L10n.Device.disableDevice)
+                            .fontWeight(.semibold)
                     }
-                    Text(L10n.Device.deleteDevice)
-                        .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(.white)
+                    .background(Color.dsAccentPink, in: RoundedRectangle(cornerRadius: 14))
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .foregroundStyle(.white)
-                .background(Color.dsAccentPink, in: RoundedRectangle(cornerRadius: 14))
+                .buttonStyle(.plain)
+                .disabled(isToggling)
+            } else {
+                Button {
+                    Task {
+                        isToggling = true
+                        do {
+                            try await vm.toggleDeviceStatus(deviceId: deviceId, enable: true)
+                        } catch {
+                            vm.errorMessage = error.localizedDescription
+                        }
+                        isToggling = false
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isToggling {
+                            ProgressView().controlSize(.small).tint(.white)
+                        } else {
+                            HIcon(AppIcon.check).font(.body)
+                        }
+                        Text(L10n.Device.enableDevice)
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(.white)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.dsAccent, Color(red: 0.10, green: 0.60, blue: 0.40)],
+                            startPoint: .leading, endPoint: .trailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: 14)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isToggling)
             }
-            .buttonStyle(.plain)
-            .disabled(isDeleting)
         }
         .padding(.horizontal, 4)
     }

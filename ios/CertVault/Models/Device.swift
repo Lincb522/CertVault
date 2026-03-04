@@ -16,6 +16,11 @@ struct Device: Codable, Identifiable {
 
     var displayName: String { name ?? "未命名设备" }
     var isEnabled: Bool { status?.uppercased() == "ENABLED" }
+    var isIneligible: Bool {
+        guard let s = status?.uppercased() else { return false }
+        return s != "ENABLED" && s != "DISABLED"
+    }
+    var isDisabled: Bool { status?.uppercased() == "DISABLED" }
 }
 
 struct AutoBindRequest: Encodable {

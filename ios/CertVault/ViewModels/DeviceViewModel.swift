@@ -121,6 +121,31 @@ final class DeviceViewModel: ObservableObject {
         await loadDevices()
     }
 
+    func toggleDeviceStatus(deviceId: String, enable: Bool) async throws {
+        let newStatus = enable ? "ENABLED" : "DISABLED"
+        AppLogger.data.info("📱 Toggling device id=\(deviceId) to \(newStatus)")
+        let updated = try await service.setStatus(deviceId: deviceId, status: newStatus)
+        if let idx = devices.firstIndex(where: { $0.id == deviceId }) {
+            devices[idx] = updated
+        }
+        if selectedDevice?.id == deviceId {
+            selectedDevice = updated
+        }
+        AppLogger.data.info("📱 Device status changed to \(newStatus)")
+    }
+
+    func toggleDeviceStatus(deviceId: String, enable: Bool) async throws {
+        AppLogger.data.info("📱 \(enable ? "Enabling" : "Disabling") device id=\(deviceId)")
+        let updated = try await service.setStatus(deviceId: deviceId, enabled: enable)
+        if let idx = devices.firstIndex(where: { $0.id == deviceId }) {
+            devices[idx] = updated
+        }
+        if selectedDevice?.id == deviceId {
+            selectedDevice = updated
+        }
+        AppLogger.data.info("📱 Device status changed to \(updated.status ?? "?")")
+    }
+
     func deleteDevice(deviceId: String, keepApple: Bool = false) async throws {
         AppLogger.data.info("📱 Deleting device id=\(deviceId) keepApple=\(keepApple)")
         try await service.delete(deviceId: deviceId, keepApple: keepApple)

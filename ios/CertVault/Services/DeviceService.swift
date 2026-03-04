@@ -50,6 +50,26 @@ struct DeviceService {
         return data
     }
 
+    func setStatus(deviceId: String, status: String) async throws -> Device {
+        struct Body: Encodable { let status: String }
+        let resp: APIResponse<Device> = try await api.request(
+            "/devices/\(deviceId)/status", method: "PATCH",
+            body: Body(status: status)
+        )
+        guard let data = resp.data else { throw APIError.serverError(resp.message ?? "操作失败") }
+        return data
+    }
+
+    func setStatus(deviceId: String, enabled: Bool) async throws -> Device {
+        struct Body: Encodable { let status: String }
+        let resp: APIResponse<Device> = try await api.request(
+            "/devices/\(deviceId)/status", method: "PATCH",
+            body: Body(status: enabled ? "ENABLED" : "DISABLED")
+        )
+        guard let data = resp.data else { throw APIError.serverError(resp.message ?? "操作失败") }
+        return data
+    }
+
     func delete(deviceId: String, keepApple: Bool = false) async throws {
         var path = "/devices/\(deviceId)"
         if keepApple { path += "?keep_apple=true" }

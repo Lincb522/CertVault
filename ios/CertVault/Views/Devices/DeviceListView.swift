@@ -7,14 +7,20 @@ struct DeviceListView: View {
     @State private var showBatchImport = false
     @State private var showAutoBind = false
     @State private var searchText = ""
+    @State private var showDisabled = true
+    @State private var showIneligible = true
 
-    var filteredDevices: [Device] {
+    private var filteredDevices: [Device] {
         if searchText.isEmpty { return vm.devices }
         return vm.devices.filter {
             ($0.name ?? "").localizedCaseInsensitiveContains(searchText) ||
             ($0.udid ?? "").localizedCaseInsensitiveContains(searchText)
         }
     }
+
+    private var enabledDevices: [Device] { filteredDevices.filter { $0.isEnabled } }
+    private var disabledDevices: [Device] { filteredDevices.filter { $0.isDisabled } }
+    private var ineligibleDevices: [Device] { filteredDevices.filter { $0.isIneligible } }
 
     var body: some View {
         Group {
@@ -33,33 +39,40 @@ struct DeviceListView: View {
                 ) { showRegister = true }
             } else {
                 ScrollView {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 16) {
                         if vm.accounts.count > 1 {
                             accountPicker
                                 .padding(.horizontal, 16)
                         }
 
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(filteredDevices.enumerated()), id: \.element.id) { index, device in
-                                NavigationLink {
-                                    DeviceDetailView(deviceId: device.id, accountId: vm.selectedAccountId)
-                                } label: {
-                                    DeviceRow(device: device)
-                                }
-                                .buttonStyle(.plain)
-
-                                if index < filteredDevices.count - 1 {
-                                    Divider().padding(.leading, 68)
-                                }
-                            }
+                        if !enabledDevices.isEmpty {
+                            deviceSection(
+                                title: L10n.Device.enabledSection,
+                                count: enabledDevices.count,
+                                color: .dsAccent,
+                                devices: enabledDevices
+                            )
                         }
-                        .padding(.vertical, 4)
-                        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.dsBorder, lineWidth: 1)
-                        )
-                        .padding(.horizontal, 16)
+
+                        if !disabledDevices.isEmpty {
+                            collapsibleSection(
+                                title: L10n.Device.disabledSection,
+                                count: disabledDevices.count,
+                                color: .dsAccentPink,
+                                devices: disabledDevices,
+                                isExpanded: $showDisabled
+                            )
+                        }
+
+                        if !ineligibleDevices.isEmpty {
+                            collapsibleSection(
+                                title: L10n.Device.ineligibleSection,
+                                count: ineligibleDevices.count,
+                                color: .dsAccentOrange,
+                                devices: ineligibleDevices,
+                                isExpanded: $showIneligible
+                            )
+                        }
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 20)
@@ -108,6 +121,98 @@ struct DeviceListView: View {
         }
     }
 
+    private func collapsibleSection(title: String, count: Int, color: Color, devices: [Device], isExpanded: Binding<Bool>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) { isExpanded.wrappedValue.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Circle().fill(color).frame(width: 8, height: 8)
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.dsText)
+                    Text("\(count)")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(color)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(color.opacity(0.12), in: Capsule())
+                    Spacer()
+                    Image(systemName: isExpanded.wrappedValue ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.dsMuted)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+
+            if isExpanded.wrappedValue {
+                deviceGroupView(devices: devices)
+            }
+        }
+    }
+
+    private func deviceSection(title: String, count: Int, color: Color, devices: [Device]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.dsText)
+                Text("\(count)")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.12), in: Capsule())
+            }
+            .padding(.horizontal, 20)
+
+            deviceGroupView(devices: devices)
+        }
+    }
+
+    private func deviceGroupView(devices: [Device]) -> some View {
+        LazyVStack(spacing: 0) {
+            ForEach(Array(devices.enumerated()), id: \.element.id) { index, device in
+                NavigationLink {
+                    DeviceDetailView(deviceId: device.id, accountId: vm.selectedAccountId)
+                } label: {
+                    DeviceRow(device: device)
+                }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    if device.isEnabled {
+                        Button(role: .destructive) {
+                            Task { try? await vm.toggleDeviceStatus(deviceId: device.id, enable: false) }
+                        } label: {
+                            Label(L10n.Device.disabledSection, systemImage: "nosign")
+                        }
+                    } else {
+                        Button {
+                            Task { try? await vm.toggleDeviceStatus(deviceId: device.id, enable: true) }
+                        } label: {
+                            Label(L10n.Device.enabledSection, systemImage: "checkmark.circle")
+                        }
+                    }
+                }
+
+                if index < devices.count - 1 {
+                    Divider().padding(.leading, 68)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.dsBorder, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+    }
+
     private var accountPicker: some View {
         HStack {
             Text(L10n.account)
@@ -139,7 +244,9 @@ private struct DeviceRow: View {
     let device: Device
 
     private var tintColor: Color {
-        device.isEnabled ? .dsAccent : .dsAccentPink
+        if device.isEnabled { return .dsAccent }
+        if device.isIneligible { return .dsAccentOrange }
+        return .dsAccentPink
     }
 
     var body: some View {
@@ -153,7 +260,7 @@ private struct DeviceRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(device.displayName)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(device.isEnabled ? Color.dsText : Color.dsAccentPink)
+                    .foregroundStyle(device.isEnabled ? Color.dsText : tintColor)
                 Text(device.udid ?? "N/A")
                     .font(.caption.monospaced())
                     .foregroundStyle(Color.dsMuted)
