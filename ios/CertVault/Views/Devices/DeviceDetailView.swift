@@ -7,6 +7,10 @@ struct DeviceDetailView: View {
     @StateObject private var vm = DeviceViewModel()
     @ObservedObject private var downloadService = FileDownloadService.shared
     @State private var copiedText: String?
+    @State private var showDeleteConfirm = false
+    @State private var showRebind = false
+    @State private var isDeleting = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
@@ -17,6 +21,7 @@ struct DeviceDetailView: View {
                         certificatesSection(device)
                         profilesSection(device)
                         downloadSection(device)
+                        actionsSection(device)
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 20)
@@ -33,11 +38,40 @@ struct DeviceDetailView: View {
         }
         .navigationTitle("设备详情")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await vm.loadDetail(deviceId: deviceId) }
+        .task {
+            vm.selectedAccountId = accountId
+            await vm.loadDetail(deviceId: deviceId)
+        }
         .sheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }
+        }
+        .sheet(isPresented: $showRebind) {
+            if let device = vm.selectedDevice {
+                AutoBindView(
+                    vm: vm,
+                    prefillName: device.displayName,
+                    prefillUDID: device.udid ?? ""
+                )
+            }
+        }
+        .alert("确认删除设备", isPresented: $showDeleteConfirm) {
+            Button("取消", role: .cancel) {}
+            Button("删除", role: .destructive) {
+                Task {
+                    isDeleting = true
+                    do {
+                        try await vm.deleteDevice(deviceId: deviceId)
+                        dismiss()
+                    } catch {
+                        vm.errorMessage = error.localizedDescription
+                    }
+                    isDeleting = false
+                }
+            }
+        } message: {
+            Text("将同时在 Apple Developer 禁用此设备，并移除本地记录，此操作不可恢复。")
         }
     }
 
@@ -223,6 +257,54 @@ struct DeviceDetailView: View {
             }
         }
         .cardStyle()
+    }
+
+    // MARK: - Actions
+
+    private func actionsSection(_ device: Device) -> some View {
+        VStack(spacing: 12) {
+            Button {
+                showRebind = true
+            } label: {
+                HStack(spacing: 8) {
+                    HIcon(AppIcon.link).font(.body)
+                    Text("重新一键绑定")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .foregroundStyle(.white)
+                .background(
+                    LinearGradient(
+                        colors: [Color.dsAccentBlue, Color.dsAccentPurple],
+                        startPoint: .leading, endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 14)
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showDeleteConfirm = true
+            } label: {
+                HStack(spacing: 8) {
+                    if isDeleting {
+                        ProgressView().controlSize(.small).tint(.white)
+                    } else {
+                        HIcon(AppIcon.close).font(.body)
+                    }
+                    Text("删除设备")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .foregroundStyle(.white)
+                .background(Color.dsAccentPink, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .disabled(isDeleting)
+        }
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Bundle Download

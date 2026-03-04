@@ -89,6 +89,66 @@ router.post('/bundle-ids', async (req, res, next) => {
   }
 });
 
+router.get('/bundle-ids/:id/resources', async (req, res, next) => {
+  try {
+    const db = getDb();
+    const bundleId = await db.prepare('SELECT * FROM bundle_ids WHERE id = ?').get(req.params.id);
+    if (!bundleId) return res.status(404).json({ success: false, message: 'Bundle ID 不存在' });
+    if (!await checkAccountOwnership(bundleId.account_id, req.user)) {
+      return res.status(403).json({ success: false, message: '无权操作' });
+    }
+
+    const identifier = bundleId.identifier;
+    const links = await db.prepare(
+      'SELECT * FROM device_resources WHERE bundle_identifier = ? ORDER BY created_at DESC'
+    ).all(identifier);
+
+    let devices = [];
+    let certificates = [];
+    let profiles = [];
+
+    if (links.length > 0) {
+      const deviceIds = [...new Set(links.map(l => l.device_id).filter(Boolean))];
+      const udids = [...new Set(links.map(l => l.udid).filter(Boolean))];
+      const certIds = [...new Set(links.map(l => l.cert_id).filter(Boolean))];
+      const profileIds = [...new Set(links.map(l => l.profile_id).filter(Boolean))];
+
+      if (deviceIds.length || udids.length) {
+        const allIds = [...deviceIds, ...udids];
+        const ph = allIds.map((_, i) => `$${i + 1}`).join(',');
+        devices = await db.prepare(
+          `SELECT id, name, udid, platform, status, created_at FROM devices WHERE id IN (${ph}) OR apple_id IN (${ph}) OR udid IN (${ph}) ORDER BY created_at DESC`
+        ).all(...allIds, ...allIds, ...allIds);
+        const seen = new Set();
+        devices = devices.filter(d => { if (seen.has(d.id)) return false; seen.add(d.id); return true; });
+      }
+      if (certIds.length) {
+        const ph = certIds.map((_, i) => `$${i + 1}`).join(',');
+        certificates = await db.prepare(
+          `SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${ph}) ORDER BY created_at DESC`
+        ).all(...certIds);
+      }
+      if (profileIds.length) {
+        const ph = profileIds.map((_, i) => `$${i + 1}`).join(',');
+        profiles = await db.prepare(
+          `SELECT id, name, type, profile_path, expires_at, created_at FROM profiles WHERE id IN (${ph}) ORDER BY created_at DESC`
+        ).all(...profileIds);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        devices: devices.map(d => ({ ...d })),
+        certificates: certificates.map(c => ({ ...c, has_p12: !!c.p12_path })),
+        profiles: profiles.map(p => ({ ...p, has_file: !!p.profile_path })),
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/bundle-ids/:id', async (req, res, next) => {
   try {
     const db = getDb();

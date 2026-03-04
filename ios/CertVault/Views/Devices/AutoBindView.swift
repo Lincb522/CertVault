@@ -5,6 +5,9 @@ struct AutoBindView: View {
     @ObservedObject var vm: DeviceViewModel
     @Environment(\.dismiss) private var dismiss
 
+    var prefillName: String = ""
+    var prefillUDID: String = ""
+
     @State private var deviceName = ""
     @State private var udid = ""
     @State private var bundleId = ""
@@ -165,6 +168,19 @@ struct AutoBindView: View {
             .padding(16)
         }
         .pageBackground()
+        .onAppear {
+            if !prefillName.isEmpty && deviceName.isEmpty {
+                deviceName = prefillName
+            }
+            if !prefillUDID.isEmpty && udid.isEmpty {
+                udid = prefillUDID
+            }
+            if bundleId.isEmpty {
+                let rand = Int.random(in: 1000...9999)
+                bundleId = "zj-\(rand).zijiu522.cn"
+                bundleName = "zj-\(rand)"
+            }
+        }
     }
 
     // MARK: - Account

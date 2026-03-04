@@ -50,6 +50,13 @@ struct DeviceService {
         return data
     }
 
+    func delete(deviceId: String, keepApple: Bool = false) async throws {
+        var path = "/devices/\(deviceId)"
+        if keepApple { path += "?keep_apple=true" }
+        let resp = try await api.requestRaw(path, method: "DELETE")
+        if !resp.success { throw APIError.serverError(resp.message ?? "删除失败") }
+    }
+
     func resources(deviceId: String) async throws -> DeviceResources {
         let resp: APIResponse<DeviceResources> = try await api.request("/devices/\(deviceId)/resources")
         guard let data = resp.data else { throw APIError.noData }

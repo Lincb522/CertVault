@@ -5,7 +5,10 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "node --watch src/app.js"
+    "dev": "node --watch src/app.js",
+    "pack": "npm ci --omit=dev",
+    "docker:build": "docker build -t apple-cert-manager-server .",
+    "docker:run": "docker run -p 3006:3006 -e PG_HOST -e PG_PORT -e PG_DATABASE -e PG_USER -e PG_PASSWORD -e ENCRYPTION_KEY --name cert-server apple-cert-manager-server"
   },
   "dependencies": {
     "archiver": "^7.0.1",

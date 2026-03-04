@@ -196,6 +196,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS device_resources (
       id SERIAL PRIMARY KEY,
       device_id TEXT NOT NULL,
+      udid TEXT,
       cert_id TEXT,
       profile_id TEXT,
       bundle_identifier TEXT,
@@ -231,6 +232,7 @@ async function initDatabase() {
     "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS user_id TEXT",
     "ALTER TABLE certificates ADD COLUMN IF NOT EXISTS user_id TEXT",
     "ALTER TABLE push_keys ADD COLUMN IF NOT EXISTS user_id TEXT",
+    "ALTER TABLE device_resources ADD COLUMN IF NOT EXISTS udid TEXT",
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (e) { /* column may already exist */ }

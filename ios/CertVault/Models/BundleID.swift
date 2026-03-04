@@ -11,3 +11,9 @@ struct BundleIDItem: Decodable, Identifiable {
 
     var displayName: String { name ?? identifier ?? "未命名" }
 }
+
+struct BundleIDResources: Decodable {
+    let devices: [Device]?
+    let certificates: [Certificate]?
+    let profiles: [Profile]?
+}

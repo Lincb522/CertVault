@@ -19,6 +19,81 @@ async function getAccount(accountId) {
   return await getDecryptedAccount(accountId);
 }
 
+async function syncDeviceResources(api, db, account_id) {
+  let profilesResult;
+  try {
+    profilesResult = await api.listProfilesWithRelations();
+  } catch (e) {
+    return;
+  }
+  const profiles = profilesResult.data || [];
+  const included = profilesResult.included || [];
+
+  const certsMap = {};
+  const bundlesMap = {};
+  const devicesMap = {};
+  for (const item of included) {
+    if (item.type === 'certificates') {
+      certsMap[item.id] = item;
+    } else if (item.type === 'bundleIds') {
+      bundlesMap[item.id] = item;
+    } else if (item.type === 'devices') {
+      devicesMap[item.id] = item;
+    }
+  }
+
+  const localCertsRows = await db.prepare('SELECT id, apple_id FROM certificates WHERE account_id = ?').all(account_id);
+  const appleToCertLocal = {};
+  for (const c of localCertsRows) {
+    if (c.apple_id) appleToCertLocal[c.apple_id] = c.id;
+    appleToCertLocal[c.id] = c.id;
+  }
+
+  const localProfilesRows = await db.prepare('SELECT id, apple_id FROM profiles WHERE account_id = ?').all(account_id);
+  const appleToProfileLocal = {};
+  for (const p of localProfilesRows) {
+    if (p.apple_id) appleToProfileLocal[p.apple_id] = p.id;
+    appleToProfileLocal[p.id] = p.id;
+  }
+
+  const existingLinks = await db.prepare(
+    'SELECT device_id, profile_id FROM device_resources'
+  ).all();
+  const existingSet = new Set(existingLinks.map(l => `${l.device_id}:${l.profile_id}`));
+
+  const insertStmt = db.prepare(
+    'INSERT INTO device_resources (device_id, udid, cert_id, profile_id, bundle_identifier) VALUES (?, ?, ?, ?, ?)'
+  );
+
+  for (const p of profiles) {
+    const deviceRels = p.relationships?.devices?.data || [];
+    const certRels = p.relationships?.certificates?.data || [];
+    const bundleRel = p.relationships?.bundleId?.data;
+    if (deviceRels.length === 0) continue;
+
+    const localProfileId = appleToProfileLocal[p.id];
+    const bundleIdentifier = bundleRel ? (bundlesMap[bundleRel.id]?.attributes?.identifier || null) : null;
+
+    const localCertId = certRels.length > 0 ? (appleToCertLocal[certRels[0].id] || null) : null;
+
+    for (const dRel of deviceRels) {
+      const deviceAppleId = dRel.id;
+      const deviceUdid = devicesMap[deviceAppleId]?.attributes?.udid || null;
+      const key = `${deviceAppleId}:${localProfileId || p.id}`;
+      if (existingSet.has(key)) continue;
+
+      await insertStmt.run(
+        deviceAppleId,
+        deviceUdid,
+        localCertId,
+        localProfileId || p.id,
+        bundleIdentifier
+      );
+      existingSet.add(key);
+    }
+  }
+}
+
 router.get('/', async (req, res, next) => {
   try {
     const { account_id } = req.query;
@@ -49,6 +124,10 @@ router.get('/', async (req, res, next) => {
     });
 
     await syncMany();
+
+    syncDeviceResources(api, db, account_id).catch(e =>
+      console.error('Background device_resources sync failed:', e.message)
+    );
 
     const devices = await db.prepare('SELECT * FROM devices WHERE account_id = ? ORDER BY created_at DESC').all(account_id);
     res.json({ success: true, data: devices });
@@ -121,6 +200,36 @@ router.post('/batch', async (req, res, next) => {
   }
 });
 
+router.delete('/:deviceId', async (req, res, next) => {
+  try {
+    const db = getDb();
+    const device = await db.prepare('SELECT * FROM devices WHERE id = ? OR apple_id = ?').get(req.params.deviceId, req.params.deviceId);
+    if (!device) return res.status(404).json({ success: false, message: '设备不存在' });
+    if (device.account_id && !await checkAccountOwnership(device.account_id, req.user)) {
+      return res.status(403).json({ success: false, message: '无权操作此账号的设备' });
+    }
+
+    if (req.query.keep_apple !== 'true' && device.account_id && device.apple_id) {
+      try {
+        const account = await getDecryptedAccount(device.account_id);
+        const api = new AppleApiService(account);
+        await api.request('PATCH', `/devices/${device.apple_id}`, {
+          data: { type: 'devices', id: device.apple_id, attributes: { status: 'DISABLED' } }
+        });
+      } catch (e) {
+        console.log(`[Device] Failed to disable on Apple: ${e.message}`);
+      }
+    }
+
+    await db.prepare('DELETE FROM device_resources WHERE device_id = ? OR udid = ?').run(device.id, device.udid);
+    await db.prepare('DELETE FROM devices WHERE id = ?').run(device.id);
+
+    res.json({ success: true, message: '设备已删除' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:deviceId/detail', async (req, res, next) => {
   try {
     const db = getDb();
@@ -131,16 +240,29 @@ router.get('/:deviceId/detail', async (req, res, next) => {
       return res.status(403).json({ success: false, message: '无权操作此账号的设备' });
     }
 
+    const deviceId = device.apple_id || device.id;
     const deviceUdid = device.udid;
+
+    const links = await db.prepare(
+      'SELECT * FROM device_resources WHERE device_id = ? OR udid = ? ORDER BY created_at DESC'
+    ).all(deviceId, deviceUdid);
+
+    const certIdSet = new Set();
+    const profileIdSet = new Set();
+    links.forEach(l => {
+      if (l.cert_id) certIdSet.add(l.cert_id);
+      if (l.profile_id) profileIdSet.add(l.profile_id);
+    });
 
     const allProfiles = await db.prepare(
       'SELECT id, name, type, profile_path, profile_content, bundle_id, expires_at, created_at FROM profiles WHERE account_id = ? ORDER BY created_at DESC'
     ).all(device.account_id);
 
-    const matchedProfiles = [];
-    const matchedCertIds = new Set();
+    const normalizedUdid = deviceUdid ? deviceUdid.toUpperCase().replace(/-/g, '') : '';
 
     for (const p of allProfiles) {
+      if (profileIdSet.has(p.id)) continue;
+
       let parsed = null;
       if (p.profile_path) {
         const fullPath = path.join(PROFILE_DIR, p.profile_path);
@@ -152,31 +274,34 @@ router.get('/:deviceId/detail', async (req, res, next) => {
       if (!parsed || !parsed.devices) continue;
 
       const normalizedDevices = parsed.devices.map(d => d.toUpperCase().replace(/-/g, ''));
-      const normalizedUdid = deviceUdid ? deviceUdid.toUpperCase().replace(/-/g, '') : '';
-
       if (normalizedDevices.includes(normalizedUdid)) {
-        matchedProfiles.push({ id: p.id, name: p.name, type: p.type, profile_path: p.profile_path, bundle_id: p.bundle_id, expires_at: p.expires_at, created_at: p.created_at, has_file: !!p.profile_path });
+        profileIdSet.add(p.id);
 
-        const links = await db.prepare(
-          'SELECT cert_id FROM device_resources WHERE profile_id = ? AND cert_id IS NOT NULL'
-        ).all(p.id);
-        links.forEach(l => matchedCertIds.add(l.cert_id));
+        const pLinks = await db.prepare(
+          'SELECT cert_id FROM device_resources WHERE (device_id = ? OR udid = ?) AND profile_id = ? AND cert_id IS NOT NULL'
+        ).all(deviceId, deviceUdid, p.id);
+        pLinks.forEach(l => certIdSet.add(l.cert_id));
       }
     }
 
     let certs = [];
-    if (matchedCertIds.size > 0) {
-      const ids = [...matchedCertIds];
-      const ph = ids.map((_, i) => `$${i + 1}`).join(',');
-      certs = await db.prepare(
-        `SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${ph})`
-      ).all(...ids);
+    let matchedProfiles = [];
+
+    if (profileIdSet.size > 0) {
+      const pIds = [...profileIdSet];
+      const ph = pIds.map((_, i) => `$${i + 1}`).join(',');
+      matchedProfiles = await db.prepare(
+        `SELECT id, name, type, profile_path, bundle_id, expires_at, created_at FROM profiles WHERE id IN (${ph}) ORDER BY created_at DESC`
+      ).all(...pIds);
+      matchedProfiles = matchedProfiles.map(p => ({ ...p, has_file: !!p.profile_path }));
     }
 
-    if (certs.length === 0 && device.account_id) {
+    if (certIdSet.size > 0) {
+      const cIds = [...certIdSet];
+      const ph = cIds.map((_, i) => `$${i + 1}`).join(',');
       certs = await db.prepare(
-        'SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE account_id = ? AND p12_path IS NOT NULL ORDER BY created_at DESC'
-      ).all(device.account_id);
+        `SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${ph}) ORDER BY created_at DESC`
+      ).all(...cIds);
     }
 
     res.json({
@@ -194,7 +319,7 @@ router.get('/:deviceId/detail', async (req, res, next) => {
 
 router.post('/auto-bindall', async (req, res, next) => {
   try {
-    const {
+    let {
       account_id,
       name: deviceName,
       udid,
@@ -206,21 +331,24 @@ router.post('/auto-bindall', async (req, res, next) => {
       password = '123456',
     } = req.body;
 
-    if (!account_id || !deviceName || !udid || !bundle_identifier) {
+    if (!bundle_identifier) {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      bundle_identifier = `zj-${rand}.zijiu522.cn`;
+    }
+
+    if (!account_id || !deviceName || !udid) {
       return res.status(400).json({
         success: false,
-        message: '请填写账号、设备名称、UDID 和 Bundle ID'
+        message: '请填写账号、设备名称和 UDID'
       });
     }
     if (!await checkAccountOwnership(account_id, req.user)) {
       return res.status(403).json({ success: false, message: '无权操作此账号的设备' });
     }
 
-    const db = getDb();
-    const account = await db.prepare('SELECT * FROM accounts WHERE id = ?').get(account_id);
-    if (!account) return res.status(404).json({ success: false, message: '账号不存在' });
-
+    const account = await getAccount(account_id);
     const api = new AppleApiService(account);
+    const db = getDb();
     const steps = [];
 
     let deviceAppleId;
@@ -283,7 +411,7 @@ router.post('/auto-bindall', async (req, res, next) => {
     }
 
     let bundleAppleId;
-    const bName = bundle_name || bundle_identifier.split('.').pop() || 'App';
+    const bName = bundle_name || bundle_identifier.split('.')[0] || 'App';
     try {
       const bundleList = await api.listBundleIds({ 'filter[identifier]': bundle_identifier });
       const found = bundleList.data?.find(b => b.attributes.identifier === bundle_identifier);
@@ -366,17 +494,17 @@ router.post('/auto-bindall', async (req, res, next) => {
     );
     steps.push({ step: 'create_profile', status: 'success', message: `描述文件创建成功: ${profileName}` });
 
-    await db.prepare('INSERT INTO device_resources (device_id, cert_id, profile_id, bundle_identifier) VALUES (?, ?, ?, ?)')
-      .run(deviceAppleId, certLocalId, profileLocalId, bundle_identifier);
+    await db.prepare('INSERT INTO device_resources (device_id, udid, cert_id, profile_id, bundle_identifier) VALUES (?, ?, ?, ?, ?)')
+      .run(deviceAppleId, udid, certLocalId, profileLocalId, bundle_identifier);
 
     res.json({
       success: true,
       message: '一键绑定完成',
       data: {
         steps,
-        device: { apple_id: deviceAppleId, name: deviceName, udid },
+        device: { id: deviceAppleId, apple_id: deviceAppleId, name: deviceName, udid, platform, status: 'ENABLED', account_id },
         certificate: { id: certLocalId, apple_id: certAppleId, type: cert_type, password },
-        bundle_id: { apple_id: bundleAppleId, identifier: bundle_identifier },
+        bundle_id: { id: bundleAppleId || bundle_identifier, apple_id: bundleAppleId, identifier: bundle_identifier },
         profile: {
           id: profileLocalId,
           apple_id: profile.id,
@@ -404,8 +532,11 @@ router.get('/:deviceId/resources', async (req, res) => {
   }
 
   const deviceId = device.apple_id || device.id;
+  const deviceUdid = device.udid;
 
-  const links = await db.prepare('SELECT * FROM device_resources WHERE device_id = ? ORDER BY created_at DESC').all(deviceId);
+  const links = await db.prepare(
+    'SELECT * FROM device_resources WHERE device_id = ? OR udid = ? ORDER BY created_at DESC'
+  ).all(deviceId, deviceUdid);
 
   let certs = [];
   let profiles = [];
@@ -426,13 +557,6 @@ router.get('/:deviceId/resources', async (req, res) => {
         `SELECT id, name, type, profile_path, expires_at, created_at FROM profiles WHERE id IN (${placeholders}) ORDER BY created_at DESC`
       ).all(...profileIds);
     }
-  } else {
-    certs = await db.prepare(
-      'SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE account_id = ? AND is_self_signed = 0 ORDER BY created_at DESC'
-    ).all(device.account_id);
-    profiles = await db.prepare(
-      'SELECT id, name, type, profile_path, expires_at, created_at FROM profiles WHERE account_id = ? ORDER BY created_at DESC'
-    ).all(device.account_id);
   }
 
   const bundleIds = [...new Set(links.map(l => l.bundle_identifier).filter(Boolean))];

@@ -186,6 +186,17 @@ router.post('/', async (req, res) => {
   }
 
   const db = getDb();
+
+  const existing = await db.prepare(
+    'SELECT id, name FROM accounts WHERE issuer_id = ? AND key_id = ?'
+  ).get(issuer_id, key_id);
+  if (existing) {
+    return res.status(409).json({
+      success: false,
+      message: `该账号已存在（${existing.name}），同一 Issuer ID + Key ID 不可重复添加`
+    });
+  }
+
   const id = uuidv4();
   await db.prepare('INSERT INTO accounts (id, user_id, name, issuer_id, key_id, private_key) VALUES (?, ?, ?, ?, ?, ?)')
     .run(id, req.user.id, name, issuer_id, key_id, encrypt(private_key));
@@ -349,6 +360,18 @@ router.post('/import-p8', upload.single('file'), async (req, res) => {
   }
 
   const db = getDb();
+
+  const existing = await db.prepare(
+    'SELECT id, name FROM accounts WHERE issuer_id = ? AND key_id = ?'
+  ).get(issuer_id, key_id);
+  if (existing) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    return res.status(409).json({
+      success: false,
+      message: `该账号已存在（${existing.name}），同一 Issuer ID + Key ID 不可重复添加`
+    });
+  }
+
   const id = uuidv4();
   await db.prepare('INSERT INTO accounts (id, user_id, name, issuer_id, key_id, private_key) VALUES (?, ?, ?, ?, ?, ?)')
     .run(id, req.user.id, name, issuer_id, key_id, encrypt(privateKeyContent));

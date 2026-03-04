@@ -102,6 +102,13 @@ final class DeviceViewModel: ObservableObject {
         await loadDevices()
     }
 
+    func deleteDevice(deviceId: String, keepApple: Bool = false) async throws {
+        AppLogger.data.info("📱 Deleting device id=\(deviceId) keepApple=\(keepApple)")
+        try await service.delete(deviceId: deviceId, keepApple: keepApple)
+        AppLogger.data.info("📱 Device deleted")
+        await loadDevices()
+    }
+
     func autoBind(
         name: String, udid: String, bundleId: String, bundleName: String,
         certType: String = "IOS_DEVELOPMENT", profileType: String = "IOS_APP_DEVELOPMENT",

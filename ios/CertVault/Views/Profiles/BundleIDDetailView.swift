@@ -1,0 +1,436 @@
+import SwiftUI
+import HiconIcons
+
+struct BundleIDDetailView: View {
+    let bundleId: BundleIDItem
+    let accountId: String
+    let onDelete: () async -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var capabilities: [CapabilityItem] = []
+    @State private var resources: BundleIDResources?
+    @State private var isLoadingCaps = false
+    @State private var isLoadingResources = false
+    @State private var showDeleteConfirm = false
+    @State private var copiedText: String?
+
+    private let capService = CapabilityService()
+    private let profileService = ProfileService()
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                infoCard
+                devicesSection
+                certificatesSection
+                profilesSection
+                capabilitiesSection
+                deleteSection
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
+        }
+        .pageBackground()
+        .navigationTitle("标识符详情")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            async let caps: () = loadCapabilities()
+            async let res: () = loadResources()
+            _ = await (caps, res)
+        }
+        .alert("确认删除", isPresented: $showDeleteConfirm) {
+            Button("删除", role: .destructive) {
+                Task {
+                    await onDelete()
+                    dismiss()
+                }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("删除后将同时从 Apple Developer 移除，此操作不可撤销。")
+        }
+    }
+
+    // MARK: - Info Card
+
+    private var infoCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                HIcon(AppIcon.bundleID)
+                    .font(.title2)
+                    .foregroundStyle(Color.dsAccentCyan)
+                    .frame(width: 48, height: 48)
+                    .background(Color.dsAccentCyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(bundleId.displayName)
+                        .font(.title3.bold())
+                        .foregroundStyle(Color.dsText)
+                    if let platform = bundleId.platform {
+                        StatusBadge(platform, color: .dsAccentBlue)
+                    }
+                }
+            }
+
+            Divider().overlay(Color.dsBorder)
+
+            detailRow("标识符", value: bundleId.identifier ?? "N/A", monospaced: true, copyable: true)
+            detailRow("名称", value: bundleId.name ?? "N/A")
+            detailRow("平台", value: bundleId.platform ?? "N/A")
+            if let date = bundleId.created_at {
+                detailRow("创建时间", value: String(date.prefix(19)))
+            }
+        }
+        .cardStyle()
+    }
+
+    // MARK: - Devices
+
+    private var devicesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HIcon(AppIcon.device)
+                    .foregroundStyle(Color.dsAccent)
+                Text("关联设备")
+                    .font(.headline)
+                    .foregroundStyle(Color.dsText)
+                Spacer()
+                Text("\(resources?.devices?.count ?? 0) 个")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.dsMuted)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.dsSurfaceLight, in: Capsule())
+            }
+
+            if isLoadingResources {
+                loadingPlaceholder
+            } else if let devices = resources?.devices, !devices.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(devices.enumerated()), id: \.element.id) { index, device in
+                        NavigationLink {
+                            DeviceDetailView(deviceId: device.id, accountId: accountId)
+                        } label: {
+                            HStack(spacing: 12) {
+                                HIcon(AppIcon.device)
+                                    .font(.body)
+                                    .foregroundStyle(Color.dsAccent)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.dsAccent.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(device.displayName)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(Color.dsText)
+                                    Text(device.udid ?? "")
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(Color.dsMuted)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer()
+
+                                if let status = device.status {
+                                    StatusBadge.forStatus(status)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 10)
+
+                        if index < devices.count - 1 {
+                            Divider().padding(.leading, 48)
+                        }
+                    }
+                }
+            } else {
+                Text("暂无关联设备")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.dsMuted)
+                    .padding(.vertical, 8)
+            }
+        }
+        .cardStyle()
+    }
+
+    // MARK: - Certificates
+
+    private var certificatesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HIcon(AppIcon.certificate)
+                    .foregroundStyle(Color.dsAccentPurple)
+                Text("关联证书")
+                    .font(.headline)
+                    .foregroundStyle(Color.dsText)
+                Spacer()
+                Text("\(resources?.certificates?.count ?? 0) 个")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.dsMuted)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.dsSurfaceLight, in: Capsule())
+            }
+
+            if isLoadingResources {
+                loadingPlaceholder
+            } else if let certs = resources?.certificates, !certs.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(certs.enumerated()), id: \.element.id) { index, cert in
+                        NavigationLink {
+                            CertificateDetailView(certId: cert.id, accountId: accountId)
+                        } label: {
+                            HStack(spacing: 12) {
+                                HIcon(AppIcon.certificate)
+                                    .font(.body)
+                                    .foregroundStyle(Color.dsAccentPurple)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.dsAccentPurple.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(cert.displayName)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(Color.dsText)
+                                    HStack(spacing: 6) {
+                                        Text(cert.type ?? "")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.dsMuted)
+                                        if let pwd = cert.password {
+                                            Text("密码: \(pwd)")
+                                                .font(.caption.monospaced())
+                                                .foregroundStyle(Color.dsAccentBlue)
+                                        }
+                                    }
+                                }
+
+                                Spacer()
+
+                                if cert.has_p12 == true {
+                                    StatusBadge("P12", color: .dsAccentBlue)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 10)
+
+                        if index < certs.count - 1 {
+                            Divider().padding(.leading, 48)
+                        }
+                    }
+                }
+            } else {
+                Text("暂无关联证书")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.dsMuted)
+                    .padding(.vertical, 8)
+            }
+        }
+        .cardStyle()
+    }
+
+    // MARK: - Profiles
+
+    private var profilesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HIcon(AppIcon.profile)
+                    .foregroundStyle(Color.dsAccentOrange)
+                Text("关联描述文件")
+                    .font(.headline)
+                    .foregroundStyle(Color.dsText)
+                Spacer()
+                Text("\(resources?.profiles?.count ?? 0) 个")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.dsMuted)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.dsSurfaceLight, in: Capsule())
+            }
+
+            if isLoadingResources {
+                loadingPlaceholder
+            } else if let profiles = resources?.profiles, !profiles.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
+                        HStack(spacing: 12) {
+                            HIcon(AppIcon.profile)
+                                .font(.body)
+                                .foregroundStyle(Color.dsAccentOrange)
+                                .frame(width: 36, height: 36)
+                                .background(Color.dsAccentOrange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(profile.displayName)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color.dsText)
+                                Text(profile.type ?? "")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.dsMuted)
+                            }
+
+                            Spacer()
+
+                            if profile.has_file == true {
+                                StatusBadge("可下载", color: .dsAccent)
+                            }
+                        }
+                        .padding(.vertical, 10)
+
+                        if index < profiles.count - 1 {
+                            Divider().padding(.leading, 48)
+                        }
+                    }
+                }
+            } else {
+                Text("暂无关联描述文件")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.dsMuted)
+                    .padding(.vertical, 8)
+            }
+        }
+        .cardStyle()
+    }
+
+    // MARK: - Capabilities
+
+    private var capabilitiesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HIcon(AppIcon.star)
+                    .foregroundStyle(Color.dsAccentOrange)
+                Text("已开启权限")
+                    .font(.headline)
+                    .foregroundStyle(Color.dsText)
+                Spacer()
+
+                let enabledCount = capabilities.filter(\.isEnabled).count
+                Text("\(enabledCount) 个")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.dsMuted)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.dsSurfaceLight, in: Capsule())
+            }
+
+            if isLoadingCaps {
+                loadingPlaceholder
+            } else {
+                let enabled = capabilities.filter(\.isEnabled)
+                if enabled.isEmpty {
+                    Text("暂无已开启的权限")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.dsMuted)
+                        .padding(.vertical, 8)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(enabled.enumerated()), id: \.element.stableId) { index, cap in
+                            HStack(spacing: 12) {
+                                HIcon(AppIcon.check)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.dsAccent)
+                                    .frame(width: 28, height: 28)
+                                    .background(Color.dsAccent.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+
+                                Text(cap.name ?? cap.type)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.dsText)
+
+                                Spacer()
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < enabled.count - 1 {
+                                Divider().padding(.leading, 40)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .cardStyle()
+    }
+
+    // MARK: - Delete
+
+    private var deleteSection: some View {
+        Button {
+            showDeleteConfirm = true
+        } label: {
+            HStack(spacing: 8) {
+                HIcon(AppIcon.close).font(.body)
+                Text("删除 Bundle ID")
+                    .fontWeight(.semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .foregroundStyle(.white)
+            .background(Color.dsAccentPink, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - Helpers
+
+    private var loadingPlaceholder: some View {
+        HStack {
+            Spacer()
+            ProgressView().controlSize(.small)
+            Text("加载中...")
+                .font(.subheadline)
+                .foregroundStyle(Color.dsMuted)
+            Spacer()
+        }
+        .padding(.vertical, 12)
+    }
+
+    private func detailRow(_ label: String, value: String, monospaced: Bool = false, copyable: Bool = false) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(Color.dsMuted)
+                .frame(width: 70, alignment: .leading)
+            Spacer()
+            Text(value)
+                .font(monospaced ? .subheadline.monospaced() : .subheadline)
+                .foregroundStyle(Color.dsText)
+                .textSelection(.enabled)
+                .multilineTextAlignment(.trailing)
+
+            if copyable {
+                Button {
+                    UIPasteboard.general.string = value
+                    withAnimation { copiedText = value }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation { if copiedText == value { copiedText = nil } }
+                    }
+                } label: {
+                    HIcon(copiedText == value ? AppIcon.check : AppIcon.copy)
+                        .font(.caption)
+                        .foregroundStyle(copiedText == value ? .green : Color.dsMuted)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func loadCapabilities() async {
+        isLoadingCaps = true
+        do {
+            capabilities = try await capService.list(bundleId: bundleId.id, accountId: accountId)
+        } catch {
+            AppLogger.data.error("Failed to load capabilities: \(error.localizedDescription)")
+        }
+        isLoadingCaps = false
+    }
+
+    private func loadResources() async {
+        isLoadingResources = true
+        do {
+            resources = try await profileService.bundleIdResources(id: bundleId.id)
+        } catch {
+            AppLogger.data.error("Failed to load bundle ID resources: \(error.localizedDescription)")
+        }
+        isLoadingResources = false
+    }
+}

@@ -70,4 +70,10 @@ struct ProfileService {
     func deleteBundleId(id: String) async throws {
         _ = try await api.requestRaw("/profiles/bundle-ids/\(id)", method: "DELETE")
     }
+
+    func bundleIdResources(id: String) async throws -> BundleIDResources {
+        let resp: APIResponse<BundleIDResources> = try await api.request("/profiles/bundle-ids/\(id)/resources")
+        guard let data = resp.data else { throw APIError.noData }
+        return data
+    }
 }

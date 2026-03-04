@@ -51,24 +51,37 @@ struct BundleIDListView: View {
 
                         LazyVStack(spacing: 0) {
                             ForEach(Array(vm.bundleIds.enumerated()), id: \.element.id) { index, item in
-                                HStack(spacing: 14) {
-                                    HIcon(AppIcon.bundleID)
-                                        .font(.body)
-                                        .foregroundStyle(Color.dsAccentCyan)
-                                        .frame(width: 40, height: 40)
-                                        .background(Color.dsAccentCyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                                NavigationLink {
+                                    BundleIDDetailView(
+                                        bundleId: item,
+                                        accountId: vm.selectedAccountId,
+                                        onDelete: { try? await vm.deleteBundleId(id: item.id) }
+                                    )
+                                } label: {
+                                    HStack(spacing: 14) {
+                                        HIcon(AppIcon.bundleID)
+                                            .font(.body)
+                                            .foregroundStyle(Color.dsAccentCyan)
+                                            .frame(width: 40, height: 40)
+                                            .background(Color.dsAccentCyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
 
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(item.displayName)
-                                            .font(.subheadline.weight(.medium))
-                                            .foregroundStyle(Color.dsText)
-                                        Text(item.identifier ?? "")
-                                            .font(.caption.monospaced())
-                                            .foregroundStyle(Color.dsMuted)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(item.displayName)
+                                                .font(.subheadline.weight(.medium))
+                                                .foregroundStyle(Color.dsText)
+                                            Text(item.identifier ?? "")
+                                                .font(.caption.monospaced())
+                                                .foregroundStyle(Color.dsMuted)
+                                        }
+
+                                        Spacer()
+
+                                        HIcon(AppIcon.chevronRight)
+                                            .font(.caption)
+                                            .foregroundStyle(Color.dsMuted.opacity(0.5))
                                     }
-
-                                    Spacer()
                                 }
+                                .buttonStyle(.plain)
                                 .padding(.vertical, 12)
                                 .padding(.horizontal, 16)
                                 .contentShape(Rectangle())
