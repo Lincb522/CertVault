@@ -10,7 +10,7 @@
         <div class="content-card">
           <div class="card-header"><h3>发送推送</h3></div>
 
-          <el-form :model="form" label-width="120px">
+          <el-form :model="form" label-width="100px">
             <el-form-item label="认证方式">
               <el-radio-group v-model="authMode">
                 <el-radio-button value="pushkey">已导入的推送密钥</el-radio-button>

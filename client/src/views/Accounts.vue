@@ -33,19 +33,30 @@
         <el-table-column prop="created_at" label="创建时间" width="180">
           <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="380" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="viewDetail(row)">
-              <el-icon><View /></el-icon> 详情
-            </el-button>
-            <el-button size="small" type="success" @click="testConnection(row.id)" :loading="testingId === row.id">
-              测试
-            </el-button>
-            <el-button size="small" @click="downloadP8(row)">
-              <el-icon><Download /></el-icon> P8
-            </el-button>
-            <el-button size="small" type="primary" @click="editAccount(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteAccount(row)">删除</el-button>
+            <el-button size="small" @click="viewDetail(row)">详情</el-button>
+            <el-dropdown trigger="click" @command="cmd => handleCommand(cmd, row)">
+              <el-button size="small">
+                更多 <el-icon style="margin-left:4px"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">
+                    <el-icon><Edit /></el-icon> 编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item command="test">
+                    <el-icon><Connection /></el-icon> 测试连接
+                  </el-dropdown-item>
+                  <el-dropdown-item command="p8">
+                    <el-icon><Download /></el-icon> 下载 P8
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided style="color: var(--nask-red)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -655,6 +666,13 @@ async function testConnection(id) {
   } finally {
     testingId.value = null
   }
+}
+
+function handleCommand(cmd, row) {
+  if (cmd === 'edit') editAccount(row)
+  else if (cmd === 'test') testConnection(row.id)
+  else if (cmd === 'p8') downloadP8(row)
+  else if (cmd === 'delete') deleteAccount(row)
 }
 
 onMounted(fetchAccounts)

@@ -227,20 +227,12 @@ private struct CreatePushKeySheet: View {
                     .disabled(!isValid || isLoading)
                 }
             }
-            .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: [
-                    UTType(filenameExtension: "p8") ?? .data,
-                    .plainText,
-                    .data
-                ],
-                allowsMultipleSelection: false
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    guard let url = urls.first else { return }
-                    guard url.startAccessingSecurityScopedResource() else { return }
-                    defer { url.stopAccessingSecurityScopedResource() }
+            .sheet(isPresented: $showFilePicker) {
+                DocumentPicker(contentTypes: [.data, .plainText, .item]) { url in
+                    guard url.pathExtension.lowercased() == "p8" else {
+                        errorMsg = "请选择 .p8 格式的文件"
+                        return
+                    }
                     selectedFileName = url.lastPathComponent
                     if let data = try? Data(contentsOf: url), let text = String(data: data, encoding: .utf8) {
                         p8Content = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -251,8 +243,6 @@ private struct CreatePushKeySheet: View {
                         if keyId.isEmpty { keyId = extracted }
                         if name.isEmpty { name = "APNs Key \(extracted)" }
                     }
-                case .failure(let error):
-                    errorMsg = error.localizedDescription
                 }
             }
         }

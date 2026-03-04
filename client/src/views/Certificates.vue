@@ -53,17 +53,24 @@
           <el-table-column prop="created_at" label="创建时间" width="180">
             <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="300" fixed="right">
+          <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" @click="viewCertDetail(row)">
-                <el-icon><View /></el-icon>
-              </el-button>
-              <el-button size="small" :type="row.p12_path || row.private_key ? 'primary' : 'success'" @click="downloadCert(row)">
-                <el-icon><Download /></el-icon> {{ row.p12_path || row.private_key ? 'P12' : 'CER' }}
-              </el-button>
-              <el-button size="small" type="danger" @click="deleteCert(row)">
-                {{ row.is_remote ? '撤销' : '删除' }}
-              </el-button>
+              <el-button size="small" @click="viewCertDetail(row)">详情</el-button>
+              <el-dropdown trigger="click">
+                <el-button size="small">
+                  更多 <el-icon style="margin-left:4px"><ArrowDown /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="downloadCert(row)">
+                      <el-icon><Download /></el-icon> {{ row.p12_path || row.private_key ? '导出 P12' : '导出 CER' }}
+                    </el-dropdown-item>
+                    <el-dropdown-item divided @click="deleteCert(row)" style="color: var(--nask-red)">
+                      <el-icon><Delete /></el-icon> {{ row.is_remote ? '撤销' : '删除' }}
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
           </el-table-column>
         </el-table>

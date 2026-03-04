@@ -24,8 +24,76 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static(path.join(__dirname, '../data/uploads')));
 
+const multer = require('multer');
+const AdmZip = require('adm-zip');
+const plist = require('plist');
+const bplist = require('bplist-parser');
+const ipaDir = path.join(__dirname, '../data/downloads');
+const ipaUpload = multer({ dest: path.join(__dirname, '../data/tmp'), limits: { fileSize: 200 * 1024 * 1024 } });
+
+function parseIpaInfo(filePath) {
+  try {
+    const zip = new AdmZip(filePath);
+    const entries = zip.getEntries();
+    const plistEntry = entries.find(e => /^Payload\/[^/]+\.app\/Info\.plist$/.test(e.entryName));
+    if (!plistEntry) return null;
+    const buf = plistEntry.getData();
+
+    let info;
+    if (buf[0] === 0x62 && buf[1] === 0x70 && buf[2] === 0x6C && buf[3] === 0x69) {
+      const parsed = bplist.parseBuffer(buf);
+      info = parsed && parsed[0] ? parsed[0] : null;
+    } else {
+      info = plist.parse(buf.toString('utf8'));
+    }
+    if (!info) return null;
+
+    return {
+      app_name: info.CFBundleDisplayName || info.CFBundleName || '',
+      bundle_id: info.CFBundleIdentifier || '',
+      version: info.CFBundleShortVersionString || '',
+      build: String(info.CFBundleVersion || ''),
+      min_os: info.MinimumOSVersion || '',
+    };
+  } catch (err) {
+    console.error('parseIpaInfo error:', err.message);
+    return null;
+  }
+}
+
+app.get('/download/ipa', (req, res) => {
+  const fs = require('fs');
+  const files = fs.existsSync(ipaDir) ? fs.readdirSync(ipaDir).filter(f => f.endsWith('.ipa')).sort() : [];
+  if (!files.length) return res.status(404).send('IPA 尚未上传');
+  res.download(path.join(ipaDir, files[files.length - 1]));
+});
+
+app.get('/download/ipa/:name', (req, res) => {
+  const fs = require('fs');
+  const name = req.params.name;
+  if (!name.endsWith('.ipa') || name.includes('..')) return res.status(400).send('无效文件名');
+  const filePath = path.join(ipaDir, name);
+  if (!fs.existsSync(filePath)) return res.status(404).send('文件不存在');
+  res.download(filePath, name);
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+app.get('/api/app/version', (req, res) => {
+  const fs = require('fs');
+  const versionFile = path.join(__dirname, '../data/app-version.json');
+  const defaults = { version: '1.0.0', build: '1', force_update: false, changelog: '' };
+  if (fs.existsSync(versionFile)) {
+    try {
+      const info = JSON.parse(fs.readFileSync(versionFile, 'utf8'));
+      return res.json({ success: true, data: { ...defaults, ...info } });
+    } catch {}
+  }
+  const files = fs.existsSync(ipaDir) ? fs.readdirSync(ipaDir).filter(f => f.endsWith('.ipa')).sort() : [];
+  const hasIpa = files.length > 0;
+  res.json({ success: true, data: { ...defaults, download_url: hasIpa ? '/download/ipa' : null } });
 });
 
 const udidRoutes = require('./routes/udid');
@@ -34,6 +102,139 @@ app.use('/api/auth', authRoutes);
 app.use('/api/udid', udidRoutes);
 
 app.use('/api', requireAuth);
+
+function requireSuperAdmin(req, res, next) {
+  if (req.user?.role !== 'superadmin') return res.status(403).json({ success: false, message: '需要超级管理员权限' });
+  next();
+}
+
+app.post('/api/ipa/upload', requireSuperAdmin, ipaUpload.single('ipa'), (req, res) => {
+  const fs = require('fs');
+  if (!req.file) return res.status(400).json({ success: false, message: '请上传 IPA 文件' });
+
+  const ipaInfo = parseIpaInfo(req.file.path);
+  const base = path.basename(req.file.originalname, '.ipa');
+  const ver = ipaInfo?.version || '';
+  const build = ipaInfo?.build || '';
+  const now = new Date();
+  const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  const fileName = ver ? `${base}_v${ver}_b${build}_${ts}.ipa` : `${base}_${ts}.ipa`;
+
+  if (!fs.existsSync(ipaDir)) fs.mkdirSync(ipaDir, { recursive: true });
+  const destPath = path.join(ipaDir, fileName);
+  fs.renameSync(req.file.path, destPath);
+
+  const stats = fs.statSync(destPath);
+  res.json({
+    success: true,
+    message: 'IPA 上传成功',
+    data: {
+      name: fileName,
+      size: stats.size,
+      updated_at: new Date().toISOString(),
+      ipa_info: ipaInfo
+    }
+  });
+});
+
+app.get('/api/ipa/list', requireSuperAdmin, (req, res) => {
+  const fs = require('fs');
+  if (!fs.existsSync(ipaDir)) return res.json({ success: true, data: [] });
+  const files = fs.readdirSync(ipaDir).filter(f => f.endsWith('.ipa')).map(name => {
+    const filePath = path.join(ipaDir, name);
+    const stats = fs.statSync(filePath);
+    const ipaInfo = parseIpaInfo(filePath);
+    return { name, size: stats.size, updated_at: stats.mtime.toISOString(), ipa_info: ipaInfo };
+  });
+  files.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  res.json({ success: true, data: files });
+});
+
+const versionsFile = path.join(__dirname, '../data/app-versions.json');
+const currentVersionFile = path.join(__dirname, '../data/app-version.json');
+
+function loadVersions() {
+  const fs = require('fs');
+  if (!fs.existsSync(versionsFile)) return [];
+  try { return JSON.parse(fs.readFileSync(versionsFile, 'utf8')); } catch { return []; }
+}
+
+function saveVersions(list) {
+  const fs = require('fs');
+  fs.mkdirSync(path.dirname(versionsFile), { recursive: true });
+  fs.writeFileSync(versionsFile, JSON.stringify(list, null, 2));
+}
+
+function setCurrentVersion(entry) {
+  const fs = require('fs');
+  fs.mkdirSync(path.dirname(currentVersionFile), { recursive: true });
+  fs.writeFileSync(currentVersionFile, JSON.stringify(entry, null, 2));
+}
+
+app.get('/api/app/versions', requireSuperAdmin, (req, res) => {
+  const list = loadVersions();
+  res.json({ success: true, data: list });
+});
+
+app.post('/api/app/versions', requireSuperAdmin, (req, res) => {
+  const fs = require('fs');
+  const { version, build, changelog, force_update, ipa_file } = req.body;
+  if (!version) return res.status(400).json({ success: false, message: '版本号不能为空' });
+  if (!ipa_file) return res.status(400).json({ success: false, message: '请选择 IPA 文件' });
+  const ipaPath = path.join(ipaDir, ipa_file);
+  if (!fs.existsSync(ipaPath)) return res.status(400).json({ success: false, message: '所选 IPA 文件不存在' });
+
+  const id = Date.now().toString(36);
+  const entry = {
+    id, version, build: build || '1', changelog: changelog || '',
+    force_update: !!force_update, ipa_file,
+    download_url: `/download/ipa/${encodeURIComponent(ipa_file)}`,
+    created_at: new Date().toISOString(), is_current: true
+  };
+
+  const list = loadVersions();
+  list.forEach(v => v.is_current = false);
+  list.unshift(entry);
+  saveVersions(list);
+  setCurrentVersion(entry);
+
+  res.json({ success: true, message: '版本已发布', data: entry });
+});
+
+app.put('/api/app/versions/:id/current', requireSuperAdmin, (req, res) => {
+  const list = loadVersions();
+  const target = list.find(v => v.id === req.params.id);
+  if (!target) return res.status(404).json({ success: false, message: '版本不存在' });
+
+  list.forEach(v => v.is_current = false);
+  target.is_current = true;
+  saveVersions(list);
+  setCurrentVersion(target);
+
+  res.json({ success: true, message: '已设为当前版本', data: target });
+});
+
+app.delete('/api/app/versions/:id', requireSuperAdmin, (req, res) => {
+  let list = loadVersions();
+  const target = list.find(v => v.id === req.params.id);
+  if (!target) return res.status(404).json({ success: false, message: '版本不存在' });
+  if (target.is_current) return res.status(400).json({ success: false, message: '不能删除当前发布版本' });
+
+  list = list.filter(v => v.id !== req.params.id);
+  saveVersions(list);
+
+  res.json({ success: true, message: '已删除' });
+});
+
+app.delete('/api/ipa/:name', requireSuperAdmin, (req, res) => {
+  const fs = require('fs');
+  const name = req.params.name;
+  if (!name.endsWith('.ipa') || name.includes('..')) return res.status(400).json({ success: false, message: '无效文件名' });
+  const filePath = path.join(ipaDir, name);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: '文件不存在' });
+  fs.unlinkSync(filePath);
+  res.json({ success: true, message: '已删除' });
+});
 
 app.get('/api/dashboard', async (req, res) => {
   const { getDb } = require('./config/database');

@@ -6,7 +6,7 @@
     </div>
 
     <el-row :gutter="20">
-      <el-col :span="14">
+      <el-col :xs="24" :sm="14">
         <div class="content-card">
           <div class="card-header">
             <h3>生成获取链接</h3>
@@ -93,7 +93,7 @@
         </div>
       </el-col>
 
-      <el-col :span="10">
+      <el-col :xs="24" :sm="10">
         <div class="content-card">
           <div class="card-header"><h3>使用说明</h3></div>
           <el-timeline>
@@ -266,5 +266,15 @@ function goBindDevice() {
 
 .result-section {
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .qr-section {
+    flex-direction: column;
+    align-items: center;
+  }
+  .qr-info {
+    width: 100%;
+  }
 }
 </style>

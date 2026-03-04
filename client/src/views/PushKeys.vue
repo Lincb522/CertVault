@@ -56,16 +56,27 @@
         <el-table-column prop="created_at" label="导入时间" width="170">
           <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="success" @click="goTest(row)">
-              <el-icon><Promotion /></el-icon> 测试推送
-            </el-button>
-            <el-button size="small" @click="downloadKey(row)">
-              <el-icon><Download /></el-icon> P8
-            </el-button>
-            <el-button size="small" type="primary" @click="editKey(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteKey(row)">删除</el-button>
+            <el-button size="small" type="success" @click="goTest(row)">测试</el-button>
+            <el-dropdown trigger="click" @command="cmd => handleKeyCmd(cmd, row)">
+              <el-button size="small">
+                更多 <el-icon style="margin-left:4px"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">
+                    <el-icon><Edit /></el-icon> 编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item command="download">
+                    <el-icon><Download /></el-icon> 下载 P8
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided style="color: var(--nask-red)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -266,6 +277,12 @@ async function deleteKey(row) {
   await pushKeyApi.delete(row.id)
   ElMessage.success('删除成功')
   fetchKeys()
+}
+
+function handleKeyCmd(cmd, row) {
+  if (cmd === 'edit') editKey(row)
+  else if (cmd === 'download') downloadKey(row)
+  else if (cmd === 'delete') deleteKey(row)
 }
 
 function downloadKey(row) {

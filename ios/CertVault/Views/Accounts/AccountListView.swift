@@ -272,19 +272,16 @@ private struct UploadP8Sheet: View {
                         .disabled(!isValid || isLoading)
                 }
             }
-            .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: [
-                    UTType(filenameExtension: "p8") ?? .data,
-                    .plainText,
-                    .data
-                ],
-                allowsMultipleSelection: false
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    guard let url = urls.first else { return }
-                    guard url.startAccessingSecurityScopedResource() else { return }
+            .sheet(isPresented: $showFilePicker) {
+                DocumentPicker(contentTypes: [.data, .plainText, .item]) { url in
+                    guard url.pathExtension.lowercased() == "p8" else {
+                        errorMsg = "请选择 .p8 格式的文件"
+                        return
+                    }
+                    guard url.startAccessingSecurityScopedResource() else {
+                        errorMsg = "无法访问该文件"
+                        return
+                    }
                     defer { url.stopAccessingSecurityScopedResource() }
                     selectedFileName = url.lastPathComponent
                     selectedFileData = try? Data(contentsOf: url)
@@ -294,8 +291,6 @@ private struct UploadP8Sheet: View {
                             keyID = String(base.dropFirst("AuthKey_".count))
                         }
                     }
-                case .failure(let error):
-                    errorMsg = error.localizedDescription
                 }
             }
         }
@@ -320,6 +315,34 @@ private struct UploadP8Sheet: View {
                 errorMsg = error.localizedDescription
             }
             isLoading = false
+        }
+    }
+}
+
+// MARK: - Document Picker (UIKit)
+
+struct DocumentPicker: UIViewControllerRepresentable {
+    let contentTypes: [UTType]
+    let onPick: (URL) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: true)
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+        init(onPick: @escaping (URL) -> Void) { self.onPick = onPick }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            onPick(url)
         }
     }
 }

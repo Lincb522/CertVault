@@ -6,10 +6,14 @@ struct SettingsView: View {
     @EnvironmentObject private var authVM: AuthViewModel
     @EnvironmentObject private var appearance: AppearanceManager
     @EnvironmentObject private var notificationManager: NotificationManager
+    @StateObject private var updateService = UpdateService.shared
     @State private var showChangePassword = false
     @State private var showLogoutConfirm = false
     @State private var showClearCacheConfirm = false
     @State private var showSMTP = false
+    @State private var showUpdateSheet = false
+    @State private var showAlreadyLatest = false
+    @State private var showUpdateError: String?
     @State private var serverStatus: ServerStatus = .checking
     @State private var cacheSize: Int64 = 0
     @State private var cacheCleared = false
@@ -72,6 +76,7 @@ struct SettingsView: View {
             Button(L10n.ok) {}
         }
         .task { await checkServerHealth() }
+        .task { await updateService.checkForUpdate() }
         .onAppear { cacheSize = DatabaseManager.shared.cacheSize() }
     }
 
@@ -482,12 +487,70 @@ struct SettingsView: View {
                         .foregroundStyle(Color.dsMuted)
                 }
                 .padding(14)
+
+                Divider().padding(.horizontal, 14)
+
+                Button {
+                    Task {
+                        await updateService.checkForUpdate()
+                        if updateService.updateAvailable {
+                            showUpdateSheet = true
+                        } else if let err = updateService.lastError {
+                            showUpdateError = err
+                        } else {
+                            showAlreadyLatest = true
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        HIcon(AppIcon.refresh)
+                            .font(.body)
+                            .foregroundStyle(Color.dsAccentBlue)
+                            .frame(width: 20)
+                        Text(NSLocalizedString("settings.checkUpdate", comment: ""))
+                            .font(.subheadline)
+                            .foregroundStyle(Color.dsText)
+                        Spacer()
+                        if updateService.isChecking {
+                            ProgressView().controlSize(.small)
+                        } else if updateService.updateAvailable {
+                            HStack(spacing: 4) {
+                                Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
+                                Text(NSLocalizedString("settings.updateAvailable", comment: ""))
+                                    .font(.caption)
+                                    .foregroundStyle(Color.dsAccentPink)
+                            }
+                        } else {
+                            HIcon(AppIcon.chevronRight)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.dsMuted.opacity(0.4))
+                        }
+                    }
+                    .padding(14)
+                }
             }
             .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.dsBorder, lineWidth: 1)
             )
+        }
+        .sheet(isPresented: $showUpdateSheet) {
+            UpdateSheet()
+                .environmentObject(updateService)
+        }
+        .alert("已是最新版本", isPresented: $showAlreadyLatest) {
+            Button("好的") {}
+        } message: {
+            Text("当前版本 v\(updateService.currentVersion) 已是最新")
+        }
+        .alert("检查更新失败", isPresented: .init(
+            get: { showUpdateError != nil },
+            set: { if !$0 { showUpdateError = nil } }
+        )) {
+            Button("好的") { showUpdateError = nil }
+        } message: {
+            Text(showUpdateError ?? "")
         }
     }
 

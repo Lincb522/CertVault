@@ -426,3 +426,14 @@
 "more.healthCheck.sub" = "Check API connection & config";
 "more.settings" = "Settings";
 "more.settings.sub" = "Account & server configuration";
+
+"settings.checkUpdate" = "Check for Updates";
+"settings.updateAvailable" = "New Version";
+"update.title" = "Update Available";
+"update.currentVersion" = "Current version";
+"update.changelog" = "What's New";
+"update.download" = "Download IPA";
+"update.share" = "Share to Install";
+"update.later" = "Later";
+"update.downloadFailed" = "Download failed, please retry";
+"update.upToDate" = "Up to date";

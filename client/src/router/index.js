@@ -15,6 +15,7 @@ const routes = [
   { path: '/udid-result', name: 'UDIDResult', component: () => import('../views/UDIDResult.vue'), meta: { title: 'UDID 结果', public: true } },
   { path: '/push-keys', name: 'PushKeys', component: () => import('../views/PushKeys.vue'), meta: { title: '推送密钥' } },
   { path: '/push', name: 'PushTest', component: () => import('../views/PushTest.vue'), meta: { title: '推送测试' } },
+  { path: '/ipa', name: 'IpaManage', component: () => import('../views/IpaManage.vue'), meta: { title: 'IPA 管理', requireSuperAdmin: true } },
 ]
 
 const router = createRouter({

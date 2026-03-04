@@ -37,15 +37,20 @@
             <span style="color: var(--cv-text-secondary); font-size: 13px">{{ formatDate(row.created_at) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="openRoleDialog(row)" :disabled="row.id === currentUserId">修改角色</el-button>
-            <el-button size="small" type="warning" @click="openResetPwd(row)">重置密码</el-button>
-            <el-popconfirm :title="`确认删除用户 ${row.username}？`" @confirm="handleDelete(row)">
-              <template #reference>
-                <el-button size="small" type="danger" :disabled="row.id === currentUserId">删除</el-button>
+            <el-dropdown trigger="click">
+              <el-button size="small" type="primary">
+                操作 <el-icon style="margin-left:4px"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="openRoleDialog(row)" :disabled="row.id === currentUserId">修改角色</el-dropdown-item>
+                  <el-dropdown-item @click="openResetPwd(row)">重置密码</el-dropdown-item>
+                  <el-dropdown-item divided @click="handleDelete(row)" :disabled="row.id === currentUserId" style="color: var(--nask-red)">删除用户</el-dropdown-item>
+                </el-dropdown-menu>
               </template>
-            </el-popconfirm>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>

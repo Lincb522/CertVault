@@ -4,14 +4,16 @@
   </div>
   <div v-else class="app-layout">
     <div class="sidebar-overlay" :class="{ open: sidebarOpen }" @click="sidebarOpen = false"></div>
+
+    <!-- ========== SIDEBAR ========== -->
     <aside class="sidebar" :class="{ open: sidebarOpen }">
       <div class="sidebar-brand">
         <div class="sidebar-brand-icon">
-          <el-icon><Key /></el-icon>
+          <img src="./assets/app-icon.png" alt="CertVault">
         </div>
         <div class="sidebar-brand-text">
           <h2>CertVault</h2>
-          <p>Apple 证书管理工具</p>
+          <p>Workspace</p>
         </div>
         <button class="sidebar-close-btn" @click="sidebarOpen = false">
           <el-icon><Close /></el-icon>
@@ -20,8 +22,7 @@
 
       <nav class="sidebar-nav">
         <div class="nav-group">
-          <div class="nav-group-label">概览</div>
-          <router-link to="/" class="nav-item" active-class="active" exact-active-class="active" :class="{ active: $route.path === '/' }" @click="sidebarOpen = false">
+          <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }" @click="sidebarOpen = false">
             <el-icon><Odometer /></el-icon> 仪表盘
           </router-link>
         </div>
@@ -53,7 +54,7 @@
         </div>
 
         <div class="nav-group">
-          <div class="nav-group-label">开发工具</div>
+          <div class="nav-group-label">工具</div>
           <router-link to="/get-udid" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Monitor /></el-icon> 获取 UDID
           </router-link>
@@ -62,8 +63,15 @@
           </router-link>
         </div>
 
+        <div class="nav-group" v-if="userInfo.role === 'superadmin'">
+          <div class="nav-group-label">分发</div>
+          <router-link to="/ipa" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <el-icon><Download /></el-icon> IPA 管理
+          </router-link>
+        </div>
+
         <div class="nav-group">
-          <div class="nav-group-label">推送服务</div>
+          <div class="nav-group-label">推送</div>
           <router-link to="/push-keys" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Bell /></el-icon> 推送密钥
           </router-link>
@@ -73,65 +81,72 @@
         </div>
       </nav>
 
-      <div class="sidebar-footer">
-        <el-select
-          v-model="store.currentAccountId"
-          placeholder="选择账号"
-          size="small"
-          style="width: 100%; margin-bottom: 10px"
-          @change="store.setCurrentAccount"
-        >
-          <el-option
-            v-for="acc in store.accounts"
-            :key="acc.id"
-            :label="acc.name"
-            :value="acc.id"
+      <!-- Sidebar bottom -->
+      <div class="sidebar-bottom-items">
+        <div class="sidebar-theme-toggle" @click="toggleDarkMode">
+          <el-icon><Moon /></el-icon>
+          <span>Dark Mode</span>
+          <el-switch
+            :model-value="isDark"
+            size="small"
+            style="margin-left: auto; pointer-events: none"
           />
-        </el-select>
-
-        <div class="sidebar-user">
-          <div class="sidebar-user-avatar">{{ avatarChar }}</div>
-          <div class="sidebar-user-info">
-            <div class="sidebar-user-name">{{ userInfo.username || '用户' }}</div>
-            <div class="sidebar-user-role">{{ roleLabel }}</div>
-          </div>
         </div>
-
-        <div style="display: flex; gap: 6px">
-          <el-button size="small" style="flex:1" @click="showChangePwd = true">
-            <el-icon><Lock /></el-icon> 改密码
-          </el-button>
-          <el-button size="small" type="danger" style="flex:1" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon> 退出
-          </el-button>
+        <div class="nav-item" @click="showChangePwd = true">
+          <el-icon><Setting /></el-icon> 修改密码
+        </div>
+        <div class="nav-item" style="color: var(--nask-red)" @click="handleLogout">
+          <el-icon><SwitchButton /></el-icon> 退出登录
         </div>
       </div>
+
     </aside>
 
+    <!-- ========== MAIN ========== -->
     <main class="main-content">
       <header class="main-header">
         <div style="display: flex; align-items: center; gap: 12px">
           <button class="mobile-menu-btn" @click="sidebarOpen = true">
-            <el-icon size="20"><Fold /></el-icon>
+            <el-icon size="22"><Fold /></el-icon>
           </button>
           <div>
             <div class="main-header-title">{{ $route.meta.title || 'CertVault' }}</div>
-            <div class="main-header-sub" v-if="store.currentAccount">
-              {{ store.currentAccount.name }}
-            </div>
+            <div class="main-header-sub" v-if="store.currentAccount">{{ store.currentAccount.name }}</div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 12px">
-          <el-tag v-if="store.accounts.length" size="small" type="info" effect="plain">
-            {{ store.accounts.length }} 个账号
-          </el-tag>
+        <div class="navbar-right">
+          <el-select
+            v-model="store.currentAccountId"
+            placeholder="选择账号"
+            size="small"
+            class="navbar-account-select"
+            @change="store.setCurrentAccount"
+            v-if="store.accounts.length > 1"
+          >
+            <el-option
+              v-for="acc in store.accounts"
+              :key="acc.id"
+              :label="acc.name"
+              :value="acc.id"
+            />
+          </el-select>
+          <div class="navbar-user" @click="showUserMenu = !showUserMenu">
+            <div class="navbar-user-avatar">{{ avatarChar }}</div>
+            <div class="navbar-user-info">
+              <div class="navbar-user-name">{{ userInfo.username || '用户' }}</div>
+              <div class="navbar-user-email">{{ roleLabel }}</div>
+            </div>
+            <el-icon style="color: var(--nask-text-secondary); font-size: 12px"><ArrowDown /></el-icon>
+          </div>
         </div>
       </header>
+
       <div class="main-body">
         <router-view />
       </div>
     </main>
 
+    <!-- Change password dialog -->
     <el-dialog v-model="showChangePwd" title="修改密码" width="420px" destroy-on-close>
       <el-form :model="pwdForm" label-width="80px">
         <el-form-item label="旧密码" required>
@@ -162,7 +177,28 @@ const store = useAppStore()
 const showChangePwd = ref(false)
 const changingPwd = ref(false)
 const sidebarOpen = ref(false)
+const showUserMenu = ref(false)
 const pwdForm = ref({ old_password: '', new_password: '' })
+
+const isDark = ref(localStorage.getItem('theme') === 'dark')
+
+function toggleDarkMode() {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('theme', 'light')
+  }
+}
+
+onMounted(() => {
+  if (localStorage.getItem('theme') === 'dark') {
+    document.documentElement.classList.add('dark')
+    isDark.value = true
+  }
+})
 
 const userInfo = ref(JSON.parse(localStorage.getItem('auth_user') || '{}'))
 

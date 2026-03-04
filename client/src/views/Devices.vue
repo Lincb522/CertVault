@@ -67,14 +67,10 @@
             <span v-else style="color:#c0c4cc">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="showResources(row)">
-              <el-icon><Download /></el-icon> 下载资源
-            </el-button>
-            <el-button size="small" @click="downloadAll(row)">
-              <el-icon><FolderOpened /></el-icon> 打包下载
-            </el-button>
+            <el-button size="small" type="primary" @click="showResources(row)">资源</el-button>
+            <el-button size="small" @click="downloadAll(row)">打包</el-button>
           </template>
         </el-table-column>
       </el-table>

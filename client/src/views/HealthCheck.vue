@@ -127,7 +127,7 @@
 
     <!-- 证书有效期看板 -->
     <el-row :gutter="20" v-if="localResult || remoteResult">
-      <el-col :span="12">
+      <el-col :xs="24" :sm="12">
         <div class="content-card">
           <div class="card-header"><h3>证书有效期</h3></div>
           <el-table :data="allCerts" stripe size="small" empty-text="暂无证书">
@@ -149,7 +149,7 @@
         </div>
       </el-col>
 
-      <el-col :span="12">
+      <el-col :xs="24" :sm="12">
         <div class="content-card">
           <div class="card-header"><h3>描述文件有效期</h3></div>
           <el-table :data="allProfiles" stripe size="small" empty-text="暂无描述文件">
@@ -416,5 +416,18 @@ async function runRemoteCheck() {
 .issue-action {
   flex-shrink: 0;
   align-self: center;
+}
+
+@media (max-width: 768px) {
+  .issue-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .issue-action {
+    align-self: flex-start;
+  }
+  .issue-header {
+    flex-wrap: wrap;
+  }
 }
 </style>
