@@ -123,7 +123,7 @@ struct DashboardView: View {
     private func statsStrip(_ stats: DashboardStats) -> some View {
         LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: 10), count: 2), spacing: 10) {
             MiniStatCard(title: L10n.Dashboard.statAccounts, value: stats.accounts, icon: AppIcon.account, color: .dsAccentBlue)
-            MiniStatCard(title: L10n.Dashboard.statDevices, value: stats.devices, icon: AppIcon.device, color: .dsAccent)
+            MiniStatCard(title: L10n.Dashboard.statDevices, value: stats.devices, total: 100, icon: AppIcon.device, color: .dsAccent)
             MiniStatCard(title: L10n.Dashboard.statCerts, value: stats.certificates, icon: AppIcon.certificate, color: .dsAccentPurple)
             MiniStatCard(title: L10n.Dashboard.statProfiles, value: stats.profiles, icon: AppIcon.profile, color: .dsAccentOrange)
         }
@@ -281,6 +281,7 @@ struct DashboardView: View {
 private struct MiniStatCard: View {
     let title: String
     let value: Int
+    var total: Int? = nil
     let icon: UIImage
     let color: Color
 
@@ -297,10 +298,22 @@ private struct MiniStatCard: View {
                 )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(value)")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.dsText)
-                    .contentTransition(.numericText())
+                if let total {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("\(value)")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.dsText)
+                            .contentTransition(.numericText())
+                        Text("/ \(total)")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.dsMuted)
+                    }
+                } else {
+                    Text("\(value)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.dsText)
+                        .contentTransition(.numericText())
+                }
                 Text(title)
                     .font(.system(size: 11))
                     .foregroundStyle(Color.dsMuted)

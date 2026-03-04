@@ -44,14 +44,14 @@ app.get('/api/dashboard', async (req, res) => {
   let accountFilter, certFilter, deviceFilter, profileFilter, bundleFilter, certP12Filter;
   if (isSuperAdmin) {
     accountFilter = db.prepare('SELECT COUNT(*) as count FROM accounts');
-    deviceFilter = db.prepare('SELECT COUNT(*) as count FROM devices');
+    deviceFilter = db.prepare("SELECT COUNT(*) as count FROM devices WHERE UPPER(status) IN ('ENABLED','DISABLED')");
     certFilter = db.prepare('SELECT COUNT(*) as count FROM certificates');
     certP12Filter = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE p12_path IS NOT NULL AND p12_path != ''");
     profileFilter = db.prepare('SELECT COUNT(*) as count FROM profiles');
     bundleFilter = db.prepare('SELECT COUNT(*) as count FROM bundle_ids');
   } else {
     accountFilter = db.prepare('SELECT COUNT(*) as count FROM accounts WHERE user_id = ?');
-    deviceFilter = db.prepare('SELECT COUNT(*) as count FROM devices WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)');
+    deviceFilter = db.prepare("SELECT COUNT(*) as count FROM devices WHERE UPPER(status) IN ('ENABLED','DISABLED') AND account_id IN (SELECT id FROM accounts WHERE user_id = ?)");
     certFilter = db.prepare('SELECT COUNT(*) as count FROM certificates WHERE user_id = ?');
     certP12Filter = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE user_id = ? AND p12_path IS NOT NULL AND p12_path != ''");
     profileFilter = db.prepare('SELECT COUNT(*) as count FROM profiles WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)');
@@ -113,11 +113,8 @@ if (fs.existsSync(clientDist)) {
   }
 }
 
-app.use(express.static(publicDir));
-
-app.get('/admin', (req, res) => res.redirect('/admin/'));
-app.use('/admin/', express.static(clientDist));
-app.get('/admin/*', (req, res) => {
+app.use('/admin', express.static(clientDist, { redirect: false, index: false }));
+app.get('/admin*', (req, res) => {
   if (req.path.match(/\.(js|css|png|jpg|gif|svg|ico|woff2?|ttf|eot|map)$/)) {
     return res.status(404).send('Not found');
   }
@@ -127,6 +124,8 @@ app.get('/admin/*', (req, res) => {
   }
   res.status(500).send('Admin panel not found: ' + indexPath);
 });
+
+app.use(express.static(publicDir));
 
 app.use((err, req, res, next) => {
   console.error('Server Error:', err);
