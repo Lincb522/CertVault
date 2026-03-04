@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+client/dist/
+*.tar.gz
+
+# Runtime data
+server/data/
+server/db/
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+ios/CertVault/Config/Secrets.xcconfig
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Xcode
+ios/CertVault.xcodeproj/xcuserdata/
+ios/CertVault.xcodeproj/project.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude / Cursor
+.claude/
+.cursor/
+
+# Logs
+*.log
+npm-debug.log*
