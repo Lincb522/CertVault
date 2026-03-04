@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/License-Private-red?style=flat-square" />
 </p>
 
-<h1 align="center">🔐 CertVault</h1>
+<h1 align="center">CertVault</h1>
 
 <p align="center">
   <strong>Apple 开发者证书托管与管理平台</strong><br/>
@@ -15,13 +15,13 @@
 
 ---
 
-## ✨ 核心功能
+## 核心功能
 
 <table>
 <tr>
 <td width="50%">
 
-### 📦 证书与描述文件
+### 证书与描述文件
 - 创建、下载、撤销 iOS / macOS 证书
 - 自动生成 P12 + 密码文件
 - 创建和管理 Provisioning Profile
@@ -30,7 +30,7 @@
 </td>
 <td width="50%">
 
-### 📱 设备管理
+### 设备管理
 - Apple 设备注册与管理
 - **一键绑定** — 自动创建证书 + 描述文件 + 全权限
 - 支持 iOS / macOS / tvOS 多平台
@@ -41,7 +41,7 @@
 <tr>
 <td>
 
-### 🔑 账号与权限
+### 账号与权限
 - App Store Connect API Key 导入 (.p8)
 - 多开发者账号统一管理
 - 可视化权限开关（推送、iCloud、Sign in with Apple 等）
@@ -50,7 +50,7 @@
 </td>
 <td>
 
-### 🔔 推送服务
+### 推送服务
 - APNs 推送密钥管理
 - 在线推送测试（沙盒 / 生产）
 - 操作完成自动推送通知
@@ -62,13 +62,13 @@
 
 ---
 
-## 🛠 技术架构
+## 技术架构
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      CertVault                          │
+│                       CertVault                         │
 ├──────────────┬──────────────────┬───────────────────────┤
-│   iOS 客户端  │   Web 管理后台    │      后端服务          │
+│  iOS 客户端   │   Web 管理后台    │      后端服务          │
 │              │                  │                       │
 │  SwiftUI     │  Vue 3           │  Node.js + Express    │
 │  iOS 16+     │  Element Plus    │  PostgreSQL           │
@@ -79,12 +79,12 @@
 
 ---
 
-## 📂 项目结构
+## 项目结构
 
 ```
 CertVault/
 │
-├── 🖥  server/                 # Node.js 后端
+├── server/                    # Node.js 后端
 │   ├── src/
 │   │   ├── app.js             # 入口文件
 │   │   ├── config/            # 数据库配置
@@ -103,7 +103,7 @@ CertVault/
 │   │       └── push-helper.js #   推送通知辅助
 │   └── package.json
 │
-├── 🌐  client/                 # Vue 3 Web 前端
+├── client/                    # Vue 3 Web 前端
 │   ├── src/
 │   │   ├── views/             # 14 个业务页面
 │   │   ├── api/               # Axios API 封装
@@ -111,7 +111,7 @@ CertVault/
 │   │   └── router/            # 路由配置
 │   └── package.json
 │
-├── 📱  ios/                    # iOS SwiftUI 客户端
+├── ios/                       # iOS SwiftUI 客户端
 │   ├── CertVault/
 │   │   ├── Models/            # 数据模型 (Codable)
 │   │   ├── ViewModels/        # MVVM ViewModel
@@ -124,7 +124,7 @@ CertVault/
 │   │   │   ├── Push/          #   推送测试
 │   │   │   └── Settings/      #   设置
 │   │   ├── Services/          # API / 推送 / 下载服务
-│   │   └── Utils/             # 工具类、HIcon 图标
+│   │   └── Utils/             # 工具类、图标
 │   └── CertVault.xcodeproj
 │
 ├── build.sh                   # 打包脚本
@@ -134,7 +134,7 @@ CertVault/
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 
@@ -144,7 +144,7 @@ CertVault/
 | PostgreSQL | >= 14 |
 | Xcode | >= 15 (iOS 开发) |
 
-### 1️⃣ 后端
+### 后端
 
 ```bash
 cd server
@@ -153,7 +153,7 @@ npm install
 npm start               # http://localhost:3006
 ```
 
-### 2️⃣ Web 前端
+### Web 前端
 
 ```bash
 cd client
@@ -162,7 +162,7 @@ npm run dev             # 开发模式
 npm run build           # 生产构建
 ```
 
-### 3️⃣ iOS 客户端
+### iOS 客户端
 
 ```bash
 # 1. 创建配置文件
@@ -173,19 +173,19 @@ EOF
 # 2. Xcode 打开项目
 open ios/CertVault.xcodeproj
 
-# 3. 配置 Signing Team → 运行到真机
+# 3. 配置 Signing Team，运行到真机
 ```
 
 ---
 
-## 📦 打包部署
+## 打包部署
 
 ```bash
-./build.sh patch    # 📌 增量包 — 后端源码 + 前端构建（默认）
-./build.sh lite     # 📦 轻量包 — 含 package.json
-./build.sh full     # 📚 全量包 — 含 node_modules
-./build.sh server   # 🖥  仅后端
-./build.sh client   # 🌐 仅前端（自动构建）
+./build.sh patch    # 增量包 — 后端源码 + 前端构建（默认）
+./build.sh lite     # 轻量包 — 含 package.json
+./build.sh full     # 全量包 — 含 node_modules
+./build.sh server   # 仅后端
+./build.sh client   # 仅前端（自动构建）
 ```
 
 ### Docker 部署
@@ -196,20 +196,20 @@ docker-compose up -d
 
 ---
 
-## 🔐 默认管理员
+## 初始化配置
 
-首次启动自动创建超级管理员：
+首次启动会自动创建超级管理员账号，用户名和密码在 `.env` 中配置：
 
-| 字段 | 值 |
-|------|----|
-| 用户名 | `zijiu522` |
-| 密码 | `yqq977522` |
+```env
+ADMIN_USERNAME=your_admin
+ADMIN_PASSWORD=your_password
+```
 
-> ⚠️ 请登录后立即修改密码
+> 如未配置，将使用代码中的默认值，请登录后立即修改密码。
 
 ---
 
-## 📡 API 文档
+## API 文档
 
 详见 [API.md](./API.md)，涵盖所有接口：
 
@@ -224,6 +224,6 @@ docker-compose up -d
 
 ---
 
-## 📄 License
+## License
 
 **Private** — All rights reserved.
