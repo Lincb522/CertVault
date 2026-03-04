@@ -1,6 +1,6 @@
-# API 文档 — Apple 证书托管工具
+# API 文档 — CertVault
 
-> Base URL: `http://<host>:3000/api`
+> Base URL: `http://114.66.31.109:3006/api`
 
 ## 认证
 
@@ -460,3 +460,147 @@ Authorization: Bearer <token>
 | 404 | 资源不存在 |
 | 409 | 冲突（如证书配额已满） |
 | 500 | 服务器错误 |
+
+---
+
+## 推送服务接入指南
+
+CertVault 提供 APNs 推送代发服务，其他应用无需自建推送后端，直接调用 API 即可向 iOS 设备发送远程推送。
+
+### 推送服务地址
+
+```
+http://114.66.31.109:3006/api/push/send
+```
+
+### 前置条件
+
+1. 在 CertVault 管理后台注册账号并登录
+2. 在「推送密钥」页面导入 .p8 推送密钥（Key ID + Team ID）
+3. 目标 App 已在真机上注册推送并获取 Device Token
+
+### 第一步：获取认证 Token
+
+```bash
+curl -X POST http://114.66.31.109:3006/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "your_username", "password": "your_password"}'
+```
+
+响应：
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": "xxxxxxxxxxxxxxxx",
+    "user": { "id": "...", "username": "...", "role": "user" }
+  }
+}
+```
+
+### 第二步：目标 App 注册推送
+
+在目标 App 的 AppDelegate 中获取 Device Token：
+
+```swift
+// Swift
+func application(_ application: UIApplication,
+                 didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+    print("Device Token: \(token)")
+    // 保存这个 token，发送推送时需要用到
+}
+```
+
+```objc
+// Objective-C
+- (void)application:(UIApplication *)application
+    didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    const unsigned char *bytes = (const unsigned char *)deviceToken.bytes;
+    NSMutableString *token = [NSMutableString string];
+    for (NSUInteger i = 0; i < deviceToken.length; i++) {
+        [token appendFormat:@"%02x", bytes[i]];
+    }
+    NSLog(@"Device Token: %@", token);
+}
+```
+
+### 第三步：发送推送
+
+```bash
+curl -X POST http://114.66.31.109:3006/api/push/send \
+  -H "Authorization: Bearer <your_auth_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "push_key_id": "<CertVault中的推送密钥ID>",
+    "device_token": "<64位十六进制DeviceToken>",
+    "bundle_id": "com.example.yourapp",
+    "title": "消息标题",
+    "body": "消息内容",
+    "badge": 1,
+    "sound": "default",
+    "sandbox": true,
+    "custom_data": {
+      "type": "order",
+      "order_id": "12345"
+    }
+  }'
+```
+
+### 请求参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| push_key_id | string | 三选一 | CertVault 推送密钥 ID |
+| account_id | string | 三选一 | CertVault 账号 ID（需配合 team_id） |
+| key_id + team_id + private_key | string | 三选一 | 手动传入密钥信息 |
+| device_token | string | 是 | 目标设备 Token（64 位十六进制） |
+| bundle_id | string | 是 | 目标 App 的 Bundle Identifier |
+| title | string | 是 | 推送标题 |
+| body | string | 否 | 推送正文 |
+| badge | number | 否 | 角标数字 |
+| sound | string | 否 | 提示音，默认 `default` |
+| sandbox | boolean | 否 | `true` 沙盒环境，`false` 生产环境，默认 `true` |
+| custom_data | object | 否 | 自定义数据，会合并到推送 payload 中 |
+
+### 响应示例
+
+成功：
+
+```json
+{
+  "success": true,
+  "message": "推送发送成功",
+  "data": { "apns_id": "550e8400-e29b-41d4-a716-446655440000", "status": 200 }
+}
+```
+
+失败：
+
+```json
+{
+  "success": false,
+  "message": "推送失败: BadDeviceToken",
+  "data": { "status": 400, "reason": "BadDeviceToken" }
+}
+```
+
+### 常见错误
+
+| 错误 | 原因 | 解决方案 |
+|------|------|---------|
+| InvalidProviderToken | JWT 签名失败 | 检查 Key ID 和 Team ID 是否正确（Team ID 是 10 位，不是 Issuer ID） |
+| BadDeviceToken | Token 格式无效 | 确认是 64 位十六进制字符串，真机获取 |
+| DeviceTokenNotForTopic | Token 与 Bundle ID 不匹配 | 确认 Device Token 对应的 App 的 Bundle ID |
+| Unregistered | 设备已注销 | 用户可能卸载了 App，停止向该 Token 推送 |
+| BadMessageId | apns-id 格式错误 | 服务端问题，升级到最新版本 |
+
+### 环境说明
+
+| 环境 | sandbox 值 | 适用场景 |
+|------|-----------|---------|
+| 沙盒 | `true` | Xcode 开发调试、TestFlight 测试 |
+| 生产 | `false` | App Store 正式版 |
+
+> 一个 .p8 推送密钥可以给同一开发者账号下的所有 App 发送推送，无需为每个 App 单独创建。
