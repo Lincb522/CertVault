@@ -99,49 +99,76 @@ router.get('/bundle-ids/:id/resources', async (req, res, next) => {
     }
 
     const identifier = bundleId.identifier;
-    const links = await db.prepare(
-      'SELECT * FROM device_resources WHERE bundle_identifier = ? ORDER BY created_at DESC'
-    ).all(identifier);
+    const appleId = bundleId.apple_id || bundleId.id;
+
+    const relatedProfiles = await db.prepare(
+      'SELECT id, name, type, profile_path, profile_content, expires_at, created_at FROM profiles WHERE account_id = ? AND (bundle_id = ? OR bundle_id = ?) ORDER BY created_at DESC'
+    ).all(bundleId.account_id, appleId, identifier);
 
     let devices = [];
-    let certificates = [];
-    let profiles = [];
-
-    if (links.length > 0) {
-      const deviceIds = [...new Set(links.map(l => l.device_id).filter(Boolean))];
-      const udids = [...new Set(links.map(l => l.udid).filter(Boolean))];
-      const certIds = [...new Set(links.map(l => l.cert_id).filter(Boolean))];
-      const profileIds = [...new Set(links.map(l => l.profile_id).filter(Boolean))];
-
-      if (deviceIds.length || udids.length) {
-        const allIds = [...deviceIds, ...udids];
-        const ph = allIds.map((_, i) => `$${i + 1}`).join(',');
-        devices = await db.prepare(
-          `SELECT id, name, udid, platform, status, created_at FROM devices WHERE id IN (${ph}) OR apple_id IN (${ph}) OR udid IN (${ph}) ORDER BY created_at DESC`
-        ).all(...allIds, ...allIds, ...allIds);
-        const seen = new Set();
-        devices = devices.filter(d => { if (seen.has(d.id)) return false; seen.add(d.id); return true; });
+    const deviceUdidSet = new Set();
+    for (const p of relatedProfiles) {
+      let parsed = null;
+      if (p.profile_path) {
+        parsed = parseProvisioningProfile(path.join(PROFILE_DIR, p.profile_path));
       }
-      if (certIds.length) {
-        const ph = certIds.map((_, i) => `$${i + 1}`).join(',');
-        certificates = await db.prepare(
-          `SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${ph}) ORDER BY created_at DESC`
-        ).all(...certIds);
+      if (!parsed && p.profile_content) {
+        parsed = parseProfileFromBase64(p.profile_content);
       }
-      if (profileIds.length) {
-        const ph = profileIds.map((_, i) => `$${i + 1}`).join(',');
-        profiles = await db.prepare(
-          `SELECT id, name, type, profile_path, expires_at, created_at FROM profiles WHERE id IN (${ph}) ORDER BY created_at DESC`
-        ).all(...profileIds);
+      if (parsed && parsed.devices) {
+        parsed.devices.forEach(d => deviceUdidSet.add(d.toUpperCase().replace(/-/g, '')));
       }
     }
+
+    if (deviceUdidSet.size > 0) {
+      const allDevices = await db.prepare(
+        'SELECT id, name, udid, platform, status, created_at FROM devices WHERE account_id = ?'
+      ).all(bundleId.account_id);
+      devices = allDevices.filter(d => {
+        const norm = d.udid ? d.udid.toUpperCase().replace(/-/g, '') : '';
+        return deviceUdidSet.has(norm);
+      });
+    }
+
+    let certificates = [];
+    const links = await db.prepare(
+      'SELECT DISTINCT cert_id FROM device_resources WHERE bundle_identifier = ? AND cert_id IS NOT NULL'
+    ).all(identifier);
+    if (links.length > 0) {
+      const cIds = links.map(l => l.cert_id);
+      const ph = cIds.map((_, i) => `$${i + 1}`).join(',');
+      certificates = await db.prepare(
+        `SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${ph}) ORDER BY created_at DESC`
+      ).all(...cIds);
+    }
+
+    if (certificates.length === 0 && relatedProfiles.length > 0) {
+      const pIds = relatedProfiles.map(p => p.id);
+      const ph = pIds.map((_, i) => `$${i + 1}`).join(',');
+      const certLinks = await db.prepare(
+        `SELECT DISTINCT cert_id FROM device_resources WHERE profile_id IN (${ph}) AND cert_id IS NOT NULL`
+      ).all(...pIds);
+      if (certLinks.length > 0) {
+        const cIds = certLinks.map(l => l.cert_id);
+        const cph = cIds.map((_, i) => `$${i + 1}`).join(',');
+        certificates = await db.prepare(
+          `SELECT id, name, type, p12_path, password, expires_at, created_at FROM certificates WHERE id IN (${cph}) ORDER BY created_at DESC`
+        ).all(...cIds);
+      }
+    }
+
+    const profiles = relatedProfiles.map(p => ({
+      id: p.id, name: p.name, type: p.type,
+      profile_path: p.profile_path, expires_at: p.expires_at,
+      created_at: p.created_at, has_file: !!p.profile_path
+    }));
 
     res.json({
       success: true,
       data: {
         devices: devices.map(d => ({ ...d })),
         certificates: certificates.map(c => ({ ...c, has_p12: !!c.p12_path })),
-        profiles: profiles.map(p => ({ ...p, has_file: !!p.profile_path })),
+        profiles,
       }
     });
   } catch (err) {
@@ -343,7 +370,7 @@ router.get('/:id/detail', async (req, res, next) => {
 
     if (parsed && parsed.devices && parsed.devices.length > 0) {
       const allDevices = await db.prepare(
-        'SELECT id, name, udid, platform, status, model, device_class, created_at FROM devices WHERE account_id = ?'
+        'SELECT id, name, udid, platform, status, model, created_at FROM devices WHERE account_id = ?'
       ).all(profile.account_id);
 
       const profileUdids = new Set(parsed.devices.map(d => d.toUpperCase().replace(/-/g, '')));

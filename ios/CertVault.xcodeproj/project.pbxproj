@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		22824281F3D66897F643DBF8 /* HiconIcons in Frameworks */ = {isa = PBXBuildFile; productRef = F683824948F634A2A89E2826 /* HiconIcons */; };
+		AABB0001F3D66897F643DB01 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AABB0003F3D66897A89E2826 /* GRDB */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				22824281F3D66897F643DBF8 /* HiconIcons in Frameworks */,
+				AABB0001F3D66897F643DB01 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,6 +100,7 @@
 			name = CertVault;
 			packageProductDependencies = (
 				F683824948F634A2A89E2826 /* HiconIcons */,
+				AABB0003F3D66897A89E2826 /* GRDB */,
 			);
 			productName = CertVault;
 			productReference = 3C888D6CAF0840757EA09A41 /* CertVault.app */;
@@ -129,6 +132,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				2CBB4B97E9E988E8984711DB /* XCLocalSwiftPackageReference "HiconIcons" */,
+				AABB0002E9E988E89847CCDD /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
 			projectDirPath = "";
 			projectRoot = "";
@@ -366,7 +370,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		AABB0002E9E988E89847CCDD /* XCRemoteSwiftPackageReference "GRDB" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		AABB0003F3D66897A89E2826 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AABB0002E9E988E89847CCDD /* XCRemoteSwiftPackageReference "GRDB" */;
+			productName = GRDB;
+		};
 		F683824948F634A2A89E2826 /* HiconIcons */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HiconIcons;

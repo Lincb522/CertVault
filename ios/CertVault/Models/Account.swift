@@ -1,6 +1,6 @@
 import Foundation
 
-struct Account: Decodable, Identifiable {
+struct Account: Codable, Identifiable {
     let id: String
     let name: String?
     let issuer_id: String?
@@ -21,7 +21,7 @@ struct Account: Decodable, Identifiable {
     var displayName: String { name ?? "未命名账号" }
 }
 
-struct AccountStats: Decodable {
+struct AccountStats: Codable {
     let certificates: Int?
     let devices: Int?
     let bundle_ids: Int?

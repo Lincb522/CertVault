@@ -14,21 +14,33 @@ final class CertificateViewModel: ObservableObject {
 
     private let service = CertificateService()
     private let accountService = AccountService()
+    private let db = DatabaseManager.shared
 
     func loadAccounts() async {
         AppLogger.data.info("🔏 Loading accounts for certs...")
-        do {
-            accounts = try await accountService.list()
-            if selectedAccountId.isEmpty, let first = accounts.first {
+
+        if let cached = try? db.fetchAccounts(), !cached.isEmpty {
+            accounts = cached
+            if selectedAccountId.isEmpty, let first = cached.first {
                 selectedAccountId = first.id
-                await loadCertificates()
             }
+        }
+
+        do {
+            let fresh = try await accountService.list()
+            accounts = fresh
+            try? db.saveAccounts(fresh)
+            if selectedAccountId.isEmpty, let first = fresh.first {
+                selectedAccountId = first.id
+            }
+            await loadCertificates()
         } catch is CancellationError {
             return
         } catch {
             if !Task.isCancelled {
                 errorMessage = error.localizedDescription
             }
+            if !selectedAccountId.isEmpty { await loadCertificates() }
         }
     }
 
@@ -37,17 +49,24 @@ final class CertificateViewModel: ObservableObject {
         AppLogger.data.info("🔏 Loading certificates for account=\(self.selectedAccountId)")
         isLoading = true
         errorMessage = nil
+
+        if let cached = try? db.fetchCertificates(accountId: selectedAccountId), !cached.isEmpty {
+            certificates = cached
+        }
+
         do {
             async let certs = service.list(accountId: selectedAccountId)
             async let types = service.types()
-            certificates = try await certs
+            let freshCerts = try await certs
+            certificates = freshCerts
             certTypes = try await types
+            try? db.saveCertificates(freshCerts, accountId: selectedAccountId)
             AppLogger.data.info("🔏 Loaded \(self.certificates.count) certs, \(self.certTypes.count) types")
         } catch is CancellationError {
             return
         } catch {
             if !Task.isCancelled {
-                errorMessage = error.localizedDescription
+                if certificates.isEmpty { errorMessage = error.localizedDescription }
                 AppLogger.data.error("🔏 Load certs failed | \(error.localizedDescription)")
             }
         }
@@ -114,6 +133,7 @@ final class CertificateViewModel: ObservableObject {
         AppLogger.data.info("🔏 Deleting cert id=\(id)")
         try await service.delete(id: id)
         certificates.removeAll { $0.id == id }
+        try? db.deleteCertificate(id: id)
         AppLogger.data.info("🔏 Cert deleted")
     }
 

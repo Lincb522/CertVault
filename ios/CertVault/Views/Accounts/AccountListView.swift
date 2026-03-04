@@ -274,7 +274,11 @@ private struct UploadP8Sheet: View {
             }
             .fileImporter(
                 isPresented: $showFilePicker,
-                allowedContentTypes: [.item],
+                allowedContentTypes: [
+                    UTType(filenameExtension: "p8") ?? .data,
+                    .plainText,
+                    .data
+                ],
                 allowsMultipleSelection: false
             ) { result in
                 switch result {

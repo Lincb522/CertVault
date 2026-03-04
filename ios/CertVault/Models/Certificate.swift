@@ -1,6 +1,6 @@
 import Foundation
 
-struct Certificate: Decodable, Identifiable {
+struct Certificate: Codable, Identifiable {
     let id: String
     let name: String?
     let type: String?

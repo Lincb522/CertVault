@@ -42,6 +42,49 @@ async function syncDeviceResources(api, db, account_id) {
     }
   }
 
+  for (const [bId, b] of Object.entries(bundlesMap)) {
+    await db.prepare(`INSERT INTO bundle_ids (id, account_id, apple_id, identifier, name, platform)
+      VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET identifier=excluded.identifier, name=excluded.name`)
+      .run(bId, account_id, bId, b.attributes.identifier, b.attributes.name, b.attributes.platform);
+  }
+
+  for (const [cId, c] of Object.entries(certsMap)) {
+    await db.prepare(`INSERT INTO certificates (id, account_id, apple_id, type, name, cert_content, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
+      name=excluded.name, cert_content=COALESCE(excluded.cert_content, certificates.cert_content), expires_at=excluded.expires_at`)
+      .run(cId, account_id, cId, c.attributes.certificateType, c.attributes.name || c.attributes.certificateType,
+        c.attributes.certificateContent || null, c.attributes.expirationDate || null);
+  }
+
+  for (const p of profiles) {
+    const bundleRel = p.relationships?.bundleId?.data;
+    const bundleAppleId = bundleRel ? bundleRel.id : null;
+
+    let profilePath = null;
+    if (p.attributes.profileContent) {
+      const filename = `${p.id}.mobileprovision`;
+      const filePath = path.join(PROFILE_DIR, filename);
+      if (!fs.existsSync(filePath)) {
+        try {
+          fs.writeFileSync(filePath, Buffer.from(p.attributes.profileContent, 'base64'));
+          profilePath = filename;
+        } catch (e) { /* skip */ }
+      } else {
+        profilePath = filename;
+      }
+    }
+
+    await db.prepare(`INSERT INTO profiles (id, account_id, apple_id, name, type, bundle_id, profile_content, profile_path, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
+      name=excluded.name, type=excluded.type, bundle_id=COALESCE(excluded.bundle_id, profiles.bundle_id),
+      profile_content=COALESCE(excluded.profile_content, profiles.profile_content),
+      profile_path=COALESCE(excluded.profile_path, profiles.profile_path), expires_at=excluded.expires_at`)
+      .run(p.id, account_id, p.id, p.attributes.name || p.attributes.profileType,
+        p.attributes.profileType, bundleAppleId,
+        p.attributes.profileContent || null, profilePath,
+        p.attributes.expirationDate || null);
+  }
+
   const localCertsRows = await db.prepare('SELECT id, apple_id FROM certificates WHERE account_id = ?').all(account_id);
   const appleToCertLocal = {};
   for (const c of localCertsRows) {
@@ -73,7 +116,6 @@ async function syncDeviceResources(api, db, account_id) {
 
     const localProfileId = appleToProfileLocal[p.id];
     const bundleIdentifier = bundleRel ? (bundlesMap[bundleRel.id]?.attributes?.identifier || null) : null;
-
     const localCertId = certRels.length > 0 ? (appleToCertLocal[certRels[0].id] || null) : null;
 
     for (const dRel of deviceRels) {
@@ -125,9 +167,11 @@ router.get('/', async (req, res, next) => {
 
     await syncMany();
 
-    syncDeviceResources(api, db, account_id).catch(e =>
-      console.error('Background device_resources sync failed:', e.message)
-    );
+    try {
+      await syncDeviceResources(api, db, account_id);
+    } catch (e) {
+      console.error('device_resources sync failed:', e.message);
+    }
 
     const devices = await db.prepare('SELECT * FROM devices WHERE account_id = ? ORDER BY created_at DESC').all(account_id);
     res.json({ success: true, data: devices });
@@ -242,27 +286,14 @@ router.get('/:deviceId/detail', async (req, res, next) => {
 
     const deviceId = device.apple_id || device.id;
     const deviceUdid = device.udid;
-
-    const links = await db.prepare(
-      'SELECT * FROM device_resources WHERE device_id = ? OR udid = ? ORDER BY created_at DESC'
-    ).all(deviceId, deviceUdid);
-
-    const certIdSet = new Set();
-    const profileIdSet = new Set();
-    links.forEach(l => {
-      if (l.cert_id) certIdSet.add(l.cert_id);
-      if (l.profile_id) profileIdSet.add(l.profile_id);
-    });
+    const normalizedUdid = deviceUdid ? deviceUdid.toUpperCase().replace(/-/g, '') : '';
 
     const allProfiles = await db.prepare(
       'SELECT id, name, type, profile_path, profile_content, bundle_id, expires_at, created_at FROM profiles WHERE account_id = ? ORDER BY created_at DESC'
     ).all(device.account_id);
 
-    const normalizedUdid = deviceUdid ? deviceUdid.toUpperCase().replace(/-/g, '') : '';
-
+    const profileIdSet = new Set();
     for (const p of allProfiles) {
-      if (profileIdSet.has(p.id)) continue;
-
       let parsed = null;
       if (p.profile_path) {
         const fullPath = path.join(PROFILE_DIR, p.profile_path);
@@ -276,17 +307,10 @@ router.get('/:deviceId/detail', async (req, res, next) => {
       const normalizedDevices = parsed.devices.map(d => d.toUpperCase().replace(/-/g, ''));
       if (normalizedDevices.includes(normalizedUdid)) {
         profileIdSet.add(p.id);
-
-        const pLinks = await db.prepare(
-          'SELECT cert_id FROM device_resources WHERE (device_id = ? OR udid = ?) AND profile_id = ? AND cert_id IS NOT NULL'
-        ).all(deviceId, deviceUdid, p.id);
-        pLinks.forEach(l => certIdSet.add(l.cert_id));
       }
     }
 
-    let certs = [];
     let matchedProfiles = [];
-
     if (profileIdSet.size > 0) {
       const pIds = [...profileIdSet];
       const ph = pIds.map((_, i) => `$${i + 1}`).join(',');
@@ -296,6 +320,22 @@ router.get('/:deviceId/detail', async (req, res, next) => {
       matchedProfiles = matchedProfiles.map(p => ({ ...p, has_file: !!p.profile_path }));
     }
 
+    const certIdSet = new Set();
+    const links = await db.prepare(
+      'SELECT cert_id FROM device_resources WHERE (device_id = ? OR udid = ?) AND cert_id IS NOT NULL'
+    ).all(deviceId, deviceUdid);
+    links.forEach(l => certIdSet.add(l.cert_id));
+
+    if (certIdSet.size === 0 && matchedProfiles.length > 0) {
+      const pIds = matchedProfiles.map(p => p.id);
+      const ph = pIds.map((_, i) => `$${i + 1}`).join(',');
+      const profileCertLinks = await db.prepare(
+        `SELECT DISTINCT cert_id FROM device_resources WHERE profile_id IN (${ph}) AND cert_id IS NOT NULL`
+      ).all(...pIds);
+      profileCertLinks.forEach(l => certIdSet.add(l.cert_id));
+    }
+
+    let certs = [];
     if (certIdSet.size > 0) {
       const cIds = [...certIdSet];
       const ph = cIds.map((_, i) => `$${i + 1}`).join(',');
@@ -445,9 +485,6 @@ router.post('/auto-bindall', async (req, res, next) => {
       }
     }
 
-    const allDevicesRes = await api.listDevices({ 'filter[status]': 'ENABLED' });
-    const allDeviceIds = (allDevicesRes.data || []).map(d => d.id);
-
     // Enable all capabilities on the Bundle ID
     const ALL_CAPABILITY_TYPES = [
       'PUSH_NOTIFICATIONS', 'APPLE_ID_AUTH', 'IN_APP_PURCHASE',
@@ -474,7 +511,7 @@ router.post('/auto-bindall', async (req, res, next) => {
 
     const profileName = `${bName}_${cert_type.includes('DISTRIBUTION') ? 'Dist' : 'Dev'}_${new Date().toISOString().slice(0, 10)}`;
     const profileResult = await api.createProfile(
-      profileName, profile_type, bundleAppleId, [certAppleId], allDeviceIds
+      profileName, profile_type, bundleAppleId, [certAppleId], [deviceAppleId]
     );
 
     const profile = profileResult.data;

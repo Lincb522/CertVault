@@ -1,6 +1,6 @@
 import Foundation
 
-struct BundleIDItem: Decodable, Identifiable {
+struct BundleIDItem: Codable, Identifiable {
     let id: String
     let name: String?
     let identifier: String?

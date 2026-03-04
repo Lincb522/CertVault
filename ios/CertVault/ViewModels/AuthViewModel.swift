@@ -27,6 +27,7 @@ final class AuthViewModel: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self, self.isLoggedIn else { return }
                 AppLogger.auth.info("🚫 Received 401 — auto logout")
+                try? DatabaseManager.shared.clearAll()
                 self.isLoggedIn = false
                 self.username = ""
                 self.role = ""
@@ -96,6 +97,7 @@ final class AuthViewModel: ObservableObject {
         AppLogger.auth.info("👋 Logout | user=\(self.username)")
         await NotificationManager.shared.clearToken()
         await authService.logout()
+        try? DatabaseManager.shared.clearAll()
         isLoggedIn = false
         username = ""
         email = ""

@@ -1,5 +1,6 @@
 import SwiftUI
 import HiconIcons
+import UniformTypeIdentifiers
 
 struct PushKeyListView: View {
     @StateObject private var vm = PushViewModel()
@@ -159,10 +160,27 @@ private struct CreatePushKeySheet: View {
     @State private var p8Content = ""
     @State private var isLoading = false
     @State private var errorMsg: String?
+    @State private var showFilePicker = false
+    @State private var selectedFileName: String?
 
     var body: some View {
         NavigationStack {
             Form {
+                Section("选择 P8 文件") {
+                    Button { showFilePicker = true } label: {
+                        HStack {
+                            HIcon(AppIcon.docUpload)
+                                .foregroundStyle(Color.dsAccentBlue)
+                            if let fname = selectedFileName {
+                                Text(fname).font(.subheadline)
+                            } else {
+                                Text("点击选择 .p8 文件").foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+
                 Section("密钥信息") {
                     TextField("名称", text: $name)
                     TextField("Key ID", text: $keyId)
@@ -171,7 +189,7 @@ private struct CreatePushKeySheet: View {
                     TextField("Team ID", text: $teamId)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                    TextField("Bundle IDs（逗号分隔）", text: $bundleIds)
+                    TextField("Bundle IDs（逗号分隔，留空支持所有标识符）", text: $bundleIds)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
@@ -209,6 +227,34 @@ private struct CreatePushKeySheet: View {
                     .disabled(!isValid || isLoading)
                 }
             }
+            .fileImporter(
+                isPresented: $showFilePicker,
+                allowedContentTypes: [
+                    UTType(filenameExtension: "p8") ?? .data,
+                    .plainText,
+                    .data
+                ],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    guard url.startAccessingSecurityScopedResource() else { return }
+                    defer { url.stopAccessingSecurityScopedResource() }
+                    selectedFileName = url.lastPathComponent
+                    if let data = try? Data(contentsOf: url), let text = String(data: data, encoding: .utf8) {
+                        p8Content = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                    let base = url.deletingPathExtension().lastPathComponent
+                    if base.hasPrefix("AuthKey_") {
+                        let extracted = String(base.dropFirst("AuthKey_".count))
+                        if keyId.isEmpty { keyId = extracted }
+                        if name.isEmpty { name = "APNs Key \(extracted)" }
+                    }
+                case .failure(let error):
+                    errorMsg = error.localizedDescription
+                }
+            }
         }
     }
 
@@ -241,7 +287,7 @@ private struct EditPushKeySheet: View {
                     TextField("Team ID", text: $teamId)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
-                    TextField("Bundle IDs（逗号分隔）", text: $bundleIds)
+                    TextField("Bundle IDs（逗号分隔，留空支持所有标识符）", text: $bundleIds)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }

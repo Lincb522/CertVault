@@ -14,19 +14,27 @@ final class PushViewModel: ObservableObject {
     private let service = PushService()
     private let accountService = AccountService()
     private let certService = CertificateService()
+    private let db = DatabaseManager.shared
 
     func loadKeys() async {
         AppLogger.data.info("🔔 Loading push keys...")
         isLoading = true
         errorMessage = nil
+
+        if let cached = try? db.fetchPushKeys(), !cached.isEmpty {
+            pushKeys = cached
+        }
+
         do {
-            pushKeys = try await service.listKeys()
+            let fresh = try await service.listKeys()
+            pushKeys = fresh
+            try? db.savePushKeys(fresh)
             AppLogger.data.info("🔔 Loaded \(self.pushKeys.count) push keys")
         } catch is CancellationError {
             return
         } catch {
             if !Task.isCancelled {
-                errorMessage = error.localizedDescription
+                if pushKeys.isEmpty { errorMessage = error.localizedDescription }
                 AppLogger.data.error("🔔 Load keys failed | \(error.localizedDescription)")
             }
         }
@@ -34,13 +42,19 @@ final class PushViewModel: ObservableObject {
     }
 
     func loadAccounts() async {
+        if let cached = try? db.fetchAccounts(), !cached.isEmpty {
+            accounts = cached
+        }
+
         do {
-            accounts = try await accountService.list()
+            let fresh = try await accountService.list()
+            accounts = fresh
+            try? db.saveAccounts(fresh)
         } catch is CancellationError {
             return
         } catch {
             if !Task.isCancelled {
-                errorMessage = error.localizedDescription
+                if accounts.isEmpty { errorMessage = error.localizedDescription }
                 AppLogger.data.error("🔔 Load accounts failed | \(error.localizedDescription)")
             }
         }
@@ -64,6 +78,7 @@ final class PushViewModel: ObservableObject {
         AppLogger.data.info("🔔 Deleting push key id=\(id)")
         try await service.deleteKey(id: id)
         pushKeys.removeAll { $0.id == id }
+        try? db.deletePushKey(id: id)
     }
 
     func send(request: PushRequest) async {

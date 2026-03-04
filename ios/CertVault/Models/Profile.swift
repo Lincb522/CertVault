@@ -1,6 +1,6 @@
 import Foundation
 
-struct Profile: Decodable, Identifiable {
+struct Profile: Codable, Identifiable {
     let id: String
     let name: String?
     let type: String?

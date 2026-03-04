@@ -3,7 +3,8 @@
     <router-view />
   </div>
   <div v-else class="app-layout">
-    <aside class="sidebar">
+    <div class="sidebar-overlay" :class="{ open: sidebarOpen }" @click="sidebarOpen = false"></div>
+    <aside class="sidebar" :class="{ open: sidebarOpen }">
       <div class="sidebar-brand">
         <div class="sidebar-brand-icon">
           <el-icon><Key /></el-icon>
@@ -12,58 +13,61 @@
           <h2>CertVault</h2>
           <p>Apple 证书管理工具</p>
         </div>
+        <button class="sidebar-close-btn" @click="sidebarOpen = false">
+          <el-icon><Close /></el-icon>
+        </button>
       </div>
 
       <nav class="sidebar-nav">
         <div class="nav-group">
           <div class="nav-group-label">概览</div>
-          <router-link to="/" class="nav-item" active-class="active" exact-active-class="active" :class="{ active: $route.path === '/' }">
+          <router-link to="/" class="nav-item" active-class="active" exact-active-class="active" :class="{ active: $route.path === '/' }" @click="sidebarOpen = false">
             <el-icon><Odometer /></el-icon> 仪表盘
           </router-link>
         </div>
 
         <div class="nav-group" v-if="userInfo.role === 'superadmin'">
           <div class="nav-group-label">管理</div>
-          <router-link to="/users" class="nav-item" active-class="active">
+          <router-link to="/users" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><UserFilled /></el-icon> 用户管理
           </router-link>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">核心功能</div>
-          <router-link to="/accounts" class="nav-item" active-class="active">
+          <router-link to="/accounts" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><User /></el-icon> 账号管理
           </router-link>
-          <router-link to="/devices" class="nav-item" active-class="active">
+          <router-link to="/devices" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Iphone /></el-icon> 设备管理
           </router-link>
-          <router-link to="/certificates" class="nav-item" active-class="active">
+          <router-link to="/certificates" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Key /></el-icon> 证书管理
           </router-link>
-          <router-link to="/profiles" class="nav-item" active-class="active">
+          <router-link to="/profiles" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Document /></el-icon> 描述文件
           </router-link>
-          <router-link to="/capabilities" class="nav-item" active-class="active">
+          <router-link to="/capabilities" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Lock /></el-icon> 权限管理
           </router-link>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">开发工具</div>
-          <router-link to="/get-udid" class="nav-item" active-class="active">
+          <router-link to="/get-udid" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Monitor /></el-icon> 获取 UDID
           </router-link>
-          <router-link to="/healthcheck" class="nav-item" active-class="active">
+          <router-link to="/healthcheck" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><CircleCheck /></el-icon> 健康检查
           </router-link>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">推送服务</div>
-          <router-link to="/push-keys" class="nav-item" active-class="active">
+          <router-link to="/push-keys" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Bell /></el-icon> 推送密钥
           </router-link>
-          <router-link to="/push" class="nav-item" active-class="active">
+          <router-link to="/push" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <el-icon><Promotion /></el-icon> 推送测试
           </router-link>
         </div>
@@ -106,10 +110,15 @@
 
     <main class="main-content">
       <header class="main-header">
-        <div>
-          <div class="main-header-title">{{ $route.meta.title || 'CertVault' }}</div>
-          <div class="main-header-sub" v-if="store.currentAccount">
-            {{ store.currentAccount.name }}
+        <div style="display: flex; align-items: center; gap: 12px">
+          <button class="mobile-menu-btn" @click="sidebarOpen = true">
+            <el-icon size="20"><Fold /></el-icon>
+          </button>
+          <div>
+            <div class="main-header-title">{{ $route.meta.title || 'CertVault' }}</div>
+            <div class="main-header-sub" v-if="store.currentAccount">
+              {{ store.currentAccount.name }}
+            </div>
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 12px">
@@ -141,16 +150,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAppStore } from './stores/app'
 import { authApi } from './api'
 
 const router = useRouter()
+const route = useRoute()
 const store = useAppStore()
 const showChangePwd = ref(false)
 const changingPwd = ref(false)
+const sidebarOpen = ref(false)
 const pwdForm = ref({ old_password: '', new_password: '' })
 
 const userInfo = ref(JSON.parse(localStorage.getItem('auth_user') || '{}'))
@@ -162,6 +173,10 @@ const avatarChar = computed(() => {
 
 const roleLabel = computed(() => {
   return userInfo.value.role === 'superadmin' ? '超级管理员' : '普通用户'
+})
+
+watch(() => route.path, () => {
+  sidebarOpen.value = false
 })
 
 async function handleLogout() {

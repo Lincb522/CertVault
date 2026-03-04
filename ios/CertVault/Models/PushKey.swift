@@ -1,6 +1,6 @@
 import Foundation
 
-struct PushKey: Decodable, Identifiable {
+struct PushKey: Codable, Identifiable {
     let id: String
     let name: String?
     let key_id: String?

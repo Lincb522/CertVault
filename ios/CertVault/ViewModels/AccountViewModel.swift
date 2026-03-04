@@ -10,19 +10,27 @@ final class AccountViewModel: ObservableObject {
     @Published var isTesting = false
 
     private let service = AccountService()
+    private let db = DatabaseManager.shared
 
     func loadAccounts() async {
         AppLogger.data.info("👤 Loading accounts...")
         isLoading = true
         errorMessage = nil
+
+        if let cached = try? db.fetchAccounts(), !cached.isEmpty {
+            accounts = cached
+        }
+
         do {
-            accounts = try await service.list()
+            let fresh = try await service.list()
+            accounts = fresh
+            try? db.saveAccounts(fresh)
             AppLogger.data.info("👤 Loaded \(self.accounts.count) accounts")
         } catch is CancellationError {
             return
         } catch {
             if !Task.isCancelled {
-                errorMessage = error.localizedDescription
+                if accounts.isEmpty { errorMessage = error.localizedDescription }
                 AppLogger.data.error("👤 Load accounts failed | \(error.localizedDescription)")
             }
         }
@@ -65,6 +73,7 @@ final class AccountViewModel: ObservableObject {
         AppLogger.data.info("👤 Deleting account id=\(id)")
         try await service.delete(id: id)
         accounts.removeAll { $0.id == id }
+        try? db.deleteAccount(id: id)
         AppLogger.data.info("👤 Account deleted")
     }
 

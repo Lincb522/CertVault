@@ -1,6 +1,6 @@
 import Foundation
 
-struct Device: Decodable, Identifiable {
+struct Device: Codable, Identifiable {
     let id: String
     let name: String?
     let udid: String?

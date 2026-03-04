@@ -16,15 +16,26 @@ final class DeviceViewModel: ObservableObject {
 
     private let service = DeviceService()
     private let accountService = AccountService()
+    private let db = DatabaseManager.shared
 
     func loadAccounts() async {
         AppLogger.data.info("📱 Loading accounts for devices...")
-        do {
-            accounts = try await accountService.list()
-            if selectedAccountId.isEmpty, let first = accounts.first {
+
+        if let cached = try? db.fetchAccounts(), !cached.isEmpty {
+            accounts = cached
+            if selectedAccountId.isEmpty, let first = cached.first {
                 selectedAccountId = first.id
-                await loadDevices()
             }
+        }
+
+        do {
+            let fresh = try await accountService.list()
+            accounts = fresh
+            try? db.saveAccounts(fresh)
+            if selectedAccountId.isEmpty, let first = fresh.first {
+                selectedAccountId = first.id
+            }
+            await loadDevices()
         } catch is CancellationError {
             return
         } catch {
@@ -32,6 +43,7 @@ final class DeviceViewModel: ObservableObject {
                 errorMessage = error.localizedDescription
                 AppLogger.data.error("📱 Load accounts failed | \(error.localizedDescription)")
             }
+            if !selectedAccountId.isEmpty { await loadDevices() }
         }
     }
 
@@ -40,14 +52,21 @@ final class DeviceViewModel: ObservableObject {
         AppLogger.data.info("📱 Loading devices for account=\(self.selectedAccountId)")
         isLoading = true
         errorMessage = nil
+
+        if let cached = try? db.fetchDevices(accountId: selectedAccountId), !cached.isEmpty {
+            devices = cached
+        }
+
         do {
-            devices = try await service.list(accountId: selectedAccountId)
+            let fresh = try await service.list(accountId: selectedAccountId)
+            devices = fresh
+            try? db.saveDevices(fresh, accountId: selectedAccountId)
             AppLogger.data.info("📱 Loaded \(self.devices.count) devices")
         } catch is CancellationError {
             return
         } catch {
             if !Task.isCancelled {
-                errorMessage = error.localizedDescription
+                if devices.isEmpty { errorMessage = error.localizedDescription }
                 AppLogger.data.error("📱 Load devices failed | \(error.localizedDescription)")
             }
         }
@@ -134,6 +153,8 @@ final class DeviceViewModel: ObservableObject {
             bindSteps = (result.steps ?? []).compactMap { $0.message }
             bindResult = result
             AppLogger.data.info("📱 Auto-bind success | steps=\(result.steps?.count ?? 0)")
+            if let dev = result.device { try? db.saveDevices([dev], accountId: selectedAccountId) }
+            if let bid = result.bundle_id { try? db.saveBundleIds([bid], accountId: selectedAccountId) }
             await loadDevices()
         } catch {
             bindError = error.localizedDescription

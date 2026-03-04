@@ -92,12 +92,17 @@ app.use('/api/healthcheck', healthcheckRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/push-keys', pushKeysRoutes);
 
-const clientDist = path.join(__dirname, '../client');
 const fs = require('fs');
+
+const publicDir = path.join(__dirname, '../public');
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+}
+
+const clientDist = path.join(__dirname, '../client');
 if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/')) return next();
+  app.use('/admin', express.static(clientDist));
+  app.get('/admin/*', (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
