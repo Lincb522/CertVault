@@ -26,28 +26,28 @@
     <!-- 汇总概览 -->
     <div v-if="localResult || remoteResult" class="stat-grid">
       <div class="stat-card">
-        <div class="stat-icon red"><el-icon><WarningFilled /></el-icon></div>
+        <div class="stat-icon red"><HIcon name="warning" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ totalSummary.critical }}</div>
           <div class="stat-label">严重问题</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon orange"><el-icon><Warning /></el-icon></div>
+        <div class="stat-icon orange"><HIcon name="danger-circle" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ totalSummary.warning }}</div>
           <div class="stat-label">警告</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon blue"><el-icon><InfoFilled /></el-icon></div>
+        <div class="stat-icon blue"><HIcon name="information-circle" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ totalSummary.info }}</div>
           <div class="stat-label">提示</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon green"><el-icon><CircleCheckFilled /></el-icon></div>
+        <div class="stat-icon green"><HIcon name="tick-circle" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ totalSummary.ok }}</div>
           <div class="stat-label">正常</div>
@@ -220,7 +220,7 @@
     <!-- 空状态 -->
     <div v-if="!localResult && !remoteResult" class="content-card">
       <div class="empty-state">
-        <el-icon size="48" color="#c0c4cc"><CircleCheck /></el-icon>
+        <HIcon name="tick-circle" :size="48" />
         <p style="margin-top: 12px; font-size: 15px">点击上方按钮开始检查</p>
         <p style="color: #909399; font-size: 13px">本地检查：扫描数据库中的证书和描述文件有效期</p>
         <p style="color: #909399; font-size: 13px">远程检查：通过 Apple API 验证证书、描述文件和 Bundle ID 权限状态</p>
@@ -232,6 +232,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import HIcon from '../components/HIcon.vue'
 import { healthApi } from '../api'
 import { useAppStore } from '../stores/app'
 
@@ -351,27 +352,27 @@ async function runRemoteCheck() {
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: var(--cv-radius-sm);
-  border: 1px solid var(--cv-border-light);
-  transition: all var(--cv-transition);
+  border-radius: var(--nask-radius-sm);
+  border: 1px solid var(--nask-border);
+  transition: all var(--nask-transition);
 }
 
 .issue-item:hover {
-  box-shadow: var(--cv-shadow);
+  box-shadow: var(--nask-shadow-sm);
 }
 
 .issue-item.critical {
-  border-left: 4px solid var(--cv-red);
+  border-left: 4px solid var(--nask-red);
   background: rgba(239,68,68,0.04);
 }
 
 .issue-item.warning {
-  border-left: 4px solid var(--cv-orange);
+  border-left: 4px solid var(--nask-orange);
   background: rgba(245,158,11,0.04);
 }
 
 .issue-item.info {
-  border-left: 4px solid var(--cv-blue);
+  border-left: 4px solid var(--nask-blue);
   background: rgba(64,158,255,0.04);
 }
 
@@ -395,12 +396,12 @@ async function runRemoteCheck() {
 .issue-name {
   font-weight: 600;
   font-size: 13px;
-  color: var(--cv-text);
+  color: var(--nask-text);
 }
 
 .issue-message {
   font-size: 14px;
-  color: var(--cv-text);
+  color: var(--nask-text);
   line-height: 1.5;
 }
 
@@ -409,7 +410,7 @@ async function runRemoteCheck() {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   margin-top: 4px;
 }
 

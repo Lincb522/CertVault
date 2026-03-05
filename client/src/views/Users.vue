@@ -6,7 +6,7 @@
     </div>
 
     <div class="content-card">
-      <el-table :data="users" v-loading="loading" style="width: 100%" :header-cell-style="{ background: 'var(--cv-surface-hover)', fontWeight: 600 }">
+      <el-table :data="users" v-loading="loading" style="width: 100%" :header-cell-style="{ background: 'var(--nask-surface-hover)', fontWeight: 600 }">
         <el-table-column prop="username" label="用户名" min-width="120">
           <template #default="{ row }">
             <div style="display: flex; align-items: center; gap: 10px">
@@ -34,7 +34,7 @@
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180">
           <template #default="{ row }">
-            <span style="color: var(--cv-text-secondary); font-size: 13px">{{ formatDate(row.created_at) }}</span>
+            <span style="color: var(--nask-text-secondary); font-size: 13px">{{ formatDate(row.created_at) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">

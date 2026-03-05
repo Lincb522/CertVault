@@ -32,5 +32,10 @@ struct PushCommonService: Decodable, Identifiable {
     let config: String?
     let url: String?
 
-    var id: String { name ?? UUID().uuidString }
+    private let _stableId = UUID().uuidString
+    var id: String { name ?? _stableId }
+
+    enum CodingKeys: String, CodingKey {
+        case name, config, url
+    }
 }

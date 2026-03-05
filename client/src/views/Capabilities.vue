@@ -358,16 +358,16 @@ onMounted(() => {
 }
 
 .preset-card {
-  border: 1px solid var(--cv-border-light);
-  border-radius: var(--cv-radius-sm);
+  border: 1px solid var(--nask-border);
+  border-radius: var(--nask-radius-sm);
   padding: 16px;
   cursor: pointer;
-  transition: all var(--cv-transition);
-  background: var(--cv-surface-hover);
+  transition: all var(--nask-transition);
+  background: var(--nask-surface-hover);
 }
 
 .preset-card:hover {
-  border-color: var(--cv-blue);
+  border-color: var(--nask-blue);
   background: rgba(64,158,255,0.04);
   box-shadow: 0 4px 12px rgba(64,158,255,0.1);
   transform: translateY(-1px);
@@ -381,7 +381,7 @@ onMounted(() => {
 }
 
 .preset-desc {
-  color: var(--cv-text-secondary);
+  color: var(--nask-text-secondary);
   font-size: 13px;
   margin: 0 0 10px 0;
 }
@@ -399,7 +399,7 @@ onMounted(() => {
 }
 
 .cap-desc {
-  color: var(--cv-text-secondary);
+  color: var(--nask-text-secondary);
   font-size: 12px;
   margin-top: 2px;
 }
@@ -408,7 +408,7 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 12px;
   line-height: 1.5;
 }

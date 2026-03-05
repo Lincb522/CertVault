@@ -680,29 +680,29 @@ onMounted(fetchAccounts)
 
 <style scoped>
 .p8-drop-zone {
-  border: 2px dashed var(--cv-border);
-  border-radius: var(--cv-radius-sm);
+  border: 2px dashed var(--nask-border);
+  border-radius: var(--nask-radius-sm);
   padding: 20px;
   text-align: center;
   cursor: pointer;
-  transition: all var(--cv-transition);
-  background: var(--cv-surface-hover);
+  transition: all var(--nask-transition);
+  background: var(--nask-surface-hover);
 }
 
 .p8-drop-zone:hover {
-  border-color: var(--cv-blue);
-  background: rgba(64,158,255,0.04);
+  border-color: var(--nask-blue);
+  background: rgba(6,109,230,0.04);
 }
 
 .p8-drop-zone.drag-over {
-  border-color: var(--cv-blue);
-  background: rgba(64,158,255,0.08);
-  box-shadow: 0 0 0 3px rgba(64,158,255,0.1);
+  border-color: var(--nask-blue);
+  background: rgba(6,109,230,0.08);
+  box-shadow: 0 0 0 3px rgba(6,109,230,0.1);
 }
 
 .p8-drop-zone.has-file {
-  border-color: var(--cv-green);
-  background: rgba(34,197,94,0.04);
+  border-color: var(--nask-green);
+  background: rgba(76,217,100,0.04);
   border-style: solid;
 }
 
@@ -724,13 +724,13 @@ onMounted(fetchAccounts)
 .p8-filename {
   font-weight: 600;
   font-size: 14px;
-  color: var(--cv-text);
+  color: var(--nask-text);
   font-family: monospace;
 }
 
 .p8-placeholder p {
   margin: 0;
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 14px;
 }
 
@@ -744,24 +744,24 @@ onMounted(fetchAccounts)
 .detail-stat {
   text-align: center;
   padding: 16px 8px;
-  background: var(--cv-gradient-light);
-  border-radius: var(--cv-radius-sm);
-  border: 1px solid var(--cv-border-light);
+  background: var(--nask-surface-hover);
+  border-radius: var(--nask-radius-sm);
+  border: 1px solid var(--nask-border);
 }
 
 .detail-stat-num {
   font-size: 28px;
   font-weight: 750;
-  color: var(--cv-text);
+  color: var(--nask-text);
   line-height: 1;
 }
 
 .detail-stat-label {
   font-size: 12px;
-  color: var(--cv-text-secondary);
+  color: var(--nask-text-secondary);
   margin-top: 6px;
 }
 
-.stat-warn { color: var(--cv-red); }
-.stat-ok { color: var(--cv-green); }
+.stat-warn { color: var(--nask-red); }
+.stat-ok { color: var(--nask-green); }
 </style>

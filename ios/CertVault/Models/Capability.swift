@@ -1,17 +1,18 @@
 import Foundation
 
 struct CapabilityItem: Decodable, Identifiable {
-    let id: String?
+    let _serverId: String?
     let type: String
     let name: String?
     let enabled: Bool?
 
-    var stableId: String { id ?? type }
+    var id: String { _serverId ?? type }
     var isEnabled: Bool { enabled == true }
-}
 
-extension CapabilityItem {
-    // Conform Identifiable using stableId
+    enum CodingKeys: String, CodingKey {
+        case _serverId = "id"
+        case type, name, enabled
+    }
 }
 
 struct AvailableCapability: Decodable, Identifiable {

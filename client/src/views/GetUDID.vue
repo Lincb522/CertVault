@@ -17,7 +17,7 @@
 
           <!-- 未生成 -->
           <div v-if="!requestId" class="empty-state">
-            <el-icon size="48" color="#c0c4cc"><Iphone /></el-icon>
+            <HIcon name="display-1" :size="48" />
             <p style="margin-top: 12px">点击「生成新链接」创建 UDID 获取链接</p>
             <p style="color: #909399; font-size: 13px">生成后用 iPhone Safari 扫码或打开链接即可</p>
           </div>
@@ -140,6 +140,7 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import HIcon from '../components/HIcon.vue'
 import { ElMessage } from 'element-plus'
 import { udidApi } from '../api'
 
@@ -240,13 +241,14 @@ function goBindDevice() {
 .qr-code {
   flex-shrink: 0;
   padding: 12px;
-  background: var(--cv-surface);
-  border: 1px solid var(--cv-border-light);
-  border-radius: var(--cv-radius-sm);
+  background: var(--nask-surface);
+  border: 1px solid var(--nask-border);
+  border-radius: var(--nask-radius-sm);
 }
 
 .qr-info {
   flex: 1;
+  min-width: 0;
 }
 
 .link-box {
@@ -257,15 +259,26 @@ function goBindDevice() {
   font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
   font-size: 14px;
   font-weight: 600;
-  color: var(--cv-text);
-  background: var(--cv-surface-hover);
+  color: var(--nask-text);
+  background: var(--nask-surface-hover);
   padding: 4px 10px;
   border-radius: 6px;
   letter-spacing: 0.5px;
+  word-break: break-all;
 }
 
 .result-section {
   text-align: center;
+}
+
+@media (max-width: 768px) {
+  .qr-section {
+    flex-direction: column;
+    align-items: center;
+  }
+  .qr-info {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {

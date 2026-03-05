@@ -275,4 +275,8 @@ onMounted(() => { fetchList(); fetchVersions() })
 <style scoped>
 .ipa-manage { max-width: 900px; width: 100%; }
 .ipa-info { padding: 8px 0; }
+
+@media (max-width: 768px) {
+  .ipa-manage { max-width: 100%; }
+}
 </style>

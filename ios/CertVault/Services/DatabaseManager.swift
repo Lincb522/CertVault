@@ -4,7 +4,7 @@ import GRDB
 final class DatabaseManager {
     static let shared = DatabaseManager()
 
-    let dbQueue: DatabaseQueue
+    private(set) var dbQueue: DatabaseQueue
 
     private init() {
         do {
@@ -19,7 +19,8 @@ final class DatabaseManager {
             dbQueue = try DatabaseQueue(path: dbURL.path)
             try migrate()
         } catch {
-            fatalError("Database init failed: \(error)")
+            AppLogger.data.error("Database init failed: \(error). Using in-memory fallback.")
+            dbQueue = try! DatabaseQueue()
         }
     }
 
@@ -207,37 +208,37 @@ final class DatabaseManager {
     // MARK: - Delete by ID
 
     func deleteAccount(id: String) throws {
-        try dbQueue.write { db in
+        _ = try dbQueue.write { db in
             try Account.filter(Column("id") == id).deleteAll(db)
         }
     }
 
     func deleteDevice(id: String) throws {
-        try dbQueue.write { db in
+        _ = try dbQueue.write { db in
             try Device.filter(Column("id") == id).deleteAll(db)
         }
     }
 
     func deleteCertificate(id: String) throws {
-        try dbQueue.write { db in
+        _ = try dbQueue.write { db in
             try Certificate.filter(Column("id") == id).deleteAll(db)
         }
     }
 
     func deleteProfile(id: String) throws {
-        try dbQueue.write { db in
+        _ = try dbQueue.write { db in
             try Profile.filter(Column("id") == id).deleteAll(db)
         }
     }
 
     func deleteBundleId(id: String) throws {
-        try dbQueue.write { db in
+        _ = try dbQueue.write { db in
             try BundleIDItem.filter(Column("id") == id).deleteAll(db)
         }
     }
 
     func deletePushKey(id: String) throws {
-        try dbQueue.write { db in
+        _ = try dbQueue.write { db in
             try PushKey.filter(Column("id") == id).deleteAll(db)
         }
     }

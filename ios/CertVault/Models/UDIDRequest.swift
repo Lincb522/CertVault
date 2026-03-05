@@ -52,7 +52,8 @@ struct HealthCertInfo: Decodable, Identifiable {
     let label: String?
     let days_left: Int?
 
-    var id: String { _id ?? apple_id ?? name ?? UUID().uuidString }
+    private let _stableId = UUID().uuidString
+    var id: String { _id ?? apple_id ?? name ?? _stableId }
 
     enum CodingKeys: String, CodingKey {
         case _id = "id"
@@ -71,7 +72,8 @@ struct HealthProfileInfo: Decodable, Identifiable {
     let label: String?
     let days_left: Int?
 
-    var id: String { _id ?? apple_id ?? name ?? UUID().uuidString }
+    private let _stableId = UUID().uuidString
+    var id: String { _id ?? apple_id ?? name ?? _stableId }
 
     enum CodingKeys: String, CodingKey {
         case _id = "id"
@@ -85,7 +87,8 @@ struct HealthBundleInfo: Decodable, Identifiable {
     let identifier: String?
     let capabilities: [String]?
 
-    var id: String { _id ?? identifier ?? name ?? UUID().uuidString }
+    private let _stableId = UUID().uuidString
+    var id: String { _id ?? identifier ?? name ?? _stableId }
 
     enum CodingKeys: String, CodingKey {
         case _id = "id"
@@ -102,5 +105,10 @@ struct HealthCapabilityInfo: Decodable, Identifiable {
     let has_push: Bool?
     let has_sign_in: Bool?
 
-    var id: String { bundle_id ?? identifier ?? UUID().uuidString }
+    private let _stableId = UUID().uuidString
+    var id: String { bundle_id ?? identifier ?? _stableId }
+
+    enum CodingKeys: String, CodingKey {
+        case bundle_id, identifier, name, enabled_count, capabilities, has_push, has_sign_in
+    }
 }

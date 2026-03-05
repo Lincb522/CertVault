@@ -489,7 +489,8 @@ body {
   color: var(--nask-text-secondary);
 }
 
-.empty-state .el-icon {
+.empty-state .el-icon,
+.empty-state .hicon {
   font-size: 48px;
   margin-bottom: 12px;
   color: var(--nask-text-muted);

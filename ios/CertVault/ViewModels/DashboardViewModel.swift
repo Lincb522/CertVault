@@ -13,6 +13,12 @@ final class DashboardViewModel: ObservableObject {
     private let db = DatabaseManager.shared
     private var loginObserver: Any?
 
+    deinit {
+        if let observer = loginObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
     static let didLoginNotification = Notification.Name("DashboardDidLogin")
 
     func startObserving() {

@@ -323,7 +323,7 @@ struct BundleIDDetailView: View {
                         .padding(.vertical, 8)
                 } else {
                     VStack(spacing: 0) {
-                        ForEach(Array(enabled.enumerated()), id: \.element.stableId) { index, cap in
+                        ForEach(enabled) { cap in
                             HStack(spacing: 12) {
                                 HIcon(AppIcon.check)
                                     .font(.caption)
@@ -339,7 +339,7 @@ struct BundleIDDetailView: View {
                             }
                             .padding(.vertical, 8)
 
-                            if index < enabled.count - 1 {
+                            if cap.id != enabled.last?.id {
                                 Divider().padding(.leading, 40)
                             }
                         }

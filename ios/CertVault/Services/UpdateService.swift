@@ -45,7 +45,10 @@ final class UpdateService: ObservableObject {
                 return
             }
             latestVersion = info
-            updateAvailable = isNewer(remote: info.version, local: currentVersion)
+            updateAvailable = isNewer(
+                remoteVersion: info.version, remoteBuild: info.build ?? "1",
+                localVersion: currentVersion, localBuild: currentBuild
+            )
         } catch {
             latestVersion = nil
             updateAvailable = false
@@ -72,7 +75,10 @@ final class UpdateService: ObservableObject {
 
         do {
             let (tempURL, _) = try await URLSession.shared.download(from: url, delegate: nil)
-            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                AppLogger.api.error("Cannot locate documents directory")
+                return nil
+            }
             let dest = docs.appendingPathComponent("CertVault-\(info.version).ipa")
             try? FileManager.default.removeItem(at: dest)
             try FileManager.default.moveItem(at: tempURL, to: dest)
@@ -85,15 +91,18 @@ final class UpdateService: ObservableObject {
         }
     }
 
-    private func isNewer(remote: String, local: String) -> Bool {
-        let r = remote.split(separator: ".").compactMap { Int($0) }
-        let l = local.split(separator: ".").compactMap { Int($0) }
+    private func isNewer(remoteVersion: String, remoteBuild: String,
+                         localVersion: String, localBuild: String) -> Bool {
+        let r = remoteVersion.split(separator: ".").compactMap { Int($0) }
+        let l = localVersion.split(separator: ".").compactMap { Int($0) }
         for i in 0..<max(r.count, l.count) {
             let rv = i < r.count ? r[i] : 0
             let lv = i < l.count ? l[i] : 0
             if rv > lv { return true }
             if rv < lv { return false }
         }
-        return false
+        let rb = Int(remoteBuild) ?? 0
+        let lb = Int(localBuild) ?? 0
+        return rb > lb
     }
 }

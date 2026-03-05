@@ -88,12 +88,12 @@
         </div>
 
         <div v-if="!store.currentAccountId" class="empty-state">
-          <el-icon><Warning /></el-icon>
+          <HIcon name="danger-circle" :size="48" />
           <p>请先在左侧选择一个账号</p>
         </div>
 
         <div v-else-if="relations.length === 0 && !relationsLoading" class="empty-state">
-          <el-icon><Connection /></el-icon>
+          <HIcon name="link" :size="48" />
           <p>点击「从 Apple 加载」查看关联关系</p>
         </div>
 
@@ -547,6 +547,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import HIcon from '../components/HIcon.vue'
 import { certApi } from '../api'
 import { useAppStore } from '../stores/app'
 
@@ -771,16 +772,16 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
 }
 
 .method-card {
-  border: 1px solid var(--cv-border-light);
-  border-radius: var(--cv-radius-sm);
+  border: 1px solid var(--nask-border);
+  border-radius: var(--nask-radius-sm);
   padding: 20px;
   height: 100%;
-  background: var(--cv-surface-hover);
-  transition: all var(--cv-transition);
+  background: var(--nask-surface-hover);
+  transition: all var(--nask-transition);
 }
 
 .method-card.recommended {
-  border-color: var(--cv-green);
+  border-color: var(--nask-green);
   background: rgba(34,197,94,0.04);
 }
 
@@ -797,7 +798,7 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
 }
 
 .method-desc {
-  color: var(--cv-text-secondary);
+  color: var(--nask-text-secondary);
   font-size: 13px;
   margin: 0 0 16px 0;
 }
@@ -810,7 +811,7 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
   font-size: 13px;
   font-weight: 600;
   margin: 0 0 8px 0;
-  color: var(--cv-text);
+  color: var(--nask-text);
 }
 
 .pros-list, .cons-list {
@@ -820,13 +821,13 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
   line-height: 1.8;
 }
 
-.pros-list li { color: var(--cv-green); }
+.pros-list li { color: var(--nask-green); }
 .pros-list li::marker { content: '+ '; }
-.cons-list li { color: var(--cv-red); }
+.cons-list li { color: var(--nask-red); }
 .cons-list li::marker { content: '- '; }
 
 .form-tip {
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 12px;
   margin-top: 4px;
   line-height: 1.4;
@@ -836,21 +837,21 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  color: var(--cv-text);
+  color: var(--nask-text);
   font-size: 14px;
   line-height: 1.6;
 }
 
 .code-block {
-  background: var(--cv-surface-hover);
-  border: 1px solid var(--cv-border-light);
-  border-radius: var(--cv-radius-xs);
+  background: var(--nask-surface-hover);
+  border: 1px solid var(--nask-border);
+  border-radius: var(--nask-radius-sm);
   padding: 10px 14px;
   margin-top: 8px;
   font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.8;
-  color: var(--cv-text);
+  color: var(--nask-text);
   overflow-x: auto;
 }
 
@@ -863,7 +864,7 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
 }
 
 .relation-meta {
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 12px;
   margin-left: auto;
   flex-shrink: 0;
@@ -872,15 +873,15 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
 .rel-section-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--cv-text);
+  color: var(--nask-text);
   margin: 0 0 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--cv-border-light);
+  border-bottom: 1px solid var(--nask-border);
 }
 
 .rel-item {
   padding: 6px 0;
-  border-bottom: 1px dashed var(--cv-border-light);
+  border-bottom: 1px dashed var(--nask-border);
   font-size: 13px;
 }
 
@@ -888,18 +889,18 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
 
 .rel-name {
   font-weight: 500;
-  color: var(--cv-text);
+  color: var(--nask-text);
   margin-bottom: 2px;
 }
 
 .rel-id {
   font-size: 11px;
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-family: monospace;
 }
 
 .rel-expires {
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 11px;
   margin-left: 6px;
 }

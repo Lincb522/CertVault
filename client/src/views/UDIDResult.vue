@@ -120,16 +120,16 @@ onMounted(fetchResult)
 
 .result-icon { margin-bottom: 16px; }
 
-h2 { font-size: 22px; color: var(--cv-text); margin: 0 0 8px; font-weight: 700; }
+h2 { font-size: 22px; color: var(--nask-text); margin: 0 0 8px; font-weight: 700; }
 
-.result-tip { color: var(--cv-text-muted); font-size: 14px; margin: 0 0 24px; }
+.result-tip { color: var(--nask-text-muted); font-size: 14px; margin: 0 0 24px; }
 
 .info-block {
-  background: var(--cv-surface-hover);
-  border-radius: var(--cv-radius-sm);
+  background: var(--nask-surface-hover);
+  border-radius: var(--nask-radius-sm);
   padding: 16px;
   text-align: left;
-  border: 1px solid var(--cv-border-light);
+  border: 1px solid var(--nask-border);
 }
 
 .info-row {
@@ -137,19 +137,19 @@ h2 { font-size: 22px; color: var(--cv-text); margin: 0 0 8px; font-weight: 700; 
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid var(--cv-border-light);
+  border-bottom: 1px solid var(--nask-border);
 }
 
 .info-row:last-child { border-bottom: none; }
 
 .info-label {
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 13px;
   flex-shrink: 0;
 }
 
 .info-value {
-  color: var(--cv-text);
+  color: var(--nask-text);
   font-size: 13px;
   text-align: right;
   word-break: break-all;
@@ -162,7 +162,7 @@ h2 { font-size: 22px; color: var(--cv-text); margin: 0 0 8px; font-weight: 700; 
   background: linear-gradient(135deg, rgba(64,158,255,0.08), rgba(144,106,252,0.08));
   padding: 4px 8px;
   border-radius: 6px;
-  color: var(--cv-blue);
+  color: var(--nask-blue);
 }
 
 .result-actions { margin-top: 24px; }
@@ -171,13 +171,13 @@ h2 { font-size: 22px; color: var(--cv-text); margin: 0 0 8px; font-weight: 700; 
   background: linear-gradient(135deg, #409EFF, #906AFC);
   color: #fff;
   border: none;
-  border-radius: var(--cv-radius-sm);
+  border-radius: var(--nask-radius-sm);
   padding: 14px 32px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  transition: all var(--cv-transition);
+  transition: all var(--nask-transition);
 }
 
 .copy-btn:hover {
@@ -188,7 +188,7 @@ h2 { font-size: 22px; color: var(--cv-text); margin: 0 0 8px; font-weight: 700; 
 .copy-btn:active { background: linear-gradient(135deg, #3a8ee6, #7c5ce7); }
 
 .result-note {
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 12px;
   margin-top: 20px;
 }

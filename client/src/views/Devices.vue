@@ -582,7 +582,7 @@ onMounted(fetchDevices)
 }
 
 .step-message {
-  color: var(--cv-text-secondary);
+  color: var(--nask-text-secondary);
   font-size: 13px;
   margin-top: 4px;
 }
@@ -594,19 +594,19 @@ onMounted(fetchDevices)
   padding: 14px 16px;
   background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.1));
   border: 1px solid rgba(245,158,11,0.3);
-  border-radius: var(--cv-radius-sm);
+  border-radius: var(--nask-radius-sm);
   margin-bottom: 16px;
   font-size: 14px;
 }
 
 .password-text {
-  background: var(--cv-surface);
+  background: var(--nask-surface);
   padding: 2px 10px;
   border-radius: 6px;
   font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
   font-size: 15px;
   font-weight: 600;
-  color: var(--cv-text);
+  color: var(--nask-text);
   letter-spacing: 1px;
 }
 
@@ -633,7 +633,7 @@ onMounted(fetchDevices)
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--cv-border-light);
+  border-bottom: 1px solid var(--nask-border);
   font-size: 13px;
 }
 

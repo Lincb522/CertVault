@@ -7,9 +7,34 @@ final class APIClient: ObservableObject {
 
     let baseURL = AppConstants.serverURL
 
+    private static let dateFormatters: [DateFormatter] = {
+        ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"].map {
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.dateFormat = $0
+            return f
+        }
+    }()
+
+    private static let isoFormatters: [ISO8601DateFormatter] = {
+        let f1 = ISO8601DateFormatter()
+        f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let f2 = ISO8601DateFormatter()
+        f2.formatOptions = [.withInternetDateTime]
+        return [f1, f2]
+    }()
+
+    private let tokenLock = NSLock()
+
     var token: String? {
-        get { KeychainService.shared.get(forKey: AppConstants.tokenKey) }
+        get {
+            tokenLock.lock()
+            defer { tokenLock.unlock() }
+            return KeychainService.shared.get(forKey: AppConstants.tokenKey)
+        }
         set {
+            tokenLock.lock()
+            defer { tokenLock.unlock() }
             if let v = newValue {
                 KeychainService.shared.save(v, forKey: AppConstants.tokenKey)
                 AppLogger.auth.info("🔑 Token saved (len=\(v.count))")
@@ -33,18 +58,12 @@ final class APIClient: ObservableObject {
         self.decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let str = try container.decode(String.self)
-            let formats = ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"]
-            for fmt in formats {
-                let f = DateFormatter()
-                f.locale = Locale(identifier: "en_US_POSIX")
-                f.dateFormat = fmt
-                if let date = f.date(from: str) { return date }
+            for formatter in APIClient.dateFormatters {
+                if let date = formatter.date(from: str) { return date }
             }
-            let iso = ISO8601DateFormatter()
-            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = iso.date(from: str) { return date }
-            iso.formatOptions = [.withInternetDateTime]
-            if let date = iso.date(from: str) { return date }
+            for formatter in APIClient.isoFormatters {
+                if let date = formatter.date(from: str) { return date }
+            }
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(str)")
         }
         AppLogger.api.info("🚀 APIClient init | baseURL=\(self.baseURL) | hasToken=\(self.isLoggedIn)")
@@ -186,16 +205,16 @@ final class APIClient: ObservableObject {
         var body = Data()
         if let fields = extraFields {
             for (key, value) in fields {
-                body.append("--\(boundary)\r\n".data(using: .utf8)!)
-                body.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".data(using: .utf8)!)
-                body.append("\(value)\r\n".data(using: .utf8)!)
+                body.append(Data("--\(boundary)\r\n".utf8))
+                body.append(Data("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".utf8))
+                body.append(Data("\(value)\r\n".utf8))
             }
         }
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(Data("--\(boundary)\r\n".utf8))
+        body.append(Data("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(fileName)\"\r\n".utf8))
+        body.append(Data("Content-Type: \(mimeType)\r\n\r\n".utf8))
         body.append(fileData)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
         req.httpBody = body
 
         AppLogger.logUpload(endpoint, fileName: fileName, size: fileData.count)

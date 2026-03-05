@@ -7,28 +7,28 @@
 
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-icon blue"><el-icon><User /></el-icon></div>
+        <div class="stat-icon blue"><HIcon name="profile-1" :size="22" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ stats.accounts }}</div>
           <div class="stat-label">开发者账号</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon green"><el-icon><Iphone /></el-icon></div>
+        <div class="stat-icon green"><HIcon name="display-1" :size="22" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ stats.devices }}</div>
           <div class="stat-label">已注册设备</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon orange"><el-icon><Key /></el-icon></div>
+        <div class="stat-icon orange"><HIcon name="password-1" :size="22" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ stats.certificates }}</div>
           <div class="stat-label">证书总数</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon purple"><el-icon><Document /></el-icon></div>
+        <div class="stat-icon purple"><HIcon name="document-align-left-1" :size="22" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ stats.profiles }}</div>
           <div class="stat-label">描述文件</div>
@@ -42,27 +42,27 @@
       </div>
       <div class="quick-grid">
         <div class="quick-card" @click="$router.push('/certificates')">
-          <div class="q-icon stat-icon blue"><el-icon><Key /></el-icon></div>
+          <div class="q-icon stat-icon blue"><HIcon name="password-1" :size="20" /></div>
           <div class="q-label">创建证书</div>
         </div>
         <div class="quick-card" @click="$router.push('/devices')">
-          <div class="q-icon stat-icon green"><el-icon><Iphone /></el-icon></div>
+          <div class="q-icon stat-icon green"><HIcon name="display-1" :size="20" /></div>
           <div class="q-label">添加设备</div>
         </div>
         <div class="quick-card" @click="$router.push('/profiles')">
-          <div class="q-icon stat-icon orange"><el-icon><Document /></el-icon></div>
+          <div class="q-icon stat-icon orange"><HIcon name="document-align-left-1" :size="20" /></div>
           <div class="q-label">生成描述文件</div>
         </div>
         <div class="quick-card" @click="$router.push('/accounts')">
-          <div class="q-icon stat-icon purple"><el-icon><User /></el-icon></div>
+          <div class="q-icon stat-icon purple"><HIcon name="profile-1" :size="20" /></div>
           <div class="q-label">管理账号</div>
         </div>
         <div class="quick-card" @click="$router.push('/get-udid')">
-          <div class="q-icon stat-icon cyan"><el-icon><Monitor /></el-icon></div>
+          <div class="q-icon stat-icon cyan"><HIcon name="scan-1" :size="20" /></div>
           <div class="q-label">获取 UDID</div>
         </div>
         <div class="quick-card" @click="$router.push('/healthcheck')">
-          <div class="q-icon stat-icon pink"><el-icon><CircleCheck /></el-icon></div>
+          <div class="q-icon stat-icon pink"><HIcon name="tick-circle" :size="20" /></div>
           <div class="q-label">健康检查</div>
         </div>
       </div>
@@ -107,6 +107,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAppStore } from '../stores/app'
 import { dashboardApi, certApi } from '../api'
+import HIcon from '../components/HIcon.vue'
 
 const store = useAppStore()
 const stats = ref({ accounts: 0, devices: 0, certificates: 0, profiles: 0 })

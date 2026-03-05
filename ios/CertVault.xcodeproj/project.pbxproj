@@ -232,7 +232,7 @@
 				CODE_SIGN_ENTITLEMENTS = CertVault/CertVault.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = T63A78YFJY;
 				INFOPLIST_FILE = CertVault/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CertVault;
@@ -261,7 +261,7 @@
 				CODE_SIGN_ENTITLEMENTS = CertVault/CertVault.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = T63A78YFJY;
 				INFOPLIST_FILE = CertVault/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CertVault;

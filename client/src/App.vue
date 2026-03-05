@@ -16,67 +16,67 @@
           <p>Workspace</p>
         </div>
         <button class="sidebar-close-btn" @click="sidebarOpen = false">
-          <el-icon><Close /></el-icon>
+          <HIcon name="close" :size="18" />
         </button>
       </div>
 
       <nav class="sidebar-nav">
         <div class="nav-group">
           <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }" @click="sidebarOpen = false">
-            <el-icon><Odometer /></el-icon> 仪表盘
+            <HIcon name="category" /> 仪表盘
           </router-link>
         </div>
 
         <div class="nav-group" v-if="userInfo.role === 'superadmin'">
           <div class="nav-group-label">管理</div>
           <router-link to="/users" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><UserFilled /></el-icon> 用户管理
+            <HIcon name="group-1" /> 用户管理
           </router-link>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">核心功能</div>
           <router-link to="/accounts" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><User /></el-icon> 账号管理
+            <HIcon name="profile-1" /> 账号管理
           </router-link>
           <router-link to="/devices" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Iphone /></el-icon> 设备管理
+            <HIcon name="display-1" /> 设备管理
           </router-link>
           <router-link to="/certificates" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Key /></el-icon> 证书管理
+            <HIcon name="password-1" /> 证书管理
           </router-link>
           <router-link to="/profiles" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Document /></el-icon> 描述文件
+            <HIcon name="document-align-left-1" /> 描述文件
           </router-link>
           <router-link to="/capabilities" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Lock /></el-icon> 权限管理
+            <HIcon name="lock-1" /> 权限管理
           </router-link>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">工具</div>
           <router-link to="/get-udid" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Monitor /></el-icon> 获取 UDID
+            <HIcon name="scan-1" /> 获取 UDID
           </router-link>
           <router-link to="/healthcheck" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><CircleCheck /></el-icon> 健康检查
+            <HIcon name="tick-circle" /> 健康检查
           </router-link>
         </div>
 
         <div class="nav-group" v-if="userInfo.role === 'superadmin'">
           <div class="nav-group-label">分发</div>
           <router-link to="/ipa" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Download /></el-icon> IPA 管理
+            <HIcon name="download" /> IPA 管理
           </router-link>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">推送</div>
           <router-link to="/push-keys" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Bell /></el-icon> 推送密钥
+            <HIcon name="notification-1" /> 推送密钥
           </router-link>
           <router-link to="/push" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <el-icon><Promotion /></el-icon> 推送测试
+            <HIcon name="send-1" /> 推送测试
           </router-link>
         </div>
       </nav>
@@ -84,7 +84,7 @@
       <!-- Sidebar bottom -->
       <div class="sidebar-bottom-items">
         <div class="sidebar-theme-toggle" @click="toggleDarkMode">
-          <el-icon><Moon /></el-icon>
+          <HIcon name="moon" />
           <span>Dark Mode</span>
           <el-switch
             :model-value="isDark"
@@ -93,10 +93,10 @@
           />
         </div>
         <div class="nav-item" @click="showChangePwd = true">
-          <el-icon><Setting /></el-icon> 修改密码
+          <HIcon name="setting" /> 修改密码
         </div>
         <div class="nav-item" style="color: var(--nask-red)" @click="handleLogout">
-          <el-icon><SwitchButton /></el-icon> 退出登录
+          <HIcon name="logout" /> 退出登录
         </div>
       </div>
 
@@ -107,7 +107,7 @@
       <header class="main-header">
         <div style="display: flex; align-items: center; gap: 12px">
           <button class="mobile-menu-btn" @click="sidebarOpen = true">
-            <el-icon size="22"><Fold /></el-icon>
+            <HIcon name="menu-hamburger" :size="22" />
           </button>
           <div>
             <div class="main-header-title">{{ $route.meta.title || 'CertVault' }}</div>
@@ -136,7 +136,7 @@
               <div class="navbar-user-name">{{ userInfo.username || '用户' }}</div>
               <div class="navbar-user-email">{{ roleLabel }}</div>
             </div>
-            <el-icon style="color: var(--nask-text-secondary); font-size: 12px"><ArrowDown /></el-icon>
+            <HIcon name="down-1" :size="12" style="color: var(--nask-text-secondary)" />
           </div>
         </div>
       </header>
@@ -170,6 +170,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAppStore } from './stores/app'
 import { authApi } from './api'
+import HIcon from './components/HIcon.vue'
 
 const router = useRouter()
 const route = useRoute()

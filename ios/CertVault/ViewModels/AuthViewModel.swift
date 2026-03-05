@@ -37,6 +37,7 @@ final class AuthViewModel: ObservableObject {
     }
 
     deinit {
+        cooldownTimer?.invalidate()
         if let observer = unauthorizedObserver {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -97,7 +98,7 @@ final class AuthViewModel: ObservableObject {
 
     func logout() async {
         AppLogger.auth.info("👋 Logout | user=\(self.username)")
-        await NotificationManager.shared.clearToken()
+        NotificationManager.shared.clearToken()
         await authService.logout()
         try? DatabaseManager.shared.clearAll()
         isLoggedIn = false

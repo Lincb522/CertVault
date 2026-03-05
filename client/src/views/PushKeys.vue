@@ -298,22 +298,22 @@ onMounted(fetchKeys)
 
 <style scoped>
 .p8-drop-zone {
-  border: 2px dashed var(--cv-border);
-  border-radius: var(--cv-radius-sm);
+  border: 2px dashed var(--nask-border);
+  border-radius: var(--nask-radius-sm);
   padding: 20px;
   text-align: center;
   cursor: pointer;
-  transition: all var(--cv-transition);
-  background: var(--cv-surface-hover);
+  transition: all var(--nask-transition);
+  background: var(--nask-surface-hover);
 }
 
-.p8-drop-zone:hover { border-color: var(--cv-blue); background: rgba(64,158,255,0.04); }
-.p8-drop-zone.drag-over { border-color: var(--cv-blue); background: rgba(64,158,255,0.08); }
-.p8-drop-zone.has-file { border-color: var(--cv-green); background: rgba(34,197,94,0.04); border-style: solid; }
+.p8-drop-zone:hover { border-color: var(--nask-blue); background: rgba(64,158,255,0.04); }
+.p8-drop-zone.drag-over { border-color: var(--nask-blue); background: rgba(64,158,255,0.08); }
+.p8-drop-zone.has-file { border-color: var(--nask-green); background: rgba(34,197,94,0.04); border-style: solid; }
 
 .p8-file-info { display: flex; align-items: center; gap: 10px; justify-content: center; }
-.p8-filename { font-weight: 600; font-family: monospace; color: var(--cv-text); }
-.p8-placeholder p { margin: 8px 0 0; color: var(--cv-text-muted); font-size: 14px; }
+.p8-filename { font-weight: 600; font-family: monospace; color: var(--nask-text); }
+.p8-placeholder p { margin: 8px 0 0; color: var(--nask-text-muted); font-size: 14px; }
 
-.form-tip { color: var(--cv-text-muted); font-size: 12px; margin-top: 4px; }
+.form-tip { color: var(--nask-text-muted); font-size: 12px; margin-top: 4px; }
 </style>

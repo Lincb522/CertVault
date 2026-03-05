@@ -25,7 +25,7 @@ struct SettingsView: View {
     private var roleDisplayName: String {
         switch authVM.role {
         case "superadmin": return NSLocalizedString("user.role.superadmin", comment: "")
-        case "admin": return NSLocalizedString("user.role.superadmin", comment: "")
+        case "admin": return NSLocalizedString("user.role.admin", comment: "")
         default: return NSLocalizedString("user.role.user", comment: "")
         }
     }

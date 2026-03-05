@@ -344,7 +344,7 @@ onMounted(async () => {
 
 <style scoped>
 .form-tip {
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   font-size: 12px;
   margin-top: 4px;
 }
@@ -354,29 +354,29 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: var(--cv-radius-sm);
+  border-radius: var(--nask-radius-sm);
   margin-top: 16px;
 }
 
 .push-result.success {
   background: rgba(34,197,94,0.06);
-  border: 1px solid var(--cv-green);
-  color: var(--cv-green);
+  border: 1px solid var(--nask-green);
+  color: var(--nask-green);
 }
 
 .push-result.error {
   background: rgba(239,68,68,0.06);
-  border: 1px solid var(--cv-red);
-  color: var(--cv-red);
+  border: 1px solid var(--nask-red);
+  color: var(--nask-red);
 }
 
 .push-result strong {
-  color: var(--cv-text);
+  color: var(--nask-text);
 }
 
 .result-detail {
   font-size: 12px;
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   margin-top: 4px;
   font-family: monospace;
 }
@@ -384,30 +384,30 @@ onMounted(async () => {
 .guide-content {
   font-size: 14px;
   line-height: 1.7;
-  color: var(--cv-text);
+  color: var(--nask-text);
 }
 
 .guide-content h4 {
   font-size: 14px;
   font-weight: 600;
   margin: 16px 0 8px;
-  color: var(--cv-text);
+  color: var(--nask-text);
 }
 
 .guide-content p {
   margin: 0 0 8px;
-  color: var(--cv-text-secondary);
+  color: var(--nask-text-secondary);
 }
 
 .code-block {
-  background: var(--cv-surface-hover);
-  border: 1px solid var(--cv-border-light);
-  border-radius: var(--cv-radius-xs);
+  background: var(--nask-surface-hover);
+  border: 1px solid var(--nask-border);
+  border-radius: var(--nask-radius-sm);
   padding: 10px 14px;
   font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.8;
-  color: var(--cv-text);
+  color: var(--nask-text);
   overflow-x: auto;
 }
 
@@ -430,7 +430,7 @@ onMounted(async () => {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--cv-gradient);
+  background: var(--nask-surface-hover);
   color: #fff;
   display: flex;
   align-items: center;
@@ -441,7 +441,7 @@ onMounted(async () => {
 }
 
 .flow-arrow {
-  color: var(--cv-text-muted);
+  color: var(--nask-text-muted);
   padding-left: 8px;
   font-size: 12px;
 }
@@ -450,7 +450,7 @@ onMounted(async () => {
   padding-left: 18px;
   margin: 0;
   font-size: 13px;
-  color: var(--cv-text-secondary);
+  color: var(--nask-text-secondary);
   line-height: 1.8;
 }
 </style>

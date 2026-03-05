@@ -278,18 +278,19 @@ private struct UploadP8Sheet: View {
                         errorMsg = "请选择 .p8 格式的文件"
                         return
                     }
-                    guard url.startAccessingSecurityScopedResource() else {
-                        errorMsg = "无法访问该文件"
-                        return
-                    }
-                    defer { url.stopAccessingSecurityScopedResource() }
-                    selectedFileName = url.lastPathComponent
-                    selectedFileData = try? Data(contentsOf: url)
-                    if keyID.isEmpty, let fname = selectedFileName {
-                        let base = fname.replacingOccurrences(of: ".p8", with: "")
-                        if base.hasPrefix("AuthKey_") {
-                            keyID = String(base.dropFirst("AuthKey_".count))
+                    let accessed = url.startAccessingSecurityScopedResource()
+                    defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+                    do {
+                        selectedFileData = try Data(contentsOf: url)
+                        selectedFileName = url.lastPathComponent
+                        if keyID.isEmpty, let fname = selectedFileName {
+                            let base = fname.replacingOccurrences(of: ".p8", with: "")
+                            if base.hasPrefix("AuthKey_") {
+                                keyID = String(base.dropFirst("AuthKey_".count))
+                            }
                         }
+                    } catch {
+                        errorMsg = "无法读取文件：\(error.localizedDescription)"
                     }
                 }
             }
