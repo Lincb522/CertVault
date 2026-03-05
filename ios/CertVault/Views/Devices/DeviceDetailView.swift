@@ -10,24 +10,33 @@ struct DeviceDetailView: View {
     @State private var showDisableConfirm = false
     @State private var showRebind = false
     @State private var isToggling = false
+    @State private var appeared = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
             if let device = vm.selectedDevice {
                 ScrollView {
-                    VStack(spacing: 20) {
-                        deviceInfoCard(device)
+                    VStack(spacing: DS.spacingXL) {
+                        heroHeader(device)
+                            .staggeredAppear(index: 0, animate: appeared)
+                        infoSection(device)
+                            .staggeredAppear(index: 1, animate: appeared)
                         certificatesSection(device)
+                            .staggeredAppear(index: 2, animate: appeared)
                         profilesSection(device)
+                            .staggeredAppear(index: 3, animate: appeared)
                         downloadSection(device)
+                            .staggeredAppear(index: 4, animate: appeared)
                         actionsSection(device)
+                            .staggeredAppear(index: 5, animate: appeared)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    .padding(.horizontal, DS.spacingLG)
+                    .padding(.bottom, DS.spacingXL)
                 }
                 .pageBackground()
                 .refreshable { await vm.loadDetail(deviceId: deviceId) }
+                .onAppear { withAnimation { appeared = true } }
             } else if vm.isLoading {
                 LoadingView()
             } else if let err = vm.errorMessage {
@@ -74,106 +83,105 @@ struct DeviceDetailView: View {
         }
     }
 
-    // MARK: - Device Info
+    // MARK: - Hero Header
 
-    private func deviceInfoCard(_ device: Device) -> some View {
-        let tint: Color = device.isEnabled ? .dsAccent : (device.isIneligible ? .dsAccentOrange : .dsAccentPink)
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                HIcon(AppIcon.device)
-                    .font(.title2)
-                    .foregroundStyle(tint)
-                    .frame(width: 48, height: 48)
-                    .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+    private func heroHeader(_ device: Device) -> some View {
+        let gradient: LinearGradient = device.isEnabled ? .dsGradientGreen : .dsGradientOrange
+        return VStack(spacing: DS.spacingMD) {
+            HIcon(AppIcon.device)
+                .font(.title2)
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 56)
+                .background(gradient, in: RoundedRectangle(cornerRadius: DS.radiusLG))
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(device.displayName)
-                        .font(.title3.bold())
-                        .foregroundStyle(device.isEnabled ? Color.dsText : Color.dsAccentPink)
-                    StatusBadge.forStatus(device.status ?? "UNKNOWN")
-                }
+            Text(device.displayName)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(Color.dsText)
+                .multilineTextAlignment(.center)
+
+            DSBadge.forStatus(device.status ?? "UNKNOWN")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DS.spacingXL)
+    }
+
+    // MARK: - Info
+
+    private func infoSection(_ device: Device) -> some View {
+        DSGroupedCard {
+            infoRow(label: L10n.Device.formUdid, value: device.udid ?? L10n.na, mono: true)
+            DSDivider(leadingPadding: DS.spacingLG)
+            infoRow(label: L10n.Cert.platform, value: Localized.platform(device.platform ?? L10n.na))
+            if let model = device.model {
+                DSDivider(leadingPadding: DS.spacingLG)
+                infoRow(label: NSLocalizedString("cert.model", comment: ""), value: model)
             }
-
-            Divider().overlay(Color.dsBorder)
-
-            Group {
-                DetailRow(label: L10n.Device.formUdid, value: device.udid ?? L10n.na, monospaced: true)
-                DetailRow(label: L10n.Cert.platform, value: Localized.platform(device.platform ?? L10n.na))
-                if let model = device.model {
-                    DetailRow(label: NSLocalizedString("cert.model", comment: ""), value: model)
-                }
-                if let cls = device.device_class {
-                    DetailRow(label: NSLocalizedString("cert.deviceClass", comment: ""), value: Localized.deviceClass(cls))
-                }
-                if let date = device.created_at {
-                    DetailRow(label: NSLocalizedString("cert.addedAt", comment: ""), value: String(date.prefix(19)))
-                }
+            if let cls = device.device_class {
+                DSDivider(leadingPadding: DS.spacingLG)
+                infoRow(label: NSLocalizedString("cert.deviceClass", comment: ""), value: Localized.deviceClass(cls))
+            }
+            if let date = device.created_at {
+                DSDivider(leadingPadding: DS.spacingLG)
+                infoRow(label: NSLocalizedString("cert.addedAt", comment: ""), value: String(date.prefix(19)))
             }
         }
-        .cardStyle()
     }
 
     // MARK: - Certificates
 
     private func certificatesSection(_ device: Device) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HIcon(AppIcon.certificate)
-                    .foregroundStyle(Color.dsAccentPurple)
-                Text(L10n.Device.relatedCerts)
-                    .font(.headline)
-                    .foregroundStyle(Color.dsText)
-                Spacer()
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Device.relatedCerts) {
                 Text(L10n.count(device.certificates?.count ?? 0))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.dsMuted)
-                    .padding(.horizontal, 8)
+                    .foregroundStyle(Color.dsTextSecondary)
+                    .padding(.horizontal, DS.spacingSM)
                     .padding(.vertical, 3)
-                    .background(Color.dsSurfaceLight, in: Capsule())
+                    .background(Color.dsSurfaceElevated, in: Capsule())
             }
 
-            if let certs = device.certificates, !certs.isEmpty {
-                VStack(spacing: 0) {
+            DSGroupedCard {
+                if let certs = device.certificates, !certs.isEmpty {
                     ForEach(Array(certs.enumerated()), id: \.element.id) { index, cert in
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: DS.spacingSM) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(cert.name ?? L10n.unnamed)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(Color.dsText)
-                                    HStack(spacing: 6) {
+                                    HStack(spacing: DS.spacingSM) {
                                         Text(cert.type ?? "")
                                             .font(.caption)
-                                            .foregroundStyle(Color.dsMuted)
+                                            .foregroundStyle(Color.dsTextSecondary)
                                         if let pwd = cert.password {
                                             Text("\(L10n.Cert.password): \(pwd)")
-                                                .font(.caption.monospaced())
-                                                .foregroundStyle(Color.dsAccentBlue)
+                                                .font(.dsMonoSmall)
+                                                .foregroundStyle(Color.dsBlue)
                                         }
                                     }
                                 }
                                 Spacer()
                                 if cert.has_p12 == true {
-                                    StatusBadge("P12", color: .dsAccentBlue)
+                                    DSBadge(text: "P12", color: .dsBlue)
                                 }
                             }
 
-                            HStack(spacing: 8) {
+                            HStack(spacing: DS.spacingSM) {
                                 if cert.canDownloadP12 {
-                                    PillButton(title: "P12", icon: AppIcon.docDownload, color: .dsAccentBlue) {
+                                    pillButton(title: "P12", icon: AppIcon.docDownload, color: .dsBlue) {
                                         Task { await downloadService.download(endpoint: "/certificates/\(cert.id)/download") }
                                     }
                                 }
 
-                                PillButton(title: "CER", icon: AppIcon.docDownload, color: .dsAccentOrange) {
+                                pillButton(title: "CER", icon: AppIcon.docDownload, color: .dsOrange) {
                                     Task { await downloadService.download(endpoint: "/certificates/\(cert.id)/download-cer") }
                                 }
 
                                 if let pwd = cert.password {
-                                    PillButton(
+                                    pillButton(
                                         title: copiedText == pwd ? NSLocalizedString("common.done", comment: "") : NSLocalizedString("common.copy", comment: ""),
                                         icon: copiedText == pwd ? AppIcon.check : AppIcon.copy,
-                                        color: .dsAccent
+                                        color: .dsGreen
                                     ) {
                                         UIPasteboard.general.string = pwd
                                         withAnimation { copiedText = pwd }
@@ -183,46 +191,40 @@ struct DeviceDetailView: View {
                                 Spacer()
                             }
                         }
-                        .padding(.vertical, 10)
+                        .padding(.vertical, DS.spacingSM)
+                        .padding(.horizontal, DS.spacingLG)
 
                         if index < certs.count - 1 {
-                            Divider().overlay(Color.dsBorder)
+                            DSDivider(leadingPadding: DS.spacingLG)
                         }
                     }
+                } else {
+                    Text(L10n.Device.noRelatedCerts)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.dsTextSecondary)
+                        .padding(DS.spacingLG)
                 }
-            } else {
-                Text(L10n.Device.noRelatedCerts)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted)
-                    .padding(.vertical, 8)
             }
         }
-        .cardStyle()
     }
 
     // MARK: - Profiles
 
     private func profilesSection(_ device: Device) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HIcon(AppIcon.profile)
-                    .foregroundStyle(Color.dsAccentOrange)
-                Text(L10n.Device.relatedProfiles)
-                    .font(.headline)
-                    .foregroundStyle(Color.dsText)
-                Spacer()
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Device.relatedProfiles) {
                 Text(L10n.count(device.profiles?.count ?? 0))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.dsMuted)
-                    .padding(.horizontal, 8)
+                    .foregroundStyle(Color.dsTextSecondary)
+                    .padding(.horizontal, DS.spacingSM)
                     .padding(.vertical, 3)
-                    .background(Color.dsSurfaceLight, in: Capsule())
+                    .background(Color.dsSurfaceElevated, in: Capsule())
             }
 
-            if let profiles = device.profiles, !profiles.isEmpty {
-                VStack(spacing: 0) {
+            DSGroupedCard {
+                if let profiles = device.profiles, !profiles.isEmpty {
                     ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: DS.spacingSM) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(profile.name ?? L10n.unnamed)
@@ -230,144 +232,56 @@ struct DeviceDetailView: View {
                                         .foregroundStyle(Color.dsText)
                                     Text(Localized.profileType(profile.type ?? ""))
                                         .font(.caption)
-                                        .foregroundStyle(Color.dsMuted)
+                                        .foregroundStyle(Color.dsTextSecondary)
                                 }
                                 Spacer()
                                 if profile.has_file == true {
-                                    StatusBadge(L10n.Profile.downloadable, color: .dsAccent)
+                                    DSBadge(text: L10n.Profile.downloadable, color: .dsGreen)
                                 }
                             }
 
-                            PillButton(title: L10n.Profile.download, icon: AppIcon.docDownload, color: .dsAccentOrange) {
+                            pillButton(title: L10n.Profile.download, icon: AppIcon.docDownload, color: .dsOrange) {
                                 Task { await downloadService.download(endpoint: "/profiles/\(profile.id)/download") }
                             }
                         }
-                        .padding(.vertical, 10)
+                        .padding(.vertical, DS.spacingSM)
+                        .padding(.horizontal, DS.spacingLG)
 
                         if index < profiles.count - 1 {
-                            Divider().overlay(Color.dsBorder)
+                            DSDivider(leadingPadding: DS.spacingLG)
                         }
                     }
+                } else {
+                    Text(L10n.Device.noRelatedProfiles)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.dsTextSecondary)
+                        .padding(DS.spacingLG)
                 }
-            } else {
-                Text(L10n.Device.noRelatedProfiles)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted)
-                    .padding(.vertical, 8)
             }
         }
-        .cardStyle()
     }
 
-    // MARK: - Actions
-
-    private func actionsSection(_ device: Device) -> some View {
-        VStack(spacing: 12) {
-            Button {
-                showRebind = true
-            } label: {
-                HStack(spacing: 8) {
-                    HIcon(AppIcon.link).font(.body)
-                    Text(L10n.Device.rebind)
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .foregroundStyle(.white)
-                .background(
-                    LinearGradient(
-                        colors: [Color.dsAccentBlue, Color.dsAccentPurple],
-                        startPoint: .leading, endPoint: .trailing
-                    ),
-                    in: RoundedRectangle(cornerRadius: 14)
-                )
-            }
-            .buttonStyle(.plain)
-
-            if device.isEnabled {
-                Button {
-                    showDisableConfirm = true
-                } label: {
-                    HStack(spacing: 8) {
-                        if isToggling {
-                            ProgressView().controlSize(.small).tint(.white)
-                        } else {
-                            HIcon(AppIcon.close).font(.body)
-                        }
-                        Text(L10n.Device.disableDevice)
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(.white)
-                    .background(Color.dsAccentPink, in: RoundedRectangle(cornerRadius: 14))
-                }
-                .buttonStyle(.plain)
-                .disabled(isToggling)
-            } else {
-                Button {
-                    Task {
-                        isToggling = true
-                        do {
-                            try await vm.toggleDeviceStatus(deviceId: deviceId, enable: true)
-                        } catch {
-                            vm.errorMessage = error.localizedDescription
-                        }
-                        isToggling = false
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        if isToggling {
-                            ProgressView().controlSize(.small).tint(.white)
-                        } else {
-                            HIcon(AppIcon.check).font(.body)
-                        }
-                        Text(L10n.Device.enableDevice)
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(.white)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.dsAccent, Color(red: 0.10, green: 0.60, blue: 0.40)],
-                            startPoint: .leading, endPoint: .trailing
-                        ),
-                        in: RoundedRectangle(cornerRadius: 14)
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(isToggling)
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-
-    // MARK: - Bundle Download
+    // MARK: - Download
 
     private func downloadSection(_ device: Device) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HIcon(AppIcon.download)
-                    .foregroundStyle(Color.dsAccent)
-                Text(L10n.Device.batchDownload)
-                    .font(.headline)
-                    .foregroundStyle(Color.dsText)
-            }
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Device.batchDownload)
 
-            if let profiles = device.profiles, !profiles.isEmpty {
-                Text(L10n.Device.batchDownloadDesc)
-                    .font(.caption)
-                    .foregroundStyle(Color.dsMuted)
+            DSGroupedCard {
+                if let profiles = device.profiles, !profiles.isEmpty {
+                    Text(L10n.Device.batchDownloadDesc)
+                        .font(.caption)
+                        .foregroundStyle(Color.dsTextSecondary)
+                        .padding(.horizontal, DS.spacingLG)
+                        .padding(.top, DS.spacingMD)
 
-                VStack(spacing: 0) {
                     ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
-                        HStack(spacing: 12) {
+                        HStack(spacing: DS.spacingMD) {
                             HIcon(AppIcon.profile)
                                 .font(.body)
-                                .foregroundStyle(Color.dsAccentOrange)
+                                .foregroundStyle(Color.dsOrange)
                                 .frame(width: 36, height: 36)
-                                .background(Color.dsAccentOrange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                                .background(Color.dsOrange.opacity(0.1), in: RoundedRectangle(cornerRadius: DS.radiusSM))
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(profile.name ?? L10n.unnamed)
@@ -376,7 +290,7 @@ struct DeviceDetailView: View {
                                     .lineLimit(1)
                                 Text(Localized.profileType(profile.type ?? ""))
                                     .font(.caption)
-                                    .foregroundStyle(Color.dsMuted)
+                                    .foregroundStyle(Color.dsTextSecondary)
                             }
 
                             Spacer()
@@ -391,7 +305,7 @@ struct DeviceDetailView: View {
                                     )
                                 }
                             } label: {
-                                HStack(spacing: 4) {
+                                HStack(spacing: DS.spacingXS) {
                                     if downloadService.isDownloading {
                                         ProgressView().controlSize(.small)
                                     } else {
@@ -400,77 +314,104 @@ struct DeviceDetailView: View {
                                     Text(L10n.download)
                                 }
                                 .font(.caption.weight(.medium))
-                                .padding(.horizontal, 12)
+                                .padding(.horizontal, DS.spacingMD)
                                 .padding(.vertical, 7)
                                 .foregroundStyle(.white)
-                                .background(Color.dsAccent, in: Capsule())
+                                .background(Color.dsGreen, in: Capsule())
                             }
                             .buttonStyle(.plain)
                         }
-                        .padding(.vertical, 10)
+                        .padding(.vertical, DS.spacingSM)
+                        .padding(.horizontal, DS.spacingLG)
 
                         if index < profiles.count - 1 {
-                            Divider().padding(.leading, 48)
+                            DSDivider(leadingPadding: 60)
                         }
                     }
-                }
-            } else {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 6) {
+                } else {
+                    VStack(spacing: DS.spacingSM) {
                         HIcon(AppIcon.download)
-                            .foregroundStyle(Color.dsMuted.opacity(0.4))
+                            .foregroundStyle(Color.dsTextTertiary)
                         Text(L10n.Device.noBatchProfiles)
                             .font(.subheadline)
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsTextSecondary)
                     }
-                    .padding(.vertical, 16)
-                    Spacer()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DS.spacingLG)
                 }
             }
 
             if let err = downloadService.errorMessage {
-                Text(err).font(.caption).foregroundStyle(Color.dsAccentPink)
+                Text(err).font(.caption).foregroundStyle(Color.dsRed)
             }
         }
-        .cardStyle()
     }
-}
 
-// MARK: - Detail Row
+    // MARK: - Actions
 
-private struct DetailRow: View {
-    let label: String
-    let value: String
-    var monospaced: Bool = false
+    private func actionsSection(_ device: Device) -> some View {
+        VStack(spacing: DS.spacingMD) {
+            DSPrimaryButton(title: L10n.Device.rebind) {
+                showRebind = true
+            }
 
-    var body: some View {
+            if device.isEnabled {
+                DSDangerButton(L10n.Device.disableDevice, icon: AppIcon.close) {
+                    showDisableConfirm = true
+                }
+            } else {
+                Button {
+                    Task {
+                        isToggling = true
+                        do {
+                            try await vm.toggleDeviceStatus(deviceId: deviceId, enable: true)
+                        } catch {
+                            vm.errorMessage = error.localizedDescription
+                        }
+                        isToggling = false
+                    }
+                } label: {
+                    HStack(spacing: DS.spacingSM) {
+                        if isToggling {
+                            ProgressView().controlSize(.small).tint(.white)
+                        } else {
+                            HIcon(AppIcon.check).font(.body)
+                        }
+                        Text(L10n.Device.enableDevice)
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(.white)
+                    .background(Color.dsGradientGreen, in: RoundedRectangle(cornerRadius: DS.radiusMD))
+                }
+                .buttonStyle(.plain)
+                .disabled(isToggling)
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func infoRow(label: String, value: String, mono: Bool = false) -> some View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
-                .frame(width: 70, alignment: .leading)
+                .foregroundStyle(Color.dsTextSecondary)
             Spacer()
             Text(value)
-                .font(monospaced ? .subheadline.monospaced() : .subheadline)
+                .font(mono ? .dsMono : .subheadline)
                 .foregroundStyle(Color.dsText)
                 .textSelection(.enabled)
                 .multilineTextAlignment(.trailing)
         }
+        .padding(.horizontal, DS.spacingLG)
+        .padding(.vertical, DS.spacingMD)
     }
-}
 
-// MARK: - Pill Button
-
-private struct PillButton: View {
-    let title: String
-    let icon: UIImage
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
+    private func pillButton(title: String, icon: UIImage, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 4) {
+            HStack(spacing: DS.spacingXS) {
                 HIcon(icon).font(.caption2)
                 Text(title)
             }

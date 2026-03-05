@@ -7,7 +7,7 @@ struct AppBackground: View {
 
     var body: some View {
         ZStack {
-            (isDark ? Color(hex: "050507") : Color(hex: "F8F9FB"))
+            Color.dsBackground
                 .ignoresSafeArea()
 
             Canvas { context, size in

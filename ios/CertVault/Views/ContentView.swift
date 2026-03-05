@@ -95,108 +95,73 @@ struct MainTabView: View {
 struct MoreView: View {
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                moreSection(L10n.More.sectionResources, items: [
-                    MoreItem(icon: AppIcon.profile, title: NSLocalizedString("more.profiles", comment: ""), subtitle: NSLocalizedString("more.profiles.sub", comment: ""), color: .dsAccentOrange) {
-                        AnyView(ProfileListView())
-                    },
-                    MoreItem(icon: AppIcon.bundleID, title: NSLocalizedString("more.bundleId", comment: ""), subtitle: NSLocalizedString("more.bundleId.sub", comment: ""), color: .dsAccentCyan) {
-                        AnyView(BundleIDListView())
-                    },
-                    MoreItem(icon: AppIcon.capability, title: NSLocalizedString("more.capabilities", comment: ""), subtitle: NSLocalizedString("more.capabilities.sub", comment: ""), color: .dsAccentPurple) {
-                        AnyView(CapabilityView())
-                    },
-                ])
+            VStack(spacing: DS.spacingXL) {
+                VStack(alignment: .leading, spacing: DS.spacingSM) {
+                    DSSectionHeader(L10n.More.sectionResources)
+                    DSGroupedCard {
+                        NavigationLink { ProfileListView() } label: {
+                            DSRow(icon: AppIcon.profile, iconColor: .dsOrange, title: NSLocalizedString("more.profiles", comment: ""), subtitle: NSLocalizedString("more.profiles.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                        DSDivider()
+                        NavigationLink { BundleIDListView() } label: {
+                            DSRow(icon: AppIcon.bundleID, iconColor: .dsCyan, title: NSLocalizedString("more.bundleId", comment: ""), subtitle: NSLocalizedString("more.bundleId.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                        DSDivider()
+                        NavigationLink { CapabilityView() } label: {
+                            DSRow(icon: AppIcon.capability, iconColor: .dsPurple, title: NSLocalizedString("more.capabilities", comment: ""), subtitle: NSLocalizedString("more.capabilities.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
 
-                moreSection(L10n.More.sectionPush, items: [
-                    MoreItem(icon: AppIcon.pushKey, title: NSLocalizedString("more.pushKeys", comment: ""), subtitle: NSLocalizedString("more.pushKeys.sub", comment: ""), color: .dsAccentPink) {
-                        AnyView(PushKeyListView())
-                    },
-                    MoreItem(icon: AppIcon.pushTest, title: NSLocalizedString("more.pushTest", comment: ""), subtitle: NSLocalizedString("more.pushTest.sub", comment: ""), color: .dsAccentBlue) {
-                        AnyView(PushTestView())
-                    },
-                    MoreItem(icon: AppIcon.info, title: NSLocalizedString("more.pushGuide", comment: ""), subtitle: NSLocalizedString("more.pushGuide.sub", comment: ""), color: .dsAccentCyan) {
-                        AnyView(PushGuideView())
-                    },
-                ])
+                VStack(alignment: .leading, spacing: DS.spacingSM) {
+                    DSSectionHeader(L10n.More.sectionPush)
+                    DSGroupedCard {
+                        NavigationLink { PushKeyListView() } label: {
+                            DSRow(icon: AppIcon.pushKey, iconColor: .dsPink, title: NSLocalizedString("more.pushKeys", comment: ""), subtitle: NSLocalizedString("more.pushKeys.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                        DSDivider()
+                        NavigationLink { PushTestView() } label: {
+                            DSRow(icon: AppIcon.pushTest, iconColor: .dsBlue, title: NSLocalizedString("more.pushTest", comment: ""), subtitle: NSLocalizedString("more.pushTest.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                        DSDivider()
+                        NavigationLink { PushGuideView() } label: {
+                            DSRow(icon: AppIcon.info, iconColor: .dsCyan, title: NSLocalizedString("more.pushGuide", comment: ""), subtitle: NSLocalizedString("more.pushGuide.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
 
-                moreSection(L10n.More.sectionTools, items: [
-                    MoreItem(icon: AppIcon.udid, title: NSLocalizedString("more.udid", comment: ""), subtitle: NSLocalizedString("more.udid.sub", comment: ""), color: .dsAccent) {
-                        AnyView(GetUDIDView())
-                    },
-                    MoreItem(icon: AppIcon.health, title: NSLocalizedString("more.healthCheck", comment: ""), subtitle: NSLocalizedString("more.healthCheck.sub", comment: ""), color: .dsAccentOrange) {
-                        AnyView(HealthCheckView())
-                    },
-                ])
+                VStack(alignment: .leading, spacing: DS.spacingSM) {
+                    DSSectionHeader(L10n.More.sectionTools)
+                    DSGroupedCard {
+                        NavigationLink { GetUDIDView() } label: {
+                            DSRow(icon: AppIcon.udid, iconColor: .dsGreen, title: NSLocalizedString("more.udid", comment: ""), subtitle: NSLocalizedString("more.udid.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                        DSDivider()
+                        NavigationLink { HealthCheckView() } label: {
+                            DSRow(icon: AppIcon.health, iconColor: .dsOrange, title: NSLocalizedString("more.healthCheck", comment: ""), subtitle: NSLocalizedString("more.healthCheck.sub", comment: ""), useGradientIcon: true)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
 
-                moreSection("", items: [
-                    MoreItem(icon: AppIcon.settings, title: NSLocalizedString("more.settings", comment: ""), subtitle: NSLocalizedString("more.settings.sub", comment: ""), color: .dsMuted) {
-                        AnyView(SettingsView())
-                    },
-                ])
+                DSGroupedCard {
+                    NavigationLink { SettingsView() } label: {
+                        DSRow(icon: AppIcon.settings, iconColor: .dsTextSecondary, title: NSLocalizedString("more.settings", comment: ""), subtitle: NSLocalizedString("more.settings.sub", comment: ""), useGradientIcon: true)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20)
+            .padding(.horizontal, DS.spacingLG)
+            .padding(.bottom, DS.spacingXL)
         }
         .pageBackground()
         .navigationTitle(L10n.More.title)
     }
-
-    private func moreSection(_ title: String, items: [MoreItem]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if !title.isEmpty {
-                sectionHeader(title)
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.title) { index, item in
-                    NavigationLink { item.destination() } label: {
-                        HStack(spacing: 14) {
-                            HIcon(item.icon)
-                                .font(.body)
-                                .foregroundStyle(item.color)
-                                .frame(width: 36, height: 36)
-                                .background(item.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(Color.dsText)
-                                Text(item.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(Color.dsMuted)
-                            }
-
-                            Spacer()
-
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    if index < items.count - 1 {
-                        Divider().padding(.leading, 66)
-                    }
-                }
-            }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
-        }
-    }
-}
-
-private struct MoreItem {
-    let icon: UIImage
-    let title: String
-    let subtitle: String
-    let color: Color
-    let destination: () -> AnyView
 }

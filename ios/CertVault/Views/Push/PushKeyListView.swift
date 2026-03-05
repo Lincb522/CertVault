@@ -12,7 +12,7 @@ struct PushKeyListView: View {
     var body: some View {
         Group {
             if vm.pushKeys.isEmpty && !vm.isLoading {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.pushKey,
                     title: L10n.Push.keysEmptyTitle,
                     message: L10n.Push.keysEmptyMessage,
@@ -20,7 +20,7 @@ struct PushKeyListView: View {
                 ) { showCreate = true }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    DSGroupedCard {
                         ForEach(Array(vm.pushKeys.enumerated()), id: \.element.id) { index, key in
                             Button { keyToEdit = key } label: {
                                 PushKeyRow(key: key)
@@ -43,18 +43,13 @@ struct PushKeyListView: View {
                             }
 
                             if index < vm.pushKeys.count - 1 {
-                                Divider().padding(.leading, 68)
+                                DSDivider()
                             }
                         }
                     }
-                    .padding(.vertical, 4)
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.horizontal, DS.spacingLG)
+                    .padding(.top, DS.spacingSM)
+                    .padding(.bottom, DS.spacingXL)
                 }
                 .pageBackground()
                 .refreshable { await vm.loadKeys() }
@@ -105,33 +100,33 @@ private struct PushKeyRow: View {
     let key: PushKey
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: DS.spacingMD) {
             HIcon(AppIcon.pushKey)
-                .font(.body)
-                .foregroundStyle(Color.dsAccentPink)
-                .frame(width: 40, height: 40)
-                .background(Color.dsAccentPink.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                .font(.callout)
+                .foregroundStyle(.white)
+                .frame(width: 34, height: 34)
+                .background(Color.dsPink.gradient, in: RoundedRectangle(cornerRadius: DS.radiusSM + 2))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DS.spacingXS) {
                 Text(key.displayName)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.dsText)
-                HStack(spacing: 8) {
+                HStack(spacing: DS.spacingSM) {
                     if let kid = key.key_id {
                         Text("Key: \(kid)")
                             .font(.caption.monospaced())
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsTextSecondary)
                     }
                     if let tid = key.team_id {
                         Text("Team: \(tid)")
                             .font(.caption.monospaced())
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsTextSecondary)
                     }
                 }
                 if let bundles = key.bundle_ids, !bundles.isEmpty {
                     Text(bundles)
                         .font(.caption2)
-                        .foregroundStyle(Color.dsMuted.opacity(0.6))
+                        .foregroundStyle(Color.dsTextTertiary)
                         .lineLimit(1)
                 }
             }
@@ -139,11 +134,11 @@ private struct PushKeyRow: View {
             Spacer()
 
             HIcon(AppIcon.chevronRight)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.dsMuted.opacity(0.4))
+                .font(.caption2)
+                .foregroundStyle(Color.dsTextTertiary)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .padding(.vertical, DS.spacingMD)
+        .padding(.horizontal, DS.spacingLG)
         .contentShape(Rectangle())
     }
 }
@@ -170,11 +165,11 @@ private struct CreatePushKeySheet: View {
                     Button { showFilePicker = true } label: {
                         HStack {
                             HIcon(AppIcon.docUpload)
-                                .foregroundStyle(Color.dsAccentBlue)
+                                .foregroundStyle(Color.dsBlue)
                             if let fname = selectedFileName {
                                 Text(fname).font(.subheadline)
                             } else {
-                                Text(L10n.Push.keysSelectP8).foregroundStyle(.secondary)
+                                Text(L10n.Push.keysSelectP8).foregroundStyle(Color.dsTextSecondary)
                             }
                             Spacer()
                         }
@@ -201,7 +196,7 @@ private struct CreatePushKeySheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section { Text(err).foregroundStyle(Color.dsDanger).font(.caption) }
                 }
             }
             .navigationTitle(L10n.Push.keysImport)
@@ -283,7 +278,7 @@ private struct EditPushKeySheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section { Text(err).foregroundStyle(Color.dsDanger).font(.caption) }
                 }
             }
             .navigationTitle(L10n.Push.keysEdit)

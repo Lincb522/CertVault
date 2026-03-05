@@ -19,80 +19,77 @@ struct UpdateSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
-                    VStack(spacing: 20) {
-                        Spacer().frame(height: 8)
+                    VStack(spacing: DS.spacingXL) {
+                        Spacer().frame(height: DS.spacingSM)
 
                         ZStack {
                             Circle()
-                                .fill(LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .fill(Color.dsBrandGradient)
                                 .frame(width: 80, height: 80)
                             HIcon(AppIcon.download)
                                 .font(.largeTitle)
                                 .foregroundStyle(.white)
                         }
 
-                        VStack(spacing: 8) {
+                        VStack(spacing: DS.spacingSM) {
                             Text(NSLocalizedString("update.title", comment: ""))
                                 .font(.title2.bold())
                                 .foregroundStyle(Color.dsText)
 
                             if let info = updateService.latestVersion {
                                 Text("v\(info.version) (Build \(info.build ?? "1"))")
-                                    .font(.subheadline.monospaced())
-                                    .foregroundStyle(Color.dsMuted)
+                                    .font(.dsMono)
+                                    .foregroundStyle(Color.dsTextSecondary)
                             }
 
                             Text(NSLocalizedString("update.currentVersion", comment: "") + " v\(updateService.currentVersion) (\(updateService.currentBuild))")
                                 .font(.caption)
-                                .foregroundStyle(Color.dsMuted)
+                                .foregroundStyle(Color.dsTextSecondary)
                         }
 
                         if let changelog = updateService.latestVersion?.changelog, !changelog.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(NSLocalizedString("update.changelog", comment: ""))
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(Color.dsText)
-                                Text(changelog)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.dsMuted)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .fixedSize(horizontal: false, vertical: true)
+                            DSGroupedCard {
+                                VStack(alignment: .leading, spacing: DS.spacingSM) {
+                                    Text(NSLocalizedString("update.changelog", comment: ""))
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(Color.dsText)
+                                    Text(changelog)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.dsTextSecondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(DS.spacingLG)
                             }
-                            .padding(16)
-                            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.dsBorder, lineWidth: 1))
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, DS.spacing2XL)
                         }
-
                     }
                 }
 
-                VStack(spacing: 12) {
+                VStack(spacing: DS.spacingMD) {
                     if updateService.isDownloading {
-                        VStack(spacing: 8) {
+                        VStack(spacing: DS.spacingSM) {
                             ProgressView(value: updateService.downloadProgress)
-                                .tint(.dsAccent)
+                                .tint(Color.dsBrand)
                             Text("\(Int(updateService.downloadProgress * 100))%")
-                                .font(.caption.monospaced())
-                                .foregroundStyle(Color.dsMuted)
+                                .font(.dsMonoSmall)
+                                .foregroundStyle(Color.dsTextSecondary)
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, DS.spacing2XL)
                     } else if let url = downloadedURL {
                         Button {
                             showShareSheet = true
                         } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.body)
-                                Text("分享安装")
-                                    .fontWeight(.semibold)
+                            HStack(spacing: DS.spacingSM) {
+                                Image(systemName: "square.and.arrow.up").font(.body)
+                                Text("分享安装").fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .foregroundStyle(.white)
-                            .background(Color.dsAccent, in: RoundedRectangle(cornerRadius: 12))
+                            .background(Color.dsGradientGreen, in: RoundedRectangle(cornerRadius: DS.radiusMD))
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, DS.spacing2XL)
                         .sheet(isPresented: $showShareSheet) {
                             ShareSheet(items: [url])
                         }
@@ -107,36 +104,34 @@ struct UpdateSheet: View {
                                 }
                             }
                         } label: {
-                            HStack(spacing: 8) {
-                                HIcon(AppIcon.download)
-                                    .font(.body)
-                                Text("下载 IPA")
-                                    .fontWeight(.semibold)
+                            HStack(spacing: DS.spacingSM) {
+                                HIcon(AppIcon.download).font(.body)
+                                Text("下载 IPA").fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .foregroundStyle(.white)
-                            .background(Color.dsAccent, in: RoundedRectangle(cornerRadius: 12))
+                            .background(Color.dsBrandGradient, in: RoundedRectangle(cornerRadius: DS.radiusMD))
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, DS.spacing2XL)
                     }
 
                     if let err = errorMsg {
                         Text(err)
                             .font(.caption)
-                            .foregroundStyle(Color.dsAccentPink)
+                            .foregroundStyle(Color.dsDanger)
                     }
 
-                    HStack(spacing: 16) {
+                    HStack(spacing: DS.spacingLG) {
                         Button {
                             guard let urlStr = downloadURLString, let url = URL(string: urlStr) else { return }
                             UIApplication.shared.open(url)
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: DS.spacingXS) {
                                 Image(systemName: "safari").font(.caption)
                                 Text("浏览器打开").font(.subheadline)
                             }
-                            .foregroundStyle(Color.dsAccent)
+                            .foregroundStyle(Color.dsBrand)
                         }
 
                         Button {
@@ -145,11 +140,11 @@ struct UpdateSheet: View {
                             copied = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: DS.spacingXS) {
                                 Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.caption)
                                 Text(copied ? "已复制" : "复制链接").font(.subheadline)
                             }
-                            .foregroundStyle(Color.dsAccent)
+                            .foregroundStyle(Color.dsBrand)
                         }
                     }
 
@@ -158,10 +153,10 @@ struct UpdateSheet: View {
                     } label: {
                         Text(NSLocalizedString("update.later", comment: ""))
                             .font(.subheadline)
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsTextSecondary)
                     }
                 }
-                .padding(.bottom, 24)
+                .padding(.bottom, DS.spacing2XL)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

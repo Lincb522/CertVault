@@ -7,7 +7,7 @@ struct GetUDIDView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: DS.spacing2XL) {
                 if let result = vm.udidResult {
                     resultView(result)
                 } else if vm.enrollURL != nil {
@@ -16,65 +16,65 @@ struct GetUDIDView: View {
                     startView
                 }
             }
-            .padding()
+            .padding(DS.spacingLG)
         }
+        .pageBackground()
         .navigationTitle(L10n.UDID.title)
         .onDisappear { vm.stopPolling() }
     }
 
     private var startView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: DS.spacingXL) {
             HIcon(AppIcon.udid)
                 .font(.system(size: 64))
-                .foregroundStyle(Color.accentGradient)
+                .foregroundStyle(Color.dsBrandGradient)
 
             Text(L10n.UDID.heading)
                 .font(.title2.bold())
+                .foregroundStyle(Color.dsText)
             Text(L10n.UDID.desc)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.dsTextSecondary)
                 .multilineTextAlignment(.center)
 
-            GradientButton(NSLocalizedString("udid.generate", comment: ""), icon: AppIcon.link) {
+            DSPrimaryButton(title: NSLocalizedString("udid.generate", comment: ""), isLoading: vm.isLoading) {
                 Task { await vm.createRequest() }
             }
-            .padding(.horizontal, 40)
-            .disabled(vm.isLoading)
-
-            if vm.isLoading {
-                ProgressView()
-            }
+            .padding(.horizontal, DS.spacing3XL)
 
             if let err = vm.errorMessage {
-                Text(err).font(.caption).foregroundStyle(.red)
+                Text(err).font(.caption).foregroundStyle(Color.dsDanger)
             }
         }
-        .padding(.top, 40)
+        .padding(.top, DS.spacing3XL)
     }
 
     private var enrollView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: DS.spacingXL) {
             if let url = vm.enrollURL {
                 Text(L10n.UDID.scanQR)
                     .font(.headline)
+                    .foregroundStyle(Color.dsText)
                 Text(L10n.UDID.orVisit)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.dsTextSecondary)
 
                 if let qrImage = generateQRCode(from: url) {
-                    Image(uiImage: qrImage)
-                        .interpolation(.none)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 200, height: 200)
-                        .padding()
-                        .glassCard(cornerRadius: 16)
+                    DSGroupedCard {
+                        Image(uiImage: qrImage)
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 200, height: 200)
+                            .padding(DS.spacingLG)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
 
-                VStack(spacing: 8) {
+                VStack(spacing: DS.spacingSM) {
                     Text(url)
                         .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.dsTextSecondary)
                         .textSelection(.enabled)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
@@ -87,74 +87,76 @@ struct GetUDIDView: View {
                         } icon: {
                             HIcon(AppIcon.copy)
                         }
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, DS.spacingXL)
+                        .padding(.vertical, DS.spacingSM)
+                        .background(Color.dsBrandGradient, in: Capsule())
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
+                    .buttonStyle(.dsPressed)
                 }
 
                 if vm.isPolling {
-                    HStack(spacing: 8) {
+                    HStack(spacing: DS.spacingSM) {
                         ProgressView().controlSize(.small)
                         Text(L10n.UDID.waiting)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.dsTextSecondary)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, DS.spacingSM)
                 }
 
                 Button(L10n.UDID.regenerate) {
                     vm.reset()
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 8)
+                .foregroundStyle(Color.dsTextSecondary)
+                .padding(.top, DS.spacingSM)
             }
         }
     }
 
     private func resultView(_ result: UDIDResult) -> some View {
-        VStack(spacing: 20) {
+        VStack(spacing: DS.spacingXL) {
             HIcon(AppIcon.check)
                 .font(.system(size: 56))
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.dsSuccess)
 
             Text(L10n.UDID.success)
                 .font(.title2.bold())
+                .foregroundStyle(Color.dsText)
 
-            VStack(alignment: .leading, spacing: 12) {
-                UDIDInfoRow(label: "UDID", value: result.udid ?? L10n.na, mono: true)
-                UDIDInfoRow(label: NSLocalizedString("udid.model", comment: ""), value: result.product ?? L10n.na)
-                UDIDInfoRow(label: NSLocalizedString("udid.version", comment: ""), value: result.version ?? L10n.na)
-                if let name = result.device_name {
-                    UDIDInfoRow(label: NSLocalizedString("udid.deviceName", comment: ""), value: name)
+            DSGroupedCard {
+                VStack(alignment: .leading, spacing: DS.spacingMD) {
+                    UDIDInfoRow(label: "UDID", value: result.udid ?? L10n.na, mono: true)
+                    DSDivider(leadingPadding: 0)
+                    UDIDInfoRow(label: NSLocalizedString("udid.model", comment: ""), value: result.product ?? L10n.na)
+                    DSDivider(leadingPadding: 0)
+                    UDIDInfoRow(label: NSLocalizedString("udid.version", comment: ""), value: result.version ?? L10n.na)
+                    if let name = result.device_name {
+                        DSDivider(leadingPadding: 0)
+                        UDIDInfoRow(label: NSLocalizedString("udid.deviceName", comment: ""), value: name)
+                    }
+                    if let serial = result.serial {
+                        DSDivider(leadingPadding: 0)
+                        UDIDInfoRow(label: L10n.Cert.serial, value: serial, mono: true)
+                    }
                 }
-                if let serial = result.serial {
-                    UDIDInfoRow(label: L10n.Cert.serial, value: serial, mono: true)
-                }
+                .padding(DS.spacingLG)
             }
-            .cardStyle()
 
-            Button {
+            DSPrimaryButton(title: L10n.UDID.copyAll) {
                 var text = "UDID: \(result.udid ?? "")\n"
                 text += "型号: \(result.product ?? "")\n"
                 text += "版本: \(result.version ?? "")"
                 UIPasteboard.general.string = text
-            } label: {
-                Label {
-                    Text(L10n.UDID.copyAll)
-                } icon: {
-                    HIcon(AppIcon.copy)
-                }
-                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
 
             Button(L10n.UDID.retry) {
                 vm.reset()
             }
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.dsTextSecondary)
         }
     }
 
@@ -181,10 +183,11 @@ private struct UDIDInfoRow: View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.dsTextSecondary)
             Spacer()
             Text(value)
                 .font(mono ? .subheadline.monospaced() : .subheadline)
+                .foregroundStyle(Color.dsText)
                 .textSelection(.enabled)
         }
     }

@@ -38,7 +38,7 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: DS.spacingXL) {
                 profileCard
                 if authVM.role == "superadmin" {
                     adminSection
@@ -50,8 +50,8 @@ struct SettingsView: View {
                 aboutSection
                 logoutSection
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20)
+            .padding(.horizontal, DS.spacingLG)
+            .padding(.bottom, DS.spacingXL)
         }
         .pageBackground()
         .navigationTitle(L10n.Settings.title)
@@ -83,83 +83,47 @@ struct SettingsView: View {
     // MARK: - Profile
 
     private var profileCard: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
-                    .frame(width: 50, height: 50)
-                Text(String(authVM.username.prefix(1)).uppercased())
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-            }
+        DSGroupedCard {
+            HStack(spacing: DS.spacingMD) {
+                ZStack {
+                    Circle()
+                        .fill(Color.dsBrandGradient)
+                        .frame(width: 50, height: 50)
+                    Text(String(authVM.username.prefix(1)).uppercased())
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(authVM.username)
-                    .font(.headline)
-                    .foregroundStyle(Color.dsText)
-                Text(roleDisplayName)
-                    .font(.caption)
-                    .foregroundStyle(Color.dsMuted)
-            }
+                VStack(alignment: .leading, spacing: DS.spacingXS) {
+                    Text(authVM.username)
+                        .font(.headline)
+                        .foregroundStyle(Color.dsText)
+                    Text(roleDisplayName)
+                        .font(.caption)
+                        .foregroundStyle(Color.dsTextSecondary)
+                }
 
-            Spacer()
+                Spacer()
+            }
+            .padding(DS.spacingLG)
         }
-        .cardStyle()
     }
 
     // MARK: - Admin
 
     private var adminSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.admin", comment: ""))
-
-            NavigationLink {
-                UserManagementView()
-            } label: {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.group)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentPurple)
-                        .frame(width: 20)
-                    Text(L10n.Settings.userManagement)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    HIcon(AppIcon.chevronRight)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.dsMuted.opacity(0.4))
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.admin", comment: ""))
+            DSGroupedCard {
+                NavigationLink { UserManagementView() } label: {
+                    DSRow(icon: AppIcon.group, iconColor: .dsPurple, title: L10n.Settings.userManagement, useGradientIcon: true)
                 }
-                .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
-            }
-
-            Button { showSMTP = true } label: {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.email)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentBlue)
-                        .frame(width: 20)
-                    Text(L10n.Settings.emailConfig)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    HIcon(AppIcon.chevronRight)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.dsMuted.opacity(0.4))
+                .buttonStyle(.plain)
+                DSDivider()
+                Button { showSMTP = true } label: {
+                    DSRow(icon: AppIcon.email, iconColor: .dsBlue, title: L10n.Settings.emailConfig, useGradientIcon: true)
                 }
-                .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .buttonStyle(.plain)
             }
             .sheet(isPresented: $showSMTP) {
                 SMTPConfigSheet()
@@ -170,23 +134,23 @@ struct SettingsView: View {
     // MARK: - Appearance
 
     private var appearanceSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.appearance", comment: ""))
-
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.appearance", comment: ""))
+            DSGroupedCard {
+                HStack(spacing: DS.spacingMD) {
                     HIcon(appearance.mode == .dark ? AppIcon.moon : appearance.mode == .light ? AppIcon.sun : AppIcon.settings)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentPurple)
-                        .frame(width: 20)
+                        .font(.callout)
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(Color.dsPurple.gradient, in: RoundedRectangle(cornerRadius: DS.radiusSM + 2))
                     Text(L10n.Settings.displayMode)
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.dsText)
                     Spacer()
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.horizontal, DS.spacingLG)
+                .padding(.top, DS.spacingLG)
+                .padding(.bottom, DS.spacingSM)
 
                 Picker("", selection: $appearance.mode) {
                     ForEach(AppearanceManager.Mode.allCases, id: \.rawValue) { mode in
@@ -194,43 +158,22 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 14)
+                .padding(.horizontal, DS.spacingLG)
+                .padding(.bottom, DS.spacingLG)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 
     // MARK: - Security
 
     private var securitySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.security", comment: ""))
-
-            Button { showChangePassword = true } label: {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.lock)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentOrange)
-                        .frame(width: 20)
-                    Text(L10n.Settings.changePassword)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    HIcon(AppIcon.chevronRight)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.dsMuted.opacity(0.4))
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.security", comment: ""))
+            DSGroupedCard {
+                Button { showChangePassword = true } label: {
+                    DSRow(icon: AppIcon.lock, iconColor: .dsOrange, title: L10n.Settings.changePassword, useGradientIcon: true)
                 }
-                .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .buttonStyle(.plain)
             }
         }
     }
@@ -238,51 +181,20 @@ struct SettingsView: View {
     // MARK: - Cache
 
     private var cacheSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(L10n.Settings.cache)
-
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.category)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentCyan)
-                        .frame(width: 20)
-                    Text(L10n.Settings.cache)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(L10n.Settings.cache)
+            DSGroupedCard {
+                DSRow(icon: AppIcon.category, iconColor: .dsCyan, title: L10n.Settings.cache, trailing: AnyView(
                     Text(formattedCacheSize)
                         .font(.subheadline.monospaced())
-                        .foregroundStyle(Color.dsMuted)
+                        .foregroundStyle(Color.dsTextSecondary)
+                ), showChevron: false, useGradientIcon: true)
+                DSDivider()
+                Button { showClearCacheConfirm = true } label: {
+                    DSRow(icon: AppIcon.delete, iconColor: .dsPink, title: L10n.Settings.clearCache, useGradientIcon: true)
                 }
-                .padding(14)
-
-                Divider().padding(.horizontal, 14)
-
-                Button {
-                    showClearCacheConfirm = true
-                } label: {
-                    HStack(spacing: 12) {
-                        HIcon(AppIcon.delete)
-                            .font(.body)
-                            .foregroundStyle(Color.dsAccentPink)
-                            .frame(width: 20)
-                        Text(L10n.Settings.clearCache)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.dsAccentPink)
-                        Spacer()
-                        HIcon(AppIcon.chevronRight)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.dsMuted.opacity(0.4))
-                    }
-                    .padding(14)
-                }
+                .buttonStyle(.plain)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 
@@ -309,24 +221,11 @@ struct SettingsView: View {
     // MARK: - Notifications
 
     private var notificationSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(L10n.Settings.notification)
-
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.pushKey)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentBlue)
-                        .frame(width: 20)
-                    Text(L10n.Settings.notification)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    notificationStatusBadge
-                }
-                .padding(14)
-
-                Divider().padding(.horizontal, 14)
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(L10n.Settings.notification)
+            DSGroupedCard {
+                DSRow(icon: AppIcon.pushKey, iconColor: .dsBlue, title: L10n.Settings.notification, trailing: AnyView(notificationStatusBadge), showChevron: false, useGradientIcon: true)
+                DSDivider()
 
                 if notificationManager.authorizationStatus == .denied {
                     Button {
@@ -334,68 +233,32 @@ struct SettingsView: View {
                             UIApplication.shared.open(url)
                         }
                     } label: {
-                        HStack(spacing: 12) {
-                            HIcon(AppIcon.settings)
-                                .font(.body)
-                                .foregroundStyle(Color.dsAccentOrange)
-                                .frame(width: 20)
-                            Text(NSLocalizedString("settings.notification.goSettings", comment: ""))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccentOrange)
-                            Spacer()
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                        .padding(14)
+                        DSRow(icon: AppIcon.settings, iconColor: .dsOrange, title: NSLocalizedString("settings.notification.goSettings", comment: ""), useGradientIcon: true)
                     }
+                    .buttonStyle(.plain)
                 } else if notificationManager.authorizationStatus == .notDetermined {
                     Button {
                         Task { await notificationManager.requestPermission() }
                     } label: {
-                        HStack(spacing: 12) {
-                            HIcon(AppIcon.pushKey)
-                                .font(.body)
-                                .foregroundStyle(Color.dsAccent)
-                                .frame(width: 20)
-                            Text(NSLocalizedString("settings.notification.enable", comment: ""))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccent)
-                            Spacer()
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                        .padding(14)
+                        DSRow(icon: AppIcon.pushKey, iconColor: .dsGreen, title: NSLocalizedString("settings.notification.enable", comment: ""), useGradientIcon: true)
                     }
+                    .buttonStyle(.plain)
                 } else {
-                    HStack(spacing: 12) {
-                        HIcon(AppIcon.tick)
-                            .font(.body)
-                            .foregroundStyle(Color.dsAccent)
-                            .frame(width: 20)
-                        Text("Device Token")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.dsText)
-                        Spacer()
-                        if let token = notificationManager.deviceToken {
-                            Text(token.prefix(12) + "...")
-                                .font(.caption.monospaced())
-                                .foregroundStyle(Color.dsMuted)
-                        } else {
-                            Text(NSLocalizedString("settings.notification.waiting", comment: ""))
-                                .font(.caption)
-                                .foregroundStyle(Color.dsMuted)
+                    DSRow(icon: AppIcon.tick, iconColor: .dsGreen, title: "Device Token", trailing: AnyView(
+                        Group {
+                            if let token = notificationManager.deviceToken {
+                                Text(token.prefix(12) + "...")
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(Color.dsTextSecondary)
+                            } else {
+                                Text(NSLocalizedString("settings.notification.waiting", comment: ""))
+                                    .font(.caption)
+                                    .foregroundStyle(Color.dsTextSecondary)
+                            }
                         }
-                    }
-                    .padding(14)
+                    ), showChevron: false, useGradientIcon: true)
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 
@@ -403,93 +266,30 @@ struct SettingsView: View {
     private var notificationStatusBadge: some View {
         switch notificationManager.authorizationStatus {
         case .authorized:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsAccent).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.enabled", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsAccent)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.enabled", comment: ""), color: .dsGreen)
         case .denied:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.denied", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsAccentPink)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.denied", comment: ""), color: .dsPink)
         case .provisional:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsAccentOrange).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.provisional", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsAccentOrange)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.provisional", comment: ""), color: .dsOrange)
         default:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsMuted).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.notDetermined", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.notDetermined", comment: ""), color: .dsTextSecondary)
         }
     }
 
     // MARK: - About
 
     private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.about", comment: ""))
-
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.server)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccent)
-                        .frame(width: 20)
-                    Text(L10n.Settings.serverStatus)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    switch serverStatus {
-                    case .checking:
-                        ProgressView()
-                            .controlSize(.small)
-                    case .online(_):
-                        HStack(spacing: 6) {
-                            Circle().fill(Color.dsAccent).frame(width: 8, height: 8)
-                            Text(Localized.status("ONLINE"))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccent)
-                        }
-                    case .offline:
-                        HStack(spacing: 6) {
-                            Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                            Text(Localized.status("OFFLINE"))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccentPink)
-                        }
-                    }
-                }
-                .padding(14)
-
-                Divider().padding(.horizontal, 14)
-
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.info)
-                        .font(.body)
-                        .foregroundStyle(Color.dsMuted)
-                        .frame(width: 20)
-                    Text(L10n.Settings.version)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.about", comment: ""))
+            DSGroupedCard {
+                DSRow(icon: AppIcon.server, iconColor: .dsGreen, title: L10n.Settings.serverStatus, trailing: AnyView(serverStatusTrailing), showChevron: false, useGradientIcon: true)
+                DSDivider()
+                DSRow(icon: AppIcon.info, iconColor: .dsTextSecondary, title: L10n.Settings.version, trailing: AnyView(
                     Text(appVersion)
                         .font(.subheadline.monospaced())
-                        .foregroundStyle(Color.dsMuted)
-                }
-                .padding(14)
-
-                Divider().padding(.horizontal, 14)
-
+                        .foregroundStyle(Color.dsTextSecondary)
+                ), showChevron: false, useGradientIcon: true)
+                DSDivider()
                 Button {
                     Task {
                         await updateService.checkForUpdate()
@@ -502,38 +302,10 @@ struct SettingsView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 12) {
-                        HIcon(AppIcon.refresh)
-                            .font(.body)
-                            .foregroundStyle(Color.dsAccentBlue)
-                            .frame(width: 20)
-                        Text(NSLocalizedString("settings.checkUpdate", comment: ""))
-                            .font(.subheadline)
-                            .foregroundStyle(Color.dsText)
-                        Spacer()
-                        if updateService.isChecking {
-                            ProgressView().controlSize(.small)
-                        } else if updateService.updateAvailable {
-                            HStack(spacing: 4) {
-                                Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                                Text(NSLocalizedString("settings.updateAvailable", comment: ""))
-                                    .font(.caption)
-                                    .foregroundStyle(Color.dsAccentPink)
-                            }
-                        } else {
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                    }
-                    .padding(14)
+                    DSRow(icon: AppIcon.refresh, iconColor: .dsBlue, title: NSLocalizedString("settings.checkUpdate", comment: ""), trailing: AnyView(updateStatusTrailing), useGradientIcon: true)
                 }
+                .buttonStyle(.plain)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
         .sheet(isPresented: $showUpdateSheet) {
             UpdateSheet()
@@ -551,6 +323,27 @@ struct SettingsView: View {
             Button("好的") { showUpdateError = nil }
         } message: {
             Text(showUpdateError ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var serverStatusTrailing: some View {
+        switch serverStatus {
+        case .checking:
+            ProgressView().controlSize(.small)
+        case .online:
+            DSBadge(text: Localized.status("ONLINE"), color: .dsGreen)
+        case .offline:
+            DSBadge(text: Localized.status("OFFLINE"), color: .dsDanger)
+        }
+    }
+
+    @ViewBuilder
+    private var updateStatusTrailing: some View {
+        if updateService.isChecking {
+            ProgressView().controlSize(.small)
+        } else if updateService.updateAvailable {
+            DSBadge(text: NSLocalizedString("settings.updateAvailable", comment: ""), color: .dsPink)
         }
     }
 
@@ -575,20 +368,8 @@ struct SettingsView: View {
     }
 
     private var logoutSection: some View {
-        Button(role: .destructive) { showLogoutConfirm = true } label: {
-            HStack(spacing: 8) {
-                HIcon(AppIcon.logout).font(.body)
-                Text(L10n.Settings.logout)
-                    .fontWeight(.medium)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 13)
-            .foregroundStyle(Color.dsAccentPink)
-            .background(Color.dsAccentPink.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsAccentPink.opacity(0.2), lineWidth: 1)
-            )
+        DSDangerButton(L10n.Settings.logout, icon: AppIcon.logout) {
+            showLogoutConfirm = true
         }
     }
 }
@@ -616,7 +397,7 @@ private struct ChangePasswordSheet: View {
 
                 if let err = errorMsg {
                     Section {
-                        Text(err).foregroundStyle(.red).font(.caption)
+                        Text(err).foregroundStyle(Color.dsDanger).font(.caption)
                     }
                 }
             }

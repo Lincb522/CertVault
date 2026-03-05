@@ -1,4 +1,5 @@
 import SwiftUI
+import HiconIcons
 
 struct AccountFormView: View {
     @ObservedObject var vm: AccountViewModel
@@ -19,42 +20,65 @@ struct AccountFormView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section(L10n.Account.formSectionBasic) {
-                    TextField(L10n.Account.formName, text: $name)
-                    TextField("Issuer ID", text: $issuerID)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("Key ID", text: $keyID)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                }
+            ScrollView {
+                VStack(spacing: DS.spacingLG) {
+                    DSGroupedCard {
+                        VStack(alignment: .leading, spacing: DS.spacingMD) {
+                            DSSectionHeader(L10n.Account.formSectionBasic)
+                            DSInputField(icon: AppIcon.edit, placeholder: L10n.Account.formName, text: $name)
+                            DSInputField(icon: AppIcon.user, placeholder: "Issuer ID", text: $issuerID)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            DSInputField(icon: AppIcon.lock, placeholder: "Key ID", text: $keyID)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                        }
+                        .padding(DS.spacingLG)
+                    }
 
-                Section {
-                    TextEditor(text: $privateKey)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(minHeight: 120)
-                } header: {
-                    Text(L10n.Account.formP8Content)
-                } footer: {
-                    Text(L10n.Account.formP8Hint)
-                }
+                    DSGroupedCard {
+                        VStack(alignment: .leading, spacing: DS.spacingMD) {
+                            DSSectionHeader(L10n.Account.formP8Content)
+                            TextEditor(text: $privateKey)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(Color.dsText)
+                                .scrollContentBackground(.hidden)
+                                .frame(minHeight: 120)
+                                .padding(DS.spacingMD)
+                                .background(Color.dsSurfaceElevated.opacity(0.6), in: RoundedRectangle(cornerRadius: DS.radiusMD))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: DS.radiusMD)
+                                        .stroke(Color.dsBorder.opacity(0.5), lineWidth: 0.5)
+                                )
+                            Text(L10n.Account.formP8Hint)
+                                .font(.caption)
+                                .foregroundStyle(Color.dsTextSecondary)
+                        }
+                        .padding(DS.spacingLG)
+                    }
 
-                if let err = errorMsg {
-                    Section {
-                        Text(err).foregroundStyle(.red).font(.caption)
+                    if let err = errorMsg {
+                        Text(err)
+                            .foregroundStyle(Color.dsDanger)
+                            .font(.caption)
+                    }
+
+                    DSPrimaryButton(
+                        title: isEdit ? L10n.save : L10n.create,
+                        isLoading: isLoading,
+                        isDisabled: !isValid
+                    ) {
+                        save()
                     }
                 }
+                .padding(DS.spacingLG)
             }
+            .pageBackground()
             .navigationTitle(isEdit ? L10n.Account.edit : L10n.Account.add)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(isEdit ? L10n.save : L10n.create) { save() }
-                        .disabled(!isValid || isLoading)
                 }
             }
             .onAppear { prefill() }

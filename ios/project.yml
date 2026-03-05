@@ -20,6 +20,9 @@ configFiles:
 packages:
   HiconIcons:
     path: HiconIcons
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
 
 targets:
   CertVault:
@@ -48,6 +51,8 @@ targets:
           - UIInterfaceOrientationLandscapeRight
     dependencies:
       - package: HiconIcons
+      - package: GRDB
+        product: GRDB
     settings:
       base:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES

@@ -20,122 +20,21 @@ struct PushTestView: View {
     @State private var showTokenGuide = false
 
     var body: some View {
-        Form {
-            Section(NSLocalizedString("push.test.section.auth", comment: "")) {
-                Picker("", selection: $authMode) {
-                    Text(L10n.Push.testKeyTab).tag(0)
-                    Text(L10n.Push.testAccountTab).tag(1)
-                    Text(L10n.Push.testManualTab).tag(2)
-                }
-                .pickerStyle(.segmented)
+        ScrollView {
+            VStack(spacing: DS.spacingXL) {
+                authSection
+                targetSection
+                contentSection
+                sendSection
 
-                switch authMode {
-                case 0:
-                    Picker(L10n.Push.testKeyTab, selection: $selectedPushKeyId) {
-                        Text(L10n.select).tag("")
-                        ForEach(vm.pushKeys) { key in
-                            Text(key.displayName).tag(key.id)
-                        }
-                    }
-                case 1:
-                    Picker(L10n.account, selection: $selectedAccountId) {
-                        Text(L10n.select).tag("")
-                        ForEach(vm.accounts) { acc in
-                            Text(acc.displayName).tag(acc.id)
-                        }
-                    }
-                    TextField("Team ID", text: $manualTeamId)
-                        .textInputAutocapitalization(.characters)
-                default:
-                    TextField("Key ID", text: $manualKeyId)
-                        .textInputAutocapitalization(.characters)
-                    TextField("Team ID", text: $manualTeamId)
-                        .textInputAutocapitalization(.characters)
-                    TextEditor(text: $manualPrivateKey)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(minHeight: 80)
+                if let result = vm.sendResult {
+                    resultSection(result)
                 }
             }
-
-            Section(NSLocalizedString("push.test.section.target", comment: "")) {
-                HStack {
-                    TextField("Device Token", text: $deviceToken)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Button { showTokenGuide = true } label: {
-                        HIcon(AppIcon.info)
-                            .font(.caption)
-                            .foregroundStyle(Color.dsAccentBlue)
-                    }
-                }
-                if notificationManager.deviceToken != nil && deviceToken == notificationManager.deviceToken {
-                    Text(L10n.Push.testAutoFill)
-                        .font(.caption2)
-                        .foregroundStyle(Color.dsAccent)
-                } else if deviceToken.isEmpty {
-                    Button {
-                        if let token = notificationManager.deviceToken {
-                            deviceToken = token
-                        } else {
-                            showTokenGuide = true
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            HIcon(AppIcon.pushKey).font(.caption2)
-                            Text(notificationManager.deviceToken != nil ? NSLocalizedString("push.test.fillToken", comment: "") : NSLocalizedString("push.test.howToGetToken", comment: ""))
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(Color.dsAccentBlue)
-                    }
-                }
-                TextField("Bundle ID", text: $bundleId)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Toggle(NSLocalizedString("push.test.sandbox", comment: ""), isOn: $sandbox)
-            }
-
-            Section(NSLocalizedString("push.test.section.content", comment: "")) {
-                TextField(NSLocalizedString("push.test.field.title", comment: ""), text: $title)
-                TextField(NSLocalizedString("push.test.field.body", comment: ""), text: $messageBody)
-                TextField(NSLocalizedString("push.test.field.badge", comment: ""), text: $badge)
-                    .keyboardType(.numberPad)
-                TextField(NSLocalizedString("push.test.field.sound", comment: ""), text: $sound)
-            }
-
-            Section {
-                Button {
-                    Task { await send() }
-                } label: {
-                    HStack(spacing: 8) {
-                        if vm.isSending {
-                            ProgressView().tint(.white)
-                        } else {
-                            HIcon(AppIcon.pushTest).font(.body)
-                        }
-                        Text(L10n.Push.testSend)
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .foregroundStyle(.white)
-                    .background(
-                        canSend ? Color.dsAccentBlue : Color.dsSurfaceLight,
-                        in: RoundedRectangle(cornerRadius: 12)
-                    )
-                }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .disabled(vm.isSending || !canSend)
-            }
-
-            if let result = vm.sendResult {
-                Section(NSLocalizedString("push.test.section.result", comment: "")) {
-                    Text(result)
-                        .font(.subheadline)
-                        .foregroundStyle(result.contains("成功") ? Color.dsAccent : Color.dsAccentPink)
-                }
-            }
+            .padding(.horizontal, DS.spacingLG)
+            .padding(.bottom, DS.spacingXL)
         }
+        .pageBackground()
         .navigationTitle(L10n.Push.testTitle)
         .sheet(isPresented: $showTokenGuide) {
             TokenGuideSheet()
@@ -147,6 +46,211 @@ struct PushTestView: View {
                 deviceToken = token
             }
         }
+    }
+
+    // MARK: - Auth
+
+    private var authSection: some View {
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("push.test.section.auth", comment: ""))
+            DSGroupedCard {
+                VStack(spacing: DS.spacingMD) {
+                    Picker("", selection: $authMode) {
+                        Text(L10n.Push.testKeyTab).tag(0)
+                        Text(L10n.Push.testAccountTab).tag(1)
+                        Text(L10n.Push.testManualTab).tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, DS.spacingLG)
+                    .padding(.top, DS.spacingLG)
+
+                    switch authMode {
+                    case 0:
+                        pickerRow(L10n.Push.testKeyTab, selection: $selectedPushKeyId) {
+                            Text(L10n.select).tag("")
+                            ForEach(vm.pushKeys) { key in
+                                Text(key.displayName).tag(key.id)
+                            }
+                        }
+                    case 1:
+                        pickerRow(L10n.account, selection: $selectedAccountId) {
+                            Text(L10n.select).tag("")
+                            ForEach(vm.accounts) { acc in
+                                Text(acc.displayName).tag(acc.id)
+                            }
+                        }
+                        DSDivider()
+                        inputRow("Team ID", text: $manualTeamId, capitalize: true)
+                    default:
+                        inputRow("Key ID", text: $manualKeyId, capitalize: true)
+                        DSDivider()
+                        inputRow("Team ID", text: $manualTeamId, capitalize: true)
+                        DSDivider()
+                        VStack(alignment: .leading, spacing: DS.spacingXS) {
+                            Text("Private Key")
+                                .font(.caption)
+                                .foregroundStyle(Color.dsTextSecondary)
+                            TextEditor(text: $manualPrivateKey)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(Color.dsText)
+                                .frame(minHeight: 80)
+                                .scrollContentBackground(.hidden)
+                        }
+                        .padding(.horizontal, DS.spacingLG)
+                        .padding(.bottom, DS.spacingMD)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Target
+
+    private var targetSection: some View {
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("push.test.section.target", comment: ""))
+            DSGroupedCard {
+                VStack(spacing: 0) {
+                    HStack {
+                        TextField("Device Token", text: $deviceToken)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(.subheadline)
+                            .foregroundStyle(Color.dsText)
+                        Button { showTokenGuide = true } label: {
+                            HIcon(AppIcon.info)
+                                .font(.caption)
+                                .foregroundStyle(Color.dsBlue)
+                        }
+                    }
+                    .padding(.vertical, DS.spacingMD)
+                    .padding(.horizontal, DS.spacingLG)
+
+                    if notificationManager.deviceToken != nil && deviceToken == notificationManager.deviceToken {
+                        Text(L10n.Push.testAutoFill)
+                            .font(.caption2)
+                            .foregroundStyle(Color.dsGreen)
+                            .padding(.horizontal, DS.spacingLG)
+                            .padding(.bottom, DS.spacingSM)
+                    } else if deviceToken.isEmpty {
+                        Button {
+                            if let token = notificationManager.deviceToken {
+                                deviceToken = token
+                            } else {
+                                showTokenGuide = true
+                            }
+                        } label: {
+                            HStack(spacing: DS.spacingXS) {
+                                HIcon(AppIcon.pushKey).font(.caption2)
+                                Text(notificationManager.deviceToken != nil ? NSLocalizedString("push.test.fillToken", comment: "") : NSLocalizedString("push.test.howToGetToken", comment: ""))
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(Color.dsBlue)
+                        }
+                        .padding(.horizontal, DS.spacingLG)
+                        .padding(.bottom, DS.spacingSM)
+                    }
+
+                    DSDivider()
+
+                    HStack {
+                        Text("Bundle ID")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.dsTextSecondary)
+                        Spacer()
+                        TextField("com.example.app", text: $bundleId)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(.subheadline)
+                            .foregroundStyle(Color.dsText)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    .padding(.vertical, DS.spacingMD)
+                    .padding(.horizontal, DS.spacingLG)
+
+                    DSDivider()
+
+                    Toggle(NSLocalizedString("push.test.sandbox", comment: ""), isOn: $sandbox)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.dsText)
+                        .tint(Color.dsBrand)
+                        .padding(.vertical, DS.spacingMD)
+                        .padding(.horizontal, DS.spacingLG)
+                }
+            }
+        }
+    }
+
+    // MARK: - Content
+
+    private var contentSection: some View {
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("push.test.section.content", comment: ""))
+            DSGroupedCard {
+                VStack(spacing: 0) {
+                    inputRow(NSLocalizedString("push.test.field.title", comment: ""), text: $title)
+                    DSDivider()
+                    inputRow(NSLocalizedString("push.test.field.body", comment: ""), text: $messageBody)
+                    DSDivider()
+                    inputRow(NSLocalizedString("push.test.field.badge", comment: ""), text: $badge, keyboard: .numberPad)
+                    DSDivider()
+                    inputRow(NSLocalizedString("push.test.field.sound", comment: ""), text: $sound)
+                }
+            }
+        }
+    }
+
+    // MARK: - Send
+
+    private var sendSection: some View {
+        DSPrimaryButton(
+            title: L10n.Push.testSend,
+            isLoading: vm.isSending,
+            isDisabled: !canSend
+        ) {
+            Task { await send() }
+        }
+    }
+
+    private func resultSection(_ result: String) -> some View {
+        DSGroupedCard {
+            VStack(alignment: .leading, spacing: DS.spacingSM) {
+                Text(NSLocalizedString("push.test.section.result", comment: ""))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.dsTextSecondary)
+                Text(result)
+                    .font(.subheadline)
+                    .foregroundStyle(result.contains("成功") ? Color.dsGreen : Color.dsDanger)
+            }
+            .padding(DS.spacingLG)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func inputRow(_ placeholder: String, text: Binding<String>, capitalize: Bool = false, keyboard: UIKeyboardType = .default) -> some View {
+        TextField(placeholder, text: text)
+            .font(.subheadline)
+            .foregroundStyle(Color.dsText)
+            .textInputAutocapitalization(capitalize ? .characters : .never)
+            .autocorrectionDisabled()
+            .keyboardType(keyboard)
+            .padding(.vertical, DS.spacingMD)
+            .padding(.horizontal, DS.spacingLG)
+    }
+
+    private func pickerRow<Content: View>(_ label: String, selection: Binding<String>, @ViewBuilder content: () -> Content) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.dsText)
+            Spacer()
+            Picker(label, selection: selection, content: content)
+                .labelsHidden()
+                .tint(Color.dsBrand)
+        }
+        .padding(.horizontal, DS.spacingLG)
+        .padding(.bottom, DS.spacingMD)
     }
 
     private var canSend: Bool {
@@ -193,13 +297,13 @@ private struct TokenGuideSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: DS.spacingXL) {
                     headerCard
 
                     guideSection(
                         number: "1",
                         title: NSLocalizedString("push.token.auto.title", comment: ""),
-                        color: .dsAccent,
+                        color: .dsGreen,
                         steps: [
                             "打开「设置 → 推送通知」，确认权限已开启",
                             "CertVault 启动时会自动注册并获取 Device Token",
@@ -210,7 +314,7 @@ private struct TokenGuideSheet: View {
                     guideSection(
                         number: "2",
                         title: NSLocalizedString("push.token.xcode.title", comment: ""),
-                        color: .dsAccentBlue,
+                        color: .dsBlue,
                         steps: [
                             "在 Xcode 中运行你的目标 App",
                             "App 启动后请求推送权限并同意",
@@ -222,7 +326,7 @@ private struct TokenGuideSheet: View {
                     guideSection(
                         number: "3",
                         title: NSLocalizedString("push.token.code.title", comment: ""),
-                        color: .dsAccentPurple,
+                        color: .dsPurple,
                         steps: [
                             "在 AppDelegate 的 didRegisterForRemoteNotifications 中打印 token",
                             "将 Data 转为十六进制: token.map { String(format: \"%02x\", $0) }.joined()",
@@ -232,7 +336,7 @@ private struct TokenGuideSheet: View {
 
                     tipsCard
                 }
-                .padding(16)
+                .padding(DS.spacingLG)
             }
             .pageBackground()
             .navigationTitle(L10n.Push.tokenTitle)
@@ -247,97 +351,87 @@ private struct TokenGuideSheet: View {
     }
 
     private var headerCard: some View {
-        VStack(spacing: 12) {
-            HIcon(AppIcon.pushKey)
-                .font(.system(size: 36))
-                .foregroundStyle(
-                    LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
+        DSGroupedCard {
+            VStack(spacing: DS.spacingMD) {
+                HIcon(AppIcon.pushKey)
+                    .font(.system(size: 36))
+                    .foregroundStyle(Color.dsBrandGradient)
 
-            Text(L10n.Push.tokenDesc)
-                .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
-                .multilineTextAlignment(.center)
+                Text(L10n.Push.tokenDesc)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.dsTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(DS.spacingXL)
         }
-        .frame(maxWidth: .infinity)
-        .padding(20)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
     }
 
     private func guideSection(number: String, title: String, color: Color, steps: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            HStack(spacing: DS.spacingSM) {
                 Text(number)
                     .font(.caption.bold())
                     .foregroundStyle(.white)
                     .frame(width: 24, height: 24)
-                    .background(color, in: Circle())
+                    .background(color.gradient, in: Circle())
 
                 Text(title)
                     .font(.subheadline.bold())
                     .foregroundStyle(Color.dsText)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(steps.enumerated()), id: \.offset) { idx, step in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text("\(idx + 1).")
-                            .font(.caption.monospaced())
-                            .foregroundStyle(color)
-                            .frame(width: 18, alignment: .trailing)
-                        Text(step)
-                            .font(.caption)
-                            .foregroundStyle(Color.dsText.opacity(0.85))
+            DSGroupedCard {
+                VStack(alignment: .leading, spacing: DS.spacingSM) {
+                    ForEach(Array(steps.enumerated()), id: \.offset) { idx, step in
+                        HStack(alignment: .top, spacing: DS.spacingSM) {
+                            Text("\(idx + 1).")
+                                .font(.caption.monospaced())
+                                .foregroundStyle(color)
+                                .frame(width: 18, alignment: .trailing)
+                            Text(step)
+                                .font(.caption)
+                                .foregroundStyle(Color.dsText.opacity(0.85))
+                        }
                     }
                 }
+                .padding(DS.spacingLG)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 
     private var tipsCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            HStack(spacing: DS.spacingXS) {
                 HIcon(AppIcon.warning)
                     .font(.caption)
-                    .foregroundStyle(Color.dsAccentOrange)
+                    .foregroundStyle(Color.dsOrange)
                 Text(L10n.Push.tokenNotes)
                     .font(.caption.bold())
-                    .foregroundStyle(Color.dsAccentOrange)
+                    .foregroundStyle(Color.dsOrange)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DS.spacingXS) {
                 tipRow("模拟器无法获取 Token，需要真机运行")
                 tipRow("沙盒 Token 和生产 Token 不同，注意环境选择")
                 tipRow("Token 可能因系统更新或重装 App 而变化")
                 tipRow("Token 长度通常为 64 个十六进制字符")
             }
         }
-        .padding(14)
+        .padding(DS.spacingLG)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.dsAccentOrange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.dsOrange.opacity(0.08), in: RoundedRectangle(cornerRadius: DS.radiusMD))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsAccentOrange.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: DS.radiusMD)
+                .stroke(Color.dsOrange.opacity(0.2), lineWidth: 1)
         )
     }
 
     private func tipRow(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: DS.spacingSM) {
             Text("•")
                 .font(.caption)
-                .foregroundStyle(Color.dsAccentOrange)
+                .foregroundStyle(Color.dsOrange)
             Text(text)
                 .font(.caption)
                 .foregroundStyle(Color.dsText.opacity(0.8))

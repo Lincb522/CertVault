@@ -17,7 +17,7 @@ struct LoginView: View {
                         .opacity(animateIn ? 1 : 0)
                         .offset(y: animateIn ? 0 : -20)
 
-                    Spacer(minLength: 32)
+                    Spacer(minLength: DS.spacing3XL)
 
                     loginCard
                         .opacity(animateIn ? 1 : 0)
@@ -28,13 +28,12 @@ struct LoginView: View {
                 .frame(minHeight: geo.size.height)
                 .frame(maxWidth: 420)
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, DS.spacing2XL)
             }
             .scrollDismissesKeyboard(.interactively)
         }
         .background { AppBackground() }
         .onAppear {
-            AppLogger.ui.info("🖼️ LoginView appeared")
             if let saved = UserDefaults.standard.string(forKey: AppConstants.usernameKey) {
                 username = saved
             }
@@ -48,16 +47,14 @@ struct LoginView: View {
         }
     }
 
-    // MARK: - Header
-
     private var appHeader: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DS.spacingLG) {
             Image("AppLogo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 80, height: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
-                .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+                .clipShape(RoundedRectangle(cornerRadius: DS.radiusXL))
+                .shadow(color: Color.dsBrand.opacity(0.2), radius: 12, y: 6)
 
             VStack(spacing: 6) {
                 Text("CertVault")
@@ -66,29 +63,21 @@ struct LoginView: View {
 
                 Text(L10n.Login.subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted)
+                    .foregroundStyle(Color.dsTextSecondary)
             }
         }
     }
 
-    // MARK: - Login Card
-
     private var loginCard: some View {
-        VStack(spacing: 18) {
-            VStack(spacing: 12) {
-                inputField(icon: AppIcon.user, placeholder: L10n.Login.username) {
-                    TextField("", text: $username, prompt: Text(L10n.Login.username).foregroundColor(.dsMuted.opacity(0.6)))
-                        .textContentType(.username)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .foregroundStyle(Color.dsText)
-                }
+        VStack(spacing: DS.spacingXL) {
+            VStack(spacing: DS.spacingMD) {
+                DSInputField(icon: AppIcon.user, placeholder: L10n.Login.username, text: $username)
+                    .textContentType(.username)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
 
-                inputField(icon: AppIcon.lock, placeholder: L10n.Login.password) {
-                    SecureField("", text: $password, prompt: Text(L10n.Login.password).foregroundColor(.dsMuted.opacity(0.6)))
-                        .textContentType(.password)
-                        .foregroundStyle(Color.dsText)
-                }
+                DSInputField(icon: AppIcon.lock, placeholder: L10n.Login.password, text: $password, isSecure: true)
+                    .textContentType(.password)
             }
 
             if let error = authVM.errorMessage {
@@ -96,80 +85,42 @@ struct LoginView: View {
                     HIcon(AppIcon.warning).font(.caption)
                     Text(error).font(.caption)
                 }
-                .foregroundStyle(Color.dsAccentPink)
+                .foregroundStyle(Color.dsDanger)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, DS.spacingXS)
             }
 
-            loginButton
+            DSPrimaryButton(
+                title: L10n.Login.submit,
+                isLoading: authVM.isLoading,
+                isDisabled: username.isEmpty || password.isEmpty
+            ) {
+                Task { await authVM.login(username: username, password: password) }
+            }
 
             registerLink
         }
-        .padding(24)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 20))
+        .padding(DS.spacing2XL)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: DS.radiusXXL))
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.dsBorder, lineWidth: 1)
+            RoundedRectangle(cornerRadius: DS.radiusXXL)
+                .stroke(Color.dsBorder, lineWidth: 0.5)
         )
+        .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 8)
     }
-
-    private func inputField<Content: View>(icon: UIImage, placeholder: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(spacing: 12) {
-            HIcon(icon)
-                .foregroundStyle(Color.dsMuted)
-                .frame(width: 20)
-            content()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color.dsSurfaceLight.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
-    }
-
-    // MARK: - Login Button
-
-    private var loginButton: some View {
-        Button {
-            Task { await authVM.login(username: username, password: password) }
-        } label: {
-            HStack(spacing: 8) {
-                if authVM.isLoading {
-                    ProgressView().tint(.white)
-                } else {
-                    Text(L10n.Login.submit)
-                        .font(.body.weight(.semibold))
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .foregroundStyle(.white)
-            .background(
-                LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple],
-                               startPoint: .leading, endPoint: .trailing),
-                in: RoundedRectangle(cornerRadius: 12)
-            )
-        }
-        .disabled(username.isEmpty || password.isEmpty || authVM.isLoading)
-        .opacity(username.isEmpty || password.isEmpty ? 0.5 : 1)
-    }
-
-    // MARK: - Register Link
 
     private var registerLink: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DS.spacingXS) {
             Text(L10n.Login.noAccount)
                 .font(.footnote)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
             Button {
                 authVM.errorMessage = nil
                 showRegister = true
             } label: {
                 Text(L10n.Login.goRegister)
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Color.dsAccentBlue)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.dsBrand)
             }
         }
     }

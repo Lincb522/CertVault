@@ -10,6 +10,7 @@ struct ProfileDetailView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var showDeleteConfirm = false
+    @State private var appeared = false
 
     private let service = ProfileService()
 
@@ -60,200 +61,176 @@ struct ProfileDetailView: View {
     @ViewBuilder
     private func contentView(_ d: ProfileDetail) -> some View {
         ScrollView {
-            VStack(spacing: 16) {
-                headerCard(d)
+            VStack(spacing: DS.spacingXL) {
+                heroHeader(d)
+                    .staggeredAppear(index: 0, animate: appeared)
                 infoCard(d)
+                    .staggeredAppear(index: 1, animate: appeared)
                 if let bundle = d.bundle_info {
                     bundleInfoCard(bundle)
+                        .staggeredAppear(index: 2, animate: appeared)
                 }
                 if let certs = d.certificates, !certs.isEmpty {
                     certificatesCard(certs)
+                        .staggeredAppear(index: 3, animate: appeared)
                 }
                 devicesCard(d.devices ?? [])
+                    .staggeredAppear(index: 4, animate: appeared)
                 actionsCard(d)
+                    .staggeredAppear(index: 5, animate: appeared)
             }
-            .padding(16)
+            .padding(DS.spacingLG)
         }
         .pageBackground()
         .refreshable { await loadDetail() }
+        .onAppear { withAnimation { appeared = true } }
     }
 
-    // MARK: - Header
+    // MARK: - Hero Header
 
-    private func headerCard(_ d: ProfileDetail) -> some View {
-        VStack(spacing: 12) {
+    private func heroHeader(_ d: ProfileDetail) -> some View {
+        VStack(spacing: DS.spacingMD) {
             HIcon(AppIcon.profile)
                 .font(.title2)
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
-                .background(
-                    LinearGradient(colors: [.dsAccentOrange, .dsAccentPink],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                )
+                .background(Color.dsGradientOrange, in: RoundedRectangle(cornerRadius: DS.radiusLG))
 
             Text(d.name ?? L10n.unnamed)
-                .font(.headline)
+                .font(.headline.weight(.bold))
                 .foregroundStyle(Color.dsText)
                 .multilineTextAlignment(.center)
 
-            HStack(spacing: 8) {
+            HStack(spacing: DS.spacingSM) {
                 if let type = d.type {
-                    StatusBadge(profileTypeLabel(type), color: .dsAccentBlue)
+                    DSBadge(text: profileTypeLabel(type), color: .dsBlue)
                 }
                 if d.has_file == true {
-                    StatusBadge(L10n.Profile.downloadable, color: .dsAccent)
+                    DSBadge(text: L10n.Profile.downloadable, color: .dsGreen)
                 }
                 if let exp = d.expires_at, isExpired(exp) {
-                    StatusBadge(Localized.status("EXPIRED"), color: .dsAccentPink)
+                    DSBadge.forStatus("EXPIRED")
                 }
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(20)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
+        .padding(.vertical, DS.spacingXL)
     }
 
     // MARK: - Info
 
     private func infoCard(_ d: ProfileDetail) -> some View {
-        VStack(spacing: 0) {
+        DSGroupedCard {
             infoRow(label: NSLocalizedString("common.name", comment: ""), value: d.name ?? "-")
-            Divider().padding(.leading, 16)
+            DSDivider(leadingPadding: DS.spacingLG)
             infoRow(label: L10n.Cert.typeLabel, value: Localized.profileType(d.type ?? ""))
-            Divider().padding(.leading, 16)
+            DSDivider(leadingPadding: DS.spacingLG)
             infoRow(label: L10n.Cert.type, value: certTypeForProfile(d.type ?? ""))
-            Divider().padding(.leading, 16)
+            DSDivider(leadingPadding: DS.spacingLG)
             infoRow(label: L10n.Profile.bundleId, value: d.bundle_id ?? "-")
-            Divider().padding(.leading, 16)
+            DSDivider(leadingPadding: DS.spacingLG)
             infoRow(label: "Apple ID", value: d.apple_id ?? "-")
-            Divider().padding(.leading, 16)
+            DSDivider(leadingPadding: DS.spacingLG)
             infoRow(label: L10n.Cert.expiresAt, value: formatDate(d.expires_at))
-            Divider().padding(.leading, 16)
+            DSDivider(leadingPadding: DS.spacingLG)
             infoRow(label: L10n.Cert.createdAt, value: formatDate(d.created_at))
         }
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
     }
 
     // MARK: - Bundle Info
 
     private func bundleInfoCard(_ bundle: ProfileBundleInfo) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HIcon(AppIcon.bundleID)
-                    .foregroundStyle(Color.dsAccentPurple)
-                Text(L10n.Profile.bundleId)
-                    .font(.headline)
-                    .foregroundStyle(Color.dsText)
-            }
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Profile.bundleId)
 
-            VStack(spacing: 0) {
+            DSGroupedCard {
                 if let name = bundle.name {
                     infoRow(label: NSLocalizedString("common.name", comment: ""), value: name)
-                    Divider().padding(.leading, 16)
+                    DSDivider(leadingPadding: DS.spacingLG)
                 }
                 infoRow(label: L10n.BundleID.identifier, value: bundle.identifier ?? "-")
                 if let platform = bundle.platform {
-                    Divider().padding(.leading, 16)
+                    DSDivider(leadingPadding: DS.spacingLG)
                     infoRow(label: L10n.Cert.platform, value: Localized.platform(platform))
                 }
             }
         }
-        .cardStyle()
     }
 
     // MARK: - Certificates
 
     private func certificatesCard(_ certs: [ProfileLinkedCert]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HIcon(AppIcon.certificate)
-                    .foregroundStyle(Color.dsAccentBlue)
-                Text(L10n.Profile.relatedCerts)
-                    .font(.headline)
-                    .foregroundStyle(Color.dsText)
-                Spacer()
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Profile.relatedCerts) {
                 Text(L10n.count(certs.count))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.dsMuted)
-                    .padding(.horizontal, 8)
+                    .foregroundStyle(Color.dsTextSecondary)
+                    .padding(.horizontal, DS.spacingSM)
                     .padding(.vertical, 3)
-                    .background(Color.dsSurfaceLight, in: Capsule())
+                    .background(Color.dsSurfaceElevated, in: Capsule())
             }
 
-            VStack(spacing: 0) {
+            DSGroupedCard {
                 ForEach(Array(certs.enumerated()), id: \.element.id) { index, cert in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(cert.name ?? L10n.unnamed)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Color.dsText)
-                            HStack(spacing: 6) {
-                                StatusBadge(certTypeLabel(cert.type ?? ""), color: certTypeColor(cert.type ?? ""))
+                            HStack(spacing: DS.spacingSM) {
+                                DSBadge(text: certTypeLabel(cert.type ?? ""), color: certTypeColor(cert.type ?? ""))
                                 if let exp = cert.expires_at {
                                     Text(String(exp.prefix(10)))
-                                        .font(.caption2.monospaced())
-                                        .foregroundStyle(isExpired(exp) ? Color.dsAccentPink : Color.dsMuted)
+                                        .font(.dsMonoSmall)
+                                        .foregroundStyle(isExpired(exp) ? Color.dsRed : Color.dsTextSecondary)
                                 }
                             }
                         }
                         Spacer()
                     }
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 16)
+                    .padding(.vertical, DS.spacingSM)
+                    .padding(.horizontal, DS.spacingLG)
 
                     if index < certs.count - 1 {
-                        Divider().padding(.leading, 16)
+                        DSDivider(leadingPadding: DS.spacingLG)
                     }
                 }
             }
         }
-        .cardStyle()
     }
 
     // MARK: - Devices
 
     private func devicesCard(_ devices: [ProfileLinkedDevice]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HIcon(AppIcon.device)
-                    .foregroundStyle(Color.dsAccent)
-                Text(L10n.Profile.boundDevices)
-                    .font(.headline)
-                    .foregroundStyle(Color.dsText)
-                Spacer()
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Profile.boundDevices) {
                 Text(L10n.unitDevice(devices.count))
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.dsMuted)
-                    .padding(.horizontal, 8)
+                    .foregroundStyle(Color.dsTextSecondary)
+                    .padding(.horizontal, DS.spacingSM)
                     .padding(.vertical, 3)
-                    .background(Color.dsSurfaceLight, in: Capsule())
+                    .background(Color.dsSurfaceElevated, in: Capsule())
             }
 
-            if devices.isEmpty {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 6) {
+            DSGroupedCard {
+                if devices.isEmpty {
+                    VStack(spacing: DS.spacingSM) {
                         HIcon(AppIcon.device)
-                            .foregroundStyle(Color.dsMuted.opacity(0.4))
+                            .foregroundStyle(Color.dsTextTertiary)
                         Text(L10n.Profile.noDevices)
                             .font(.subheadline)
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsTextSecondary)
                     }
-                    .padding(.vertical, 16)
-                    Spacer()
-                }
-            } else {
-                VStack(spacing: 0) {
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DS.spacingLG)
+                } else {
                     ForEach(Array(devices.enumerated()), id: \.element.id) { index, device in
-                        HStack(spacing: 12) {
+                        HStack(spacing: DS.spacingMD) {
                             HIcon(AppIcon.device)
                                 .font(.body)
-                                .foregroundStyle(Color.dsAccent)
+                                .foregroundStyle(Color.dsGreen)
                                 .frame(width: 36, height: 36)
-                                .background(Color.dsAccent.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                                .background(Color.dsGreen.opacity(0.1), in: RoundedRectangle(cornerRadius: DS.radiusSM))
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(device.displayName)
@@ -261,8 +238,8 @@ struct ProfileDetailView: View {
                                     .foregroundStyle(Color.dsText)
                                 if let udid = device.udid {
                                     Text(udid)
-                                        .font(.caption2.monospaced())
-                                        .foregroundStyle(Color.dsMuted)
+                                        .font(.dsMonoSmall)
+                                        .foregroundStyle(Color.dsTextSecondary)
                                         .lineLimit(1)
                                 }
                             }
@@ -273,63 +250,39 @@ struct ProfileDetailView: View {
                                 if let platform = device.platform {
                                     Text(platform)
                                         .font(.caption2)
-                                        .foregroundStyle(Color.dsMuted)
+                                        .foregroundStyle(Color.dsTextSecondary)
                                 }
-                                StatusBadge.forStatus(device.status ?? "UNKNOWN")
+                                DSBadge.forStatus(device.status ?? "UNKNOWN")
                             }
                         }
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 16)
+                        .padding(.vertical, DS.spacingSM)
+                        .padding(.horizontal, DS.spacingLG)
 
                         if index < devices.count - 1 {
-                            Divider().padding(.leading, 64)
+                            DSDivider(leadingPadding: 60)
                         }
                     }
                 }
             }
         }
-        .cardStyle()
     }
 
     // MARK: - Actions
 
     private func actionsCard(_ d: ProfileDetail) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: DS.spacingMD) {
             if d.has_file == true {
-                Button {
+                DSPrimaryButton(title: L10n.Profile.download) {
                     Task {
                         await downloadService.download(endpoint: "/profiles/\(profileId)/download")
                     }
-                } label: {
-                    Label {
-                        Text(L10n.Profile.download).fontWeight(.medium)
-                    } icon: {
-                        HIcon(AppIcon.docDownload)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.dsAccentBlue)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            Button(role: .destructive) {
+            DSDangerButton(L10n.Profile.deleteProfile, icon: AppIcon.delete) {
                 showDeleteConfirm = true
-            } label: {
-                Label {
-                    Text(L10n.Profile.deleteProfile).fontWeight(.medium)
-                } icon: {
-                    HIcon(AppIcon.delete)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
             }
-            .buttonStyle(.bordered)
-            .tint(.dsAccentPink)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding(.top, 4)
     }
 
     // MARK: - Helpers
@@ -338,8 +291,7 @@ struct ProfileDetailView: View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
-                .frame(width: 80, alignment: .leading)
+                .foregroundStyle(Color.dsTextSecondary)
             Spacer()
             Text(value)
                 .font(.subheadline)
@@ -347,8 +299,8 @@ struct ProfileDetailView: View {
                 .multilineTextAlignment(.trailing)
                 .textSelection(.enabled)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, DS.spacingLG)
+        .padding(.vertical, DS.spacingMD)
     }
 
     private func profileTypeLabel(_ type: String) -> String {
@@ -379,11 +331,11 @@ struct ProfileDetailView: View {
 
     private func certTypeColor(_ type: String) -> Color {
         if type.contains("DEVELOPMENT") || type == "DEVELOPMENT" {
-            return .dsAccentBlue
+            return .dsBlue
         } else if type.contains("DISTRIBUTION") || type == "DISTRIBUTION" {
-            return .dsAccentPurple
+            return .dsPurple
         } else {
-            return .dsAccentOrange
+            return .dsOrange
         }
     }
 

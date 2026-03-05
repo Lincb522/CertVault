@@ -4,13 +4,13 @@ struct LoadingView: View {
     var message: String = "加载中..."
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: DS.spacingXL) {
             ProgressView()
                 .controlSize(.large)
-                .tint(Color.dsAccentBlue)
+                .tint(Color.dsBrand)
             Text(message)
                 .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

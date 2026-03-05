@@ -12,7 +12,7 @@ struct AccountListView: View {
     var body: some View {
         Group {
             if vm.accounts.isEmpty && !vm.isLoading {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.lock,
                     title: L10n.Account.emptyTitle,
                     message: L10n.Account.emptyMessage,
@@ -20,14 +20,23 @@ struct AccountListView: View {
                 ) { showCreateSheet = true }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    DSGroupedCard {
                         ForEach(Array(vm.accounts.enumerated()), id: \.element.id) { index, account in
                             NavigationLink {
                                 AccountDetailView(accountId: account.id)
                             } label: {
-                                AccountRow(account: account)
+                                DSRow(
+                                    icon: AppIcon.account,
+                                    iconColor: .dsBlue,
+                                    title: account.displayName,
+                                    subtitle: "Key: \(account.key_id ?? "N/A")",
+                                    trailing: account.remote_synced == true
+                                        ? AnyView(DSBadge(text: L10n.Account.synced, color: .dsGreen))
+                                        : nil,
+                                    useGradientIcon: true
+                                )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.dsPressed)
                             .contextMenu {
                                 Button(role: .destructive) {
                                     accountToDelete = account
@@ -37,18 +46,12 @@ struct AccountListView: View {
                             }
 
                             if index < vm.accounts.count - 1 {
-                                Divider().padding(.leading, 68)
+                                DSDivider()
                             }
                         }
                     }
-                    .padding(.vertical, 4)
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.horizontal, DS.spacingLG)
+                    .padding(.top, DS.spacingSM)
                 }
                 .pageBackground()
                 .refreshable { await vm.loadAccounts() }
@@ -106,45 +109,6 @@ struct AccountListView: View {
     }
 }
 
-// MARK: - Account Row
-
-private struct AccountRow: View {
-    let account: Account
-
-    var body: some View {
-        HStack(spacing: 14) {
-            HIcon(AppIcon.account)
-                .font(.title3)
-                .foregroundStyle(Color.dsAccentBlue)
-                .frame(width: 40, height: 40)
-                .background(Color.dsAccentBlue.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(account.displayName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.dsText)
-                HStack(spacing: 6) {
-                    Text("Key: \(account.key_id ?? "N/A")")
-                        .font(.caption.monospaced())
-                        .foregroundStyle(Color.dsMuted)
-                    if account.remote_synced == true {
-                        StatusBadge(L10n.Account.synced, color: .dsAccent)
-                    }
-                }
-            }
-
-            Spacer()
-
-            HIcon(AppIcon.chevronRight)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.dsMuted.opacity(0.4))
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .contentShape(Rectangle())
-    }
-}
-
 // MARK: - Import P8 Sheet
 
 private struct ImportP8Sheet: View {
@@ -178,7 +142,7 @@ private struct ImportP8Sheet: View {
 
                 if let err = errorMsg {
                     Section {
-                        Text(err).foregroundStyle(.red).font(.caption)
+                        Text(err).foregroundStyle(Color.dsDanger).font(.caption)
                     }
                 }
             }
@@ -236,7 +200,7 @@ private struct UploadP8Sheet: View {
                     Button { showFilePicker = true } label: {
                         HStack {
                             HIcon(AppIcon.docUpload)
-                                .foregroundStyle(Color.dsAccentBlue)
+                                .foregroundStyle(Color.dsBlue)
                             if let name = selectedFileName {
                                 Text(name).font(.subheadline)
                             } else {
@@ -258,7 +222,7 @@ private struct UploadP8Sheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section { Text(err).foregroundStyle(Color.dsDanger).font(.caption) }
                 }
             }
             .navigationTitle(L10n.Account.uploadTitle)
