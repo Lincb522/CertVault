@@ -12,7 +12,7 @@ struct AccountListView: View {
     var body: some View {
         Group {
             if vm.accounts.isEmpty && !vm.isLoading {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.lock,
                     title: L10n.Account.emptyTitle,
                     message: L10n.Account.emptyMessage,
@@ -20,14 +20,14 @@ struct AccountListView: View {
                 ) { showCreateSheet = true }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(vm.accounts.enumerated()), id: \.element.id) { index, account in
+                    DSGroupedCard {
+                        ForEach(vm.accounts) { account in
                             NavigationLink {
                                 AccountDetailView(accountId: account.id)
                             } label: {
                                 AccountRow(account: account)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.dsPressed)
                             .contextMenu {
                                 Button(role: .destructive) {
                                     accountToDelete = account
@@ -36,19 +36,13 @@ struct AccountListView: View {
                                 }
                             }
 
-                            if index < vm.accounts.count - 1 {
-                                Divider().padding(.leading, 68)
+                            if account.id != vm.accounts.last?.id {
+                                DSDivider(leadingPadding: 56)
                             }
                         }
                     }
-                    .padding(.vertical, 4)
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.horizontal, DS.spacingLG)
+                    .padding(.top, DS.spacingMD)
                 }
                 .pageBackground()
                 .refreshable { await vm.loadAccounts() }
@@ -112,36 +106,13 @@ private struct AccountRow: View {
     let account: Account
 
     var body: some View {
-        HStack(spacing: 14) {
-            HIcon(AppIcon.account)
-                .font(.title3)
-                .foregroundStyle(Color.dsAccentBlue)
-                .frame(width: 40, height: 40)
-                .background(Color.dsAccentBlue.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(account.displayName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.dsText)
-                HStack(spacing: 6) {
-                    Text("Key: \(account.key_id ?? "N/A")")
-                        .font(.caption.monospaced())
-                        .foregroundStyle(Color.dsMuted)
-                    if account.remote_synced == true {
-                        StatusBadge(L10n.Account.synced, color: .dsAccent)
-                    }
-                }
-            }
-
-            Spacer()
-
-            HIcon(AppIcon.chevronRight)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.dsMuted.opacity(0.4))
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .contentShape(Rectangle())
+        DSRow(
+            icon: AppIcon.account,
+            iconColor: .dsBlue,
+            title: account.displayName,
+            subtitle: "Key: \(account.key_id ?? "N/A")",
+            trailing: account.remote_synced == true ? AnyView(DSBadge(text: L10n.Account.synced, color: .dsGreen)) : nil
+        )
     }
 }
 
@@ -159,29 +130,50 @@ private struct ImportP8Sheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section(L10n.Account.formP8Content) {
-                    TextEditor(text: $p8Content)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(minHeight: 120)
-                }
+            ScrollView {
+                VStack(spacing: DS.spacingLG) {
+                    VStack(alignment: .leading, spacing: DS.spacingSM) {
+                        DSSectionHeader(L10n.Account.formP8Content)
+                        DSInputFieldBuilder(icon: AppIcon.docUpload, focused: false) {
+                            TextEditor(text: $p8Content)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(Color.dsText)
+                                .frame(minHeight: 120)
+                        }
+                    }
+                    .cardStyle()
 
-                Section(L10n.Account.formSectionBasic) {
-                    TextField(L10n.Account.formName, text: $name)
-                    TextField(L10n.Account.formIssuerId, text: $issuerID)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField(L10n.Account.formKeyId, text: $keyID)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                }
+                    VStack(alignment: .leading, spacing: DS.spacingSM) {
+                        DSSectionHeader(L10n.Account.formSectionBasic)
+                        DSInputField(icon: AppIcon.user, placeholder: L10n.Account.formName, text: $name)
+                        DSInputFieldBuilder(icon: AppIcon.link, focused: false) {
+                            TextField("", text: $issuerID, prompt: Text(L10n.Account.formIssuerId).foregroundColor(.dsTextTertiary))
+                                .foregroundStyle(Color.dsText)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
+                        DSInputFieldBuilder(icon: AppIcon.lock, focused: false) {
+                            TextField("", text: $keyID, prompt: Text(L10n.Account.formKeyId).foregroundColor(.dsTextTertiary))
+                                .foregroundStyle(Color.dsText)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                        }
+                    }
+                    .cardStyle()
 
-                if let err = errorMsg {
-                    Section {
-                        Text(err).foregroundStyle(.red).font(.caption)
+                    if let err = errorMsg {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(Color.dsDanger)
+                    }
+
+                    DSPrimaryButton(title: L10n.import, isLoading: isLoading, isDisabled: !isValid) {
+                        doImport()
                     }
                 }
+                .padding(DS.spacingLG)
             }
+            .background(Color.dsBackground)
             .navigationTitle(L10n.Account.importTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -231,36 +223,54 @@ private struct UploadP8Sheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section(L10n.Account.selectP8) {
-                    Button { showFilePicker = true } label: {
-                        HStack {
-                            HIcon(AppIcon.docUpload)
-                                .foregroundStyle(Color.dsAccentBlue)
-                            if let name = selectedFileName {
-                                Text(name).font(.subheadline)
-                            } else {
-                                Text(L10n.Account.selectP8).foregroundStyle(.secondary)
-                            }
-                            Spacer()
+            ScrollView {
+                VStack(spacing: DS.spacingLG) {
+                    VStack(alignment: .leading, spacing: DS.spacingSM) {
+                        DSSectionHeader(L10n.Account.selectP8)
+                        Button { showFilePicker = true } label: {
+                            DSRow(
+                                icon: AppIcon.docUpload,
+                                iconColor: .dsBlue,
+                                title: selectedFileName ?? L10n.Account.selectP8,
+                                subtitle: nil,
+                                showChevron: false
+                            )
+                        }
+                        .buttonStyle(.dsPressed)
+                    }
+                    .cardStyle()
+
+                    VStack(alignment: .leading, spacing: DS.spacingSM) {
+                        DSSectionHeader(L10n.Account.formSectionBasic)
+                        DSInputField(icon: AppIcon.user, placeholder: L10n.Account.formName, text: $name)
+                        DSInputFieldBuilder(icon: AppIcon.link, focused: false) {
+                            TextField("", text: $issuerID, prompt: Text(L10n.Account.formIssuerId).foregroundColor(.dsTextTertiary))
+                                .foregroundStyle(Color.dsText)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
+                        DSInputFieldBuilder(icon: AppIcon.lock, focused: false) {
+                            TextField("", text: $keyID, prompt: Text(L10n.Account.formKeyId).foregroundColor(.dsTextTertiary))
+                                .foregroundStyle(Color.dsText)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
                         }
                     }
-                }
+                    .cardStyle()
 
-                Section(L10n.Account.formSectionBasic) {
-                    TextField(L10n.Account.formName, text: $name)
-                    TextField(L10n.Account.formIssuerId, text: $issuerID)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField(L10n.Account.formKeyId, text: $keyID)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                }
+                    if let err = errorMsg {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(Color.dsDanger)
+                    }
 
-                if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    DSPrimaryButton(title: L10n.upload, isLoading: isLoading, isDisabled: !isValid) {
+                        doUpload()
+                    }
                 }
+                .padding(DS.spacingLG)
             }
+            .background(Color.dsBackground)
             .navigationTitle(L10n.Account.uploadTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

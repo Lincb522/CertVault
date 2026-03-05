@@ -11,32 +11,26 @@ struct UserManagementView: View {
     var body: some View {
         Group {
             if vm.users.isEmpty && !vm.isLoading {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.group,
                     title: L10n.UserMgmt.emptyTitle,
                     message: L10n.UserMgmt.emptyMessage
                 )
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(vm.users.enumerated()), id: \.element.id) { index, user in
+                    DSGroupedCard {
+                        ForEach(vm.users) { user in
                             userRow(user)
                                 .contextMenu { contextMenuItems(for: user) }
 
-                            if index < vm.users.count - 1 {
-                                Divider().padding(.leading, 68)
+                            if user.id != vm.users.last?.id {
+                                DSDivider(leadingPadding: 68)
                             }
                         }
                     }
-                    .padding(.vertical, 4)
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
+                    .padding(.horizontal, DS.spacingLG)
+                    .padding(.top, DS.spacingSM)
+                    .padding(.bottom, DS.spacingXL)
                 }
                 .pageBackground()
                 .refreshable { await vm.load() }
@@ -55,9 +49,7 @@ struct UserManagementView: View {
         )) {
             Button(L10n.delete, role: .destructive) {
                 if let user = userToDelete {
-                    Task {
-                        try? await vm.deleteUser(id: user.id)
-                    }
+                    Task { try? await vm.deleteUser(id: user.id) }
                 }
             }
             Button(L10n.cancel, role: .cancel) {}
@@ -66,9 +58,7 @@ struct UserManagementView: View {
                 Text(L10n.UserMgmt.deleteMessage(user.username))
             }
         }
-        .sheet(isPresented: $showResetSheet) {
-            resetPasswordSheet
-        }
+        .sheet(isPresented: $showResetSheet) { resetPasswordSheet }
         .alert(L10n.UserMgmt.resultTitle, isPresented: .init(
             get: { vm.successMessage != nil },
             set: { if !$0 { vm.successMessage = nil } }
@@ -88,12 +78,12 @@ struct UserManagementView: View {
     }
 
     private func userRow(_ user: ManagedUser) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: DS.spacingMD) {
             ZStack {
                 Circle()
                     .fill(user.role == "superadmin"
-                          ? LinearGradient(colors: [.dsAccentPurple, .dsAccentPink], startPoint: .topLeading, endPoint: .bottomTrailing)
-                          : LinearGradient(colors: [.dsAccentBlue, .dsAccentCyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                          ? LinearGradient(colors: [.dsPurple, .dsPink], startPoint: .topLeading, endPoint: .bottomTrailing)
+                          : LinearGradient(colors: [.dsBlue, .dsCyan], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 40, height: 40)
                 Text(String(user.username.prefix(1)).uppercased())
                     .font(.headline.bold())
@@ -101,26 +91,26 @@ struct UserManagementView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
+                HStack(spacing: DS.spacingSM) {
                     Text(user.username)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.dsText)
-                    StatusBadge(
-                        user.role == "superadmin" ? L10n.UserMgmt.roleSuper : L10n.UserMgmt.roleUser,
-                        color: user.role == "superadmin" ? .dsAccentPurple : .dsAccentBlue
+                    DSBadge(
+                        text: user.role == "superadmin" ? L10n.UserMgmt.roleSuper : L10n.UserMgmt.roleUser,
+                        color: user.role == "superadmin" ? .dsPurple : .dsBlue
                     )
                 }
                 if let email = user.email, !email.isEmpty {
                     Text(email)
                         .font(.caption)
-                        .foregroundStyle(Color.dsMuted)
+                        .foregroundStyle(Color.dsTextSecondary)
                 }
             }
 
             Spacer()
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .padding(.vertical, DS.spacingMD)
+        .padding(.horizontal, DS.spacingLG)
         .contentShape(Rectangle())
     }
 
@@ -161,7 +151,7 @@ struct UserManagementView: View {
                 if let user = userToResetPwd {
                     Section {
                         HStack {
-                            Text(NSLocalizedString("user.field.user", comment: "")).foregroundStyle(Color.dsMuted)
+                            Text(NSLocalizedString("user.field.user", comment: "")).foregroundStyle(Color.dsTextSecondary)
                             Spacer()
                             Text(user.username).foregroundStyle(Color.dsText)
                         }
@@ -171,6 +161,8 @@ struct UserManagementView: View {
                     SecureField(NSLocalizedString("user.newPassword.hint", comment: ""), text: $newPassword)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.dsBackground)
             .navigationTitle(L10n.UserMgmt.resetPasswordTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

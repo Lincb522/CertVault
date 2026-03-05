@@ -6,14 +6,12 @@ struct SettingsView: View {
     @EnvironmentObject private var authVM: AuthViewModel
     @EnvironmentObject private var appearance: AppearanceManager
     @EnvironmentObject private var notificationManager: NotificationManager
-    @StateObject private var updateService = UpdateService.shared
     @State private var showChangePassword = false
     @State private var showLogoutConfirm = false
     @State private var showClearCacheConfirm = false
     @State private var showSMTP = false
-    @State private var showUpdateSheet = false
-    @State private var showAlreadyLatest = false
-    @State private var showUpdateError: String?
+    @State private var showDeleteAccountConfirm = false
+    @State private var showDeleteAccountContactAdmin = false
     @State private var serverStatus: ServerStatus = .checking
     @State private var cacheSize: Int64 = 0
     @State private var cacheCleared = false
@@ -38,7 +36,7 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: DS.spacingXL) {
                 profileCard
                 if authVM.role == "superadmin" {
                     adminSection
@@ -48,10 +46,11 @@ struct SettingsView: View {
                 cacheSection
                 notificationSection
                 aboutSection
+                deleteAccountSection
                 logoutSection
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20)
+            .padding(.horizontal, DS.spacingLG)
+            .padding(.bottom, DS.spacingXL)
         }
         .pageBackground()
         .navigationTitle(L10n.Settings.title)
@@ -75,34 +74,41 @@ struct SettingsView: View {
         .alert(L10n.Settings.clearCacheDone, isPresented: $cacheCleared) {
             Button(L10n.ok) {}
         }
+        .alert("删除账户", isPresented: $showDeleteAccountConfirm) {
+            Button("删除", role: .destructive) { deleteAccount() }
+            Button(L10n.cancel, role: .cancel) {}
+        } message: {
+            Text("确定要删除账户吗？此操作不可恢复。")
+        }
+        .alert("请联系管理员删除账户", isPresented: $showDeleteAccountContactAdmin) {
+            Button(L10n.ok) {}
+        } message: {
+            Text("请联系管理员删除账户")
+        }
         .task { await checkServerHealth() }
-        .task { await updateService.checkForUpdate() }
         .onAppear { cacheSize = DatabaseManager.shared.cacheSize() }
     }
 
     // MARK: - Profile
 
     private var profileCard: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: DS.spacingMD) {
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                    .fill(LinearGradient(colors: [.dsBlue, .dsPurple], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 50, height: 50)
                 Text(String(authVM.username.prefix(1)).uppercased())
                     .font(.title2.bold())
                     .foregroundStyle(.white)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DS.spacingXS) {
                 Text(authVM.username)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Text(roleDisplayName)
                     .font(.caption)
-                    .foregroundStyle(Color.dsMuted)
+                    .foregroundStyle(Color.dsTextSecondary)
             }
 
             Spacer()
@@ -113,53 +119,23 @@ struct SettingsView: View {
     // MARK: - Admin
 
     private var adminSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.admin", comment: ""))
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.admin", comment: ""))
 
-            NavigationLink {
-                UserManagementView()
-            } label: {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.group)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentPurple)
-                        .frame(width: 20)
-                    Text(L10n.Settings.userManagement)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    HIcon(AppIcon.chevronRight)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.dsMuted.opacity(0.4))
+            DSGroupedCard {
+                NavigationLink {
+                    UserManagementView()
+                } label: {
+                    DSRow(icon: AppIcon.group, iconColor: .dsPurple, title: L10n.Settings.userManagement)
                 }
-                .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
-            }
+                .buttonStyle(.dsPressed)
 
-            Button { showSMTP = true } label: {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.email)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentBlue)
-                        .frame(width: 20)
-                    Text(L10n.Settings.emailConfig)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    HIcon(AppIcon.chevronRight)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.dsMuted.opacity(0.4))
+                DSDivider()
+
+                Button { showSMTP = true } label: {
+                    DSRow(icon: AppIcon.email, iconColor: .dsBlue, title: L10n.Settings.emailConfig)
                 }
-                .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .buttonStyle(.dsPressed)
             }
             .sheet(isPresented: $showSMTP) {
                 SMTPConfigSheet()
@@ -170,23 +146,25 @@ struct SettingsView: View {
     // MARK: - Appearance
 
     private var appearanceSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.appearance", comment: ""))
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.appearance", comment: ""))
 
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
+            DSGroupedCard {
+                HStack(spacing: DS.spacingMD) {
                     HIcon(appearance.mode == .dark ? AppIcon.moon : appearance.mode == .light ? AppIcon.sun : AppIcon.settings)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentPurple)
-                        .frame(width: 20)
+                        .font(.callout)
+                        .foregroundStyle(Color.dsPurple)
+                        .frame(width: 32, height: 32)
+                        .background(Color.dsPurple.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.radiusSM))
+
                     Text(L10n.Settings.displayMode)
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.dsText)
+
                     Spacer()
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.vertical, DS.spacingMD)
+                .padding(.horizontal, DS.spacingLG)
 
                 Picker("", selection: $appearance.mode) {
                     ForEach(AppearanceManager.Mode.allCases, id: \.rawValue) { mode in
@@ -194,43 +172,23 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 14)
+                .padding(.horizontal, DS.spacingLG)
+                .padding(.bottom, DS.spacingLG)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 
     // MARK: - Security
 
     private var securitySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.security", comment: ""))
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.security", comment: ""))
 
-            Button { showChangePassword = true } label: {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.lock)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentOrange)
-                        .frame(width: 20)
-                    Text(L10n.Settings.changePassword)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    HIcon(AppIcon.chevronRight)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.dsMuted.opacity(0.4))
+            DSGroupedCard {
+                Button { showChangePassword = true } label: {
+                    DSRow(icon: AppIcon.lock, iconColor: .dsOrange, title: L10n.Settings.changePassword)
                 }
-                .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .buttonStyle(.dsPressed)
             }
         }
     }
@@ -238,51 +196,25 @@ struct SettingsView: View {
     // MARK: - Cache
 
     private var cacheSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(L10n.Settings.cache)
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(L10n.Settings.cache)
 
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.category)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentCyan)
-                        .frame(width: 20)
-                    Text(L10n.Settings.cache)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    Text(formattedCacheSize)
-                        .font(.subheadline.monospaced())
-                        .foregroundStyle(Color.dsMuted)
+            DSGroupedCard {
+                DSRow(
+                    icon: AppIcon.category,
+                    iconColor: .dsCyan,
+                    title: L10n.Settings.cache,
+                    trailing: AnyView(Text(formattedCacheSize).font(.subheadline.monospaced()).foregroundStyle(Color.dsTextSecondary)),
+                    showChevron: false
+                )
+
+                DSDivider()
+
+                Button { showClearCacheConfirm = true } label: {
+                    DSRow(icon: AppIcon.delete, iconColor: .dsDanger, title: L10n.Settings.clearCache)
                 }
-                .padding(14)
-
-                Divider().padding(.horizontal, 14)
-
-                Button {
-                    showClearCacheConfirm = true
-                } label: {
-                    HStack(spacing: 12) {
-                        HIcon(AppIcon.delete)
-                            .font(.body)
-                            .foregroundStyle(Color.dsAccentPink)
-                            .frame(width: 20)
-                        Text(L10n.Settings.clearCache)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.dsAccentPink)
-                        Spacer()
-                        HIcon(AppIcon.chevronRight)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.dsMuted.opacity(0.4))
-                    }
-                    .padding(14)
-                }
+                .buttonStyle(.dsPressed)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 
@@ -309,93 +241,80 @@ struct SettingsView: View {
     // MARK: - Notifications
 
     private var notificationSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(L10n.Settings.notification)
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(L10n.Settings.notification)
 
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
+            DSGroupedCard {
+                HStack(spacing: DS.spacingMD) {
                     HIcon(AppIcon.pushKey)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentBlue)
-                        .frame(width: 20)
+                        .font(.callout)
+                        .foregroundStyle(Color.dsBlue)
+                        .frame(width: 32, height: 32)
+                        .background(Color.dsBlue.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.radiusSM))
+
                     Text(L10n.Settings.notification)
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.dsText)
+
                     Spacer()
+
                     notificationStatusBadge
                 }
-                .padding(14)
-
-                Divider().padding(.horizontal, 14)
+                .padding(.vertical, DS.spacingMD)
+                .padding(.horizontal, DS.spacingLG)
+                .frame(minHeight: DS.minTouchTarget)
+                .contentShape(Rectangle())
 
                 if notificationManager.authorizationStatus == .denied {
+                    DSDivider()
+
                     Button {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
                     } label: {
-                        HStack(spacing: 12) {
-                            HIcon(AppIcon.settings)
-                                .font(.body)
-                                .foregroundStyle(Color.dsAccentOrange)
-                                .frame(width: 20)
-                            Text(NSLocalizedString("settings.notification.goSettings", comment: ""))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccentOrange)
-                            Spacer()
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                        .padding(14)
+                        DSRow(icon: AppIcon.settings, iconColor: .dsOrange, title: NSLocalizedString("settings.notification.goSettings", comment: ""))
                     }
+                    .buttonStyle(.dsPressed)
                 } else if notificationManager.authorizationStatus == .notDetermined {
+                    DSDivider()
+
                     Button {
                         Task { await notificationManager.requestPermission() }
                     } label: {
-                        HStack(spacing: 12) {
-                            HIcon(AppIcon.pushKey)
-                                .font(.body)
-                                .foregroundStyle(Color.dsAccent)
-                                .frame(width: 20)
-                            Text(NSLocalizedString("settings.notification.enable", comment: ""))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccent)
-                            Spacer()
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                        .padding(14)
+                        DSRow(icon: AppIcon.pushKey, iconColor: .dsGreen, title: NSLocalizedString("settings.notification.enable", comment: ""))
                     }
+                    .buttonStyle(.dsPressed)
                 } else {
-                    HStack(spacing: 12) {
+                    DSDivider()
+
+                    HStack(spacing: DS.spacingMD) {
                         HIcon(AppIcon.tick)
-                            .font(.body)
-                            .foregroundStyle(Color.dsAccent)
-                            .frame(width: 20)
+                            .font(.callout)
+                            .foregroundStyle(Color.dsGreen)
+                            .frame(width: 32, height: 32)
+                            .background(Color.dsGreen.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.radiusSM))
+
                         Text("Device Token")
-                            .font(.subheadline)
+                            .font(.subheadline.weight(.medium))
                             .foregroundStyle(Color.dsText)
+
                         Spacer()
+
                         if let token = notificationManager.deviceToken {
                             Text(token.prefix(12) + "...")
                                 .font(.caption.monospaced())
-                                .foregroundStyle(Color.dsMuted)
+                                .foregroundStyle(Color.dsTextSecondary)
                         } else {
                             Text(NSLocalizedString("settings.notification.waiting", comment: ""))
                                 .font(.caption)
-                                .foregroundStyle(Color.dsMuted)
+                                .foregroundStyle(Color.dsTextSecondary)
                         }
                     }
-                    .padding(14)
+                    .padding(.vertical, DS.spacingMD)
+                    .padding(.horizontal, DS.spacingLG)
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 
@@ -403,154 +322,90 @@ struct SettingsView: View {
     private var notificationStatusBadge: some View {
         switch notificationManager.authorizationStatus {
         case .authorized:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsAccent).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.enabled", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsAccent)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.enabled", comment: ""), color: .dsGreen)
         case .denied:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.denied", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsAccentPink)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.denied", comment: ""), color: .dsRed)
         case .provisional:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsAccentOrange).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.provisional", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsAccentOrange)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.provisional", comment: ""), color: .dsOrange)
         default:
-            HStack(spacing: 6) {
-                Circle().fill(Color.dsMuted).frame(width: 8, height: 8)
-                Text(NSLocalizedString("settings.notification.notDetermined", comment: ""))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted)
-            }
+            DSBadge(text: NSLocalizedString("settings.notification.notDetermined", comment: ""), color: .dsTextSecondary)
         }
     }
 
     // MARK: - About
 
     private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("settings.about", comment: ""))
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader(NSLocalizedString("settings.about", comment: ""))
 
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
+            DSGroupedCard {
+                HStack(spacing: DS.spacingMD) {
                     HIcon(AppIcon.server)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccent)
-                        .frame(width: 20)
+                        .font(.callout)
+                        .foregroundStyle(Color.dsGreen)
+                        .frame(width: 32, height: 32)
+                        .background(Color.dsGreen.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.radiusSM))
+
                     Text(L10n.Settings.serverStatus)
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.dsText)
+
                     Spacer()
+
                     switch serverStatus {
                     case .checking:
-                        ProgressView()
-                            .controlSize(.small)
-                    case .online(_):
-                        HStack(spacing: 6) {
-                            Circle().fill(Color.dsAccent).frame(width: 8, height: 8)
-                            Text(Localized.status("ONLINE"))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccent)
-                        }
+                        ProgressView().controlSize(.small)
+                    case .online:
+                        DSBadge(text: Localized.status("ONLINE"), color: .dsGreen)
                     case .offline:
-                        HStack(spacing: 6) {
-                            Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                            Text(Localized.status("OFFLINE"))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.dsAccentPink)
-                        }
+                        DSBadge(text: Localized.status("OFFLINE"), color: .dsRed)
                     }
                 }
-                .padding(14)
+                .padding(.vertical, DS.spacingMD)
+                .padding(.horizontal, DS.spacingLG)
+                .frame(minHeight: DS.minTouchTarget)
+                .contentShape(Rectangle())
 
-                Divider().padding(.horizontal, 14)
+                DSDivider()
 
-                HStack(spacing: 12) {
-                    HIcon(AppIcon.info)
-                        .font(.body)
-                        .foregroundStyle(Color.dsMuted)
-                        .frame(width: 20)
-                    Text(L10n.Settings.version)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsText)
-                    Spacer()
-                    Text(appVersion)
-                        .font(.subheadline.monospaced())
-                        .foregroundStyle(Color.dsMuted)
-                }
-                .padding(14)
+                DSRow(
+                    icon: AppIcon.info,
+                    iconColor: .dsTextSecondary,
+                    title: L10n.Settings.version,
+                    trailing: AnyView(Text(appVersion).font(.subheadline.monospaced()).foregroundStyle(Color.dsTextSecondary)),
+                    showChevron: false
+                )
 
-                Divider().padding(.horizontal, 14)
+                DSDivider()
 
-                Button {
-                    Task {
-                        await updateService.checkForUpdate()
-                        if updateService.updateAvailable {
-                            showUpdateSheet = true
-                        } else if let err = updateService.lastError {
-                            showUpdateError = err
-                        } else {
-                            showAlreadyLatest = true
-                        }
-                    }
+                NavigationLink {
+                    PrivacyPolicyView()
                 } label: {
-                    HStack(spacing: 12) {
-                        HIcon(AppIcon.refresh)
-                            .font(.body)
-                            .foregroundStyle(Color.dsAccentBlue)
-                            .frame(width: 20)
-                        Text(NSLocalizedString("settings.checkUpdate", comment: ""))
-                            .font(.subheadline)
-                            .foregroundStyle(Color.dsText)
-                        Spacer()
-                        if updateService.isChecking {
-                            ProgressView().controlSize(.small)
-                        } else if updateService.updateAvailable {
-                            HStack(spacing: 4) {
-                                Circle().fill(Color.dsAccentPink).frame(width: 8, height: 8)
-                                Text(NSLocalizedString("settings.updateAvailable", comment: ""))
-                                    .font(.caption)
-                                    .foregroundStyle(Color.dsAccentPink)
-                            }
-                        } else {
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                    }
-                    .padding(14)
+                    DSRow(icon: AppIcon.shield, iconColor: .dsBlue, title: "隐私政策")
                 }
+                .buttonStyle(.dsPressed)
+
+                DSDivider()
+
+                NavigationLink {
+                    TermsOfServiceView()
+                } label: {
+                    DSRow(icon: AppIcon.profile, iconColor: .dsPurple, title: "用户协议")
+                }
+                .buttonStyle(.dsPressed)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
-        .sheet(isPresented: $showUpdateSheet) {
-            UpdateSheet()
-                .environmentObject(updateService)
-        }
-        .alert("已是最新版本", isPresented: $showAlreadyLatest) {
-            Button("好的") {}
-        } message: {
-            Text("当前版本 v\(updateService.currentVersion) 已是最新")
-        }
-        .alert("检查更新失败", isPresented: .init(
-            get: { showUpdateError != nil },
-            set: { if !$0 { showUpdateError = nil } }
-        )) {
-            Button("好的") { showUpdateError = nil }
-        } message: {
-            Text(showUpdateError ?? "")
+    }
+
+    // MARK: - Delete Account
+
+    private var deleteAccountSection: some View {
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            DSSectionHeader("删除账户")
+
+            DSDangerButton("删除账户", icon: AppIcon.delete) {
+                showDeleteAccountConfirm = true
+            }
         }
     }
 
@@ -574,21 +429,13 @@ struct SettingsView: View {
         }
     }
 
+    private func deleteAccount() {
+        showDeleteAccountContactAdmin = true
+    }
+
     private var logoutSection: some View {
-        Button(role: .destructive) { showLogoutConfirm = true } label: {
-            HStack(spacing: 8) {
-                HIcon(AppIcon.logout).font(.body)
-                Text(L10n.Settings.logout)
-                    .fontWeight(.medium)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 13)
-            .foregroundStyle(Color.dsAccentPink)
-            .background(Color.dsAccentPink.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsAccentPink.opacity(0.2), lineWidth: 1)
-            )
+        DSDangerButton(L10n.Settings.logout, icon: AppIcon.logout) {
+            showLogoutConfirm = true
         }
     }
 }
@@ -616,10 +463,12 @@ private struct ChangePasswordSheet: View {
 
                 if let err = errorMsg {
                     Section {
-                        Text(err).foregroundStyle(.red).font(.caption)
+                        Text(err).foregroundStyle(Color.dsDanger).font(.caption)
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.dsBackground)
             .navigationTitle(L10n.Settings.changePassword)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -679,14 +528,15 @@ private struct SMTPConfigSheet: View {
                 if isLoading {
                     ProgressView(L10n.loading)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .foregroundStyle(Color.dsTextSecondary)
                 } else if let error = errorMsg {
-                    VStack(spacing: 12) {
+                    VStack(spacing: DS.spacingLG) {
                         HIcon(AppIcon.warning)
                             .font(.largeTitle)
-                            .foregroundStyle(Color.dsAccentOrange)
+                            .foregroundStyle(Color.dsOrange)
                         Text(error)
                             .font(.subheadline)
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsTextSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -705,17 +555,19 @@ private struct SMTPConfigSheet: View {
                                 Text(L10n.Settings.emailConfig)
                                     .foregroundStyle(Color.dsText)
                                 Spacer()
-                                HStack(spacing: 6) {
+                                HStack(spacing: DS.spacingXS) {
                                     Circle()
-                                        .fill(smtp.configured ? Color.dsAccent : Color.dsAccentPink)
+                                        .fill(smtp.configured ? Color.dsGreen : Color.dsRed)
                                         .frame(width: 8, height: 8)
                                     Text(smtp.configured ? Localized.status("CONFIGURED") : Localized.status("NOTCONFIGURED"))
-                                        .foregroundStyle(smtp.configured ? Color.dsAccent : Color.dsAccentPink)
+                                        .foregroundStyle(smtp.configured ? Color.dsGreen : Color.dsRed)
                                 }
                                 .font(.subheadline)
                             }
                         }
                     }
+                    .scrollContentBackground(.hidden)
+                    .background(Color.dsBackground)
                 }
             }
             .navigationTitle(L10n.Settings.emailConfig)
@@ -736,7 +588,7 @@ private struct SMTPConfigSheet: View {
                 .foregroundStyle(Color.dsText)
             Spacer()
             Text(value)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
                 .font(.subheadline.monospaced())
         }
     }

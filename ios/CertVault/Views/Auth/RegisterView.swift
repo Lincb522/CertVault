@@ -11,17 +11,21 @@ struct RegisterView: View {
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var animateIn = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable { case username, email, code, password, confirm }
 
     var body: some View {
         GeometryReader { geo in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     Spacer(minLength: geo.size.height * 0.06)
+
                     registerHeader
                         .opacity(animateIn ? 1 : 0)
                         .offset(y: animateIn ? 0 : -20)
 
-                    Spacer(minLength: 24)
+                    Spacer(minLength: DS.spacing2XL)
 
                     registerCard
                         .opacity(animateIn ? 1 : 0)
@@ -30,17 +34,15 @@ struct RegisterView: View {
                     Spacer(minLength: geo.size.height * 0.05)
                 }
                 .frame(minHeight: geo.size.height)
-                .frame(maxWidth: 420)
+                .frame(maxWidth: 400)
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, DS.spacing2XL)
             }
             .scrollDismissesKeyboard(.interactively)
         }
         .background { AppBackground() }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6).delay(0.1)) {
-                animateIn = true
-            }
+            withAnimation(.easeOut(duration: 0.6).delay(0.1)) { animateIn = true }
         }
         .onChange(of: authVM.isLoggedIn) { loggedIn in
             if loggedIn { dismiss() }
@@ -50,22 +52,21 @@ struct RegisterView: View {
     // MARK: - Header
 
     private var registerHeader: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DS.spacingLG) {
             Image("AppLogo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 72, height: 72)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
+                .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
 
             VStack(spacing: 6) {
                 Text(L10n.Register.title)
                     .font(.title.bold())
                     .foregroundStyle(Color.dsText)
-
                 Text(L10n.Register.subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted)
+                    .foregroundStyle(Color.dsTextSecondary)
             }
         }
     }
@@ -73,37 +74,45 @@ struct RegisterView: View {
     // MARK: - Register Card
 
     private var registerCard: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 12) {
-                inputField(icon: AppIcon.user, placeholder: L10n.Register.username) {
-                    TextField("", text: $username, prompt: Text(L10n.Register.usernameHint).foregroundColor(.dsMuted.opacity(0.6)))
+        VStack(spacing: DS.spacingLG) {
+            VStack(spacing: DS.spacingMD) {
+                DSInputFieldBuilder(icon: AppIcon.user, focused: focusedField == .username) {
+                    TextField("", text: $username,
+                              prompt: Text(L10n.Register.usernameHint).foregroundColor(.dsTextTertiary))
                         .textContentType(.username)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .foregroundStyle(Color.dsText)
+                        .focused($focusedField, equals: .username)
                 }
 
-                inputField(icon: AppIcon.email, placeholder: L10n.Register.email) {
-                    TextField("", text: $email, prompt: Text(L10n.Register.emailHint).foregroundColor(.dsMuted.opacity(0.6)))
+                DSInputFieldBuilder(icon: AppIcon.email, focused: focusedField == .email) {
+                    TextField("", text: $email,
+                              prompt: Text(L10n.Register.emailHint).foregroundColor(.dsTextTertiary))
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .foregroundStyle(Color.dsText)
+                        .focused($focusedField, equals: .email)
                 }
 
                 codeField
 
-                inputField(icon: AppIcon.lock, placeholder: L10n.Register.password) {
-                    SecureField("", text: $password, prompt: Text(L10n.Register.passwordHint).foregroundColor(.dsMuted.opacity(0.6)))
+                DSInputFieldBuilder(icon: AppIcon.lock, focused: focusedField == .password) {
+                    SecureField("", text: $password,
+                                prompt: Text(L10n.Register.passwordHint).foregroundColor(.dsTextTertiary))
                         .textContentType(.newPassword)
                         .foregroundStyle(Color.dsText)
+                        .focused($focusedField, equals: .password)
                 }
 
-                inputField(icon: AppIcon.lock, placeholder: L10n.Register.confirmPassword) {
-                    SecureField("", text: $confirmPassword, prompt: Text(L10n.Register.confirmPasswordHint).foregroundColor(.dsMuted.opacity(0.6)))
+                DSInputFieldBuilder(icon: AppIcon.lock, focused: focusedField == .confirm) {
+                    SecureField("", text: $confirmPassword,
+                                prompt: Text(L10n.Register.confirmPasswordHint).foregroundColor(.dsTextTertiary))
                         .textContentType(.newPassword)
                         .foregroundStyle(Color.dsText)
+                        .focused($focusedField, equals: .confirm)
                 }
             }
 
@@ -112,42 +121,59 @@ struct RegisterView: View {
                     HIcon(AppIcon.warning).font(.caption)
                     Text(error).font(.caption)
                 }
-                .foregroundStyle(Color.dsAccentPink)
+                .foregroundStyle(Color.dsDanger)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, DS.spacingXS)
             }
 
-            registerButton
+            DSPrimaryButton(
+                title: L10n.Register.submit,
+                isLoading: authVM.isLoading,
+                isDisabled: !canRegister
+            ) {
+                guard password == confirmPassword else {
+                    authVM.errorMessage = L10n.Register.passwordMismatch
+                    return
+                }
+                Task {
+                    await authVM.register(username: username, email: email, code: code, password: password)
+                }
+            }
 
-            loginLink
+            HStack(spacing: 4) {
+                Text(L10n.Register.hasAccount)
+                    .font(.footnote)
+                    .foregroundStyle(Color.dsTextSecondary)
+                Button {
+                    authVM.errorMessage = nil
+                    dismiss()
+                } label: {
+                    Text(L10n.Register.goLogin)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Color.dsBrand)
+                }
+            }
         }
-        .padding(24)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 20))
+        .padding(DS.spacing2XL)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: DS.radiusXL))
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: DS.radiusXL)
                 .stroke(Color.dsBorder, lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.06), radius: 20, x: 0, y: 8)
     }
 
-    // MARK: - Code Field with Send Button
+    // MARK: - Code Field
 
     private var codeField: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 12) {
-                HIcon(AppIcon.code)
-                    .foregroundStyle(Color.dsMuted)
-                    .frame(width: 20)
-                TextField("", text: $code, prompt: Text(L10n.Register.verifyCode).foregroundColor(.dsMuted.opacity(0.6)))
+        HStack(spacing: DS.spacingSM) {
+            DSInputFieldBuilder(icon: AppIcon.code, focused: focusedField == .code) {
+                TextField("", text: $code,
+                          prompt: Text(L10n.Register.verifyCode).foregroundColor(.dsTextTertiary))
                     .keyboardType(.numberPad)
                     .foregroundStyle(Color.dsText)
+                    .focused($focusedField, equals: .code)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color.dsSurfaceLight.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
 
             Button {
                 Task { await authVM.sendCode(email: email) }
@@ -155,87 +181,17 @@ struct RegisterView: View {
                 Text(authVM.codeCooldown > 0 ? L10n.Register.codeCooldown(authVM.codeCooldown) : L10n.Register.getCode)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, DS.spacingMD)
                     .padding(.vertical, 15)
-                    .background(
-                        LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple],
-                                       startPoint: .leading, endPoint: .trailing),
-                        in: RoundedRectangle(cornerRadius: 12)
-                    )
+                    .background(Color.dsBrandGradient, in: RoundedRectangle(cornerRadius: DS.radiusMD))
             }
             .disabled(email.isEmpty || authVM.codeCooldown > 0 || authVM.isSendingCode)
             .opacity(email.isEmpty || authVM.codeCooldown > 0 ? 0.5 : 1)
         }
     }
 
-    private func inputField<Content: View>(icon: UIImage, placeholder: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(spacing: 12) {
-            HIcon(icon)
-                .foregroundStyle(Color.dsMuted)
-                .frame(width: 20)
-            content()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color.dsSurfaceLight.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
-    }
-
-    // MARK: - Register Button
-
-    private var registerButton: some View {
-        Button {
-            guard password == confirmPassword else {
-                authVM.errorMessage = L10n.Register.passwordMismatch
-                return
-            }
-            Task {
-                await authVM.register(username: username, email: email, code: code, password: password)
-            }
-        } label: {
-            HStack(spacing: 8) {
-                if authVM.isLoading {
-                    ProgressView().tint(.white)
-                } else {
-                    Text(L10n.Register.submit)
-                        .font(.body.weight(.semibold))
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .foregroundStyle(.white)
-            .background(
-                LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple],
-                               startPoint: .leading, endPoint: .trailing),
-                in: RoundedRectangle(cornerRadius: 12)
-            )
-        }
-        .disabled(!canRegister)
-        .opacity(canRegister ? 1 : 0.5)
-    }
-
     private var canRegister: Bool {
-        !username.isEmpty && !email.isEmpty && !code.isEmpty && !password.isEmpty && !confirmPassword.isEmpty && !authVM.isLoading
-    }
-
-    // MARK: - Login Link
-
-    private var loginLink: some View {
-        HStack(spacing: 4) {
-            Text(L10n.Register.hasAccount)
-                .font(.footnote)
-                .foregroundStyle(Color.dsMuted)
-            Button {
-                authVM.errorMessage = nil
-                dismiss()
-            } label: {
-                Text(L10n.Register.goLogin)
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Color.dsAccentBlue)
-            }
-        }
+        !username.isEmpty && !email.isEmpty && !code.isEmpty &&
+        !password.isEmpty && !confirmPassword.isEmpty && !authVM.isLoading
     }
 }

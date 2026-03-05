@@ -24,16 +24,34 @@ struct CertificateListView: View {
         return result
     }
 
+    private var filterOptions: [String] {
+        ["全部"] + vm.certTypes.map(\.label)
+    }
+
+    private var selectedFilterLabel: String {
+        get {
+            if filterType == "ALL" { return "全部" }
+            return vm.certTypes.first { $0.value == filterType }?.label ?? "全部"
+        }
+        set {
+            if newValue == "全部" {
+                filterType = "ALL"
+            } else {
+                filterType = vm.certTypes.first { $0.label == newValue }?.value ?? "ALL"
+            }
+        }
+    }
+
     var body: some View {
         Group {
             if !vm.isLoading && vm.accounts.isEmpty {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.account,
                     title: L10n.Cert.noAccountTitle,
                     message: L10n.Cert.noAccountMessage
                 )
             } else if vm.certificates.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.certificate,
                     title: L10n.Cert.emptyTitle,
                     message: L10n.Cert.emptyMessage,
@@ -41,25 +59,25 @@ struct CertificateListView: View {
                 ) { showCreate = true }
             } else {
                 ScrollView {
-                    VStack(spacing: 12) {
+                    VStack(spacing: DS.spacingMD) {
                         if vm.accounts.count > 1 {
                             accountPicker
-                                .padding(.horizontal, 16)
+                                .padding(.horizontal, DS.spacingLG)
                         }
 
                         if !vm.quotas.isEmpty {
                             quotaSection
-                                .padding(.horizontal, 16)
+                                .padding(.horizontal, DS.spacingLG)
                         }
 
                         filterSection
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, DS.spacingLG)
 
                         certList
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, DS.spacingLG)
                     }
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
+                    .padding(.top, DS.spacingSM)
+                    .padding(.bottom, DS.spacingXL)
                 }
                 .pageBackground()
                 .searchable(text: $searchText, prompt: L10n.Cert.search)
@@ -122,14 +140,14 @@ struct CertificateListView: View {
         HStack {
             Text(L10n.account)
                 .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
             Spacer()
             Picker("", selection: $vm.selectedAccountId) {
                 ForEach(vm.accounts) { acc in
                     Text(acc.displayName).tag(acc.id)
                 }
             }
-            .tint(Color.dsAccentBlue)
+            .tint(Color.dsBrand)
             .onChange(of: vm.selectedAccountId) { _ in
                 Task {
                     await vm.loadCertificates()
@@ -137,89 +155,84 @@ struct CertificateListView: View {
                 }
             }
         }
-        .padding(14)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .padding(DS.spacingLG)
+        .cardStyle()
     }
 
     private var quotaSection: some View {
-        VStack(spacing: 6) {
-            ForEach(Array(vm.quotas.keys.sorted()), id: \.self) { key in
-                if let quota = vm.quotas[key] {
-                    HStack {
-                        Text(quota.label ?? key)
-                            .font(.caption)
-                            .foregroundStyle(Color.dsMuted)
-                        Spacer()
-                        Text("\(quota.used)/\(quota.limit)")
-                            .font(.caption.weight(.semibold).monospaced())
-                            .foregroundStyle(quota.available > 0 ? Color.dsAccent : Color.dsAccentPink)
+        DSGroupedCard {
+            VStack(spacing: DS.spacingSM) {
+                ForEach(Array(vm.quotas.keys.sorted()), id: \.self) { key in
+                    if let quota = vm.quotas[key] {
+                        HStack {
+                            Text(quota.label ?? key)
+                                .font(.caption)
+                                .foregroundStyle(Color.dsTextSecondary)
+                            Spacer()
+                            Text("\(quota.used)/\(quota.limit)")
+                                .font(.dsMono)
+                                .foregroundStyle(quota.available > 0 ? Color.dsBlue : Color.dsPink)
+                        }
+                        .padding(.vertical, DS.spacingSM)
                     }
                 }
             }
+            .padding(DS.spacingLG)
         }
-        .padding(14)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
     }
 
     private var filterSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                FilterChip(title: "全部", isSelected: filterType == "ALL") {
-                    filterType = "ALL"
-                }
-                ForEach(vm.certTypes) { type in
-                    FilterChip(title: type.label, isSelected: filterType == type.value) {
-                        filterType = type.value
+        DSChipGroup(
+            options: filterOptions,
+            selected: Binding(
+                get: {
+                    if filterType == "ALL" { return "全部" }
+                    return vm.certTypes.first { $0.value == filterType }?.label ?? "全部"
+                },
+                set: { newValue in
+                    if newValue == "全部" {
+                        filterType = "ALL"
+                    } else {
+                        filterType = vm.certTypes.first { $0.label == newValue }?.value ?? "ALL"
                     }
                 }
-            }
-        }
+            )
+        )
     }
 
     private var certList: some View {
-        LazyVStack(spacing: 0) {
-            ForEach(Array(filteredCerts.enumerated()), id: \.element.id) { index, cert in
-                NavigationLink {
-                    CertificateDetailView(certId: cert.id, accountId: vm.selectedAccountId)
-                } label: {
-                    CertRow(cert: cert)
-                }
-                .buttonStyle(.plain)
-                .contextMenu {
-                    Button {
-                        let endpoint = cert.canDownloadP12
-                            ? "/certificates/\(cert.id)/download"
-                            : "/certificates/\(cert.id)/download-cer"
-                        Task { await downloadService.download(endpoint: endpoint) }
+        DSGroupedCard {
+            LazyVStack(spacing: 0) {
+                ForEach(filteredCerts) { cert in
+                    NavigationLink {
+                        CertificateDetailView(certId: cert.id, accountId: vm.selectedAccountId)
                     } label: {
-                        Label { Text(L10n.download) } icon: { HIcon(AppIcon.download) }
+                        CertRow(cert: cert)
                     }
-                    Button(role: .destructive) {
-                        certToDelete = cert
-                    } label: {
-                        Label { Text(L10n.delete) } icon: { HIcon(AppIcon.delete) }
+                    .buttonStyle(.dsPressed)
+                    .contextMenu {
+                        Button {
+                            let endpoint = cert.canDownloadP12
+                                ? "/certificates/\(cert.id)/download"
+                                : "/certificates/\(cert.id)/download-cer"
+                            Task { await downloadService.download(endpoint: endpoint) }
+                        } label: {
+                            Label { Text(L10n.download) } icon: { HIcon(AppIcon.download) }
+                        }
+                        Button(role: .destructive) {
+                            certToDelete = cert
+                        } label: {
+                            Label { Text(L10n.delete) } icon: { HIcon(AppIcon.delete) }
+                        }
                     }
-                }
 
-                if index < filteredCerts.count - 1 {
-                    Divider().padding(.leading, 68)
+                    if cert.id != filteredCerts.last?.id {
+                        DSDivider(leadingPadding: 68)
+                    }
                 }
             }
+            .padding(.vertical, DS.spacingXS)
         }
-        .padding(.vertical, 4)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
     }
 }
 
@@ -229,72 +242,23 @@ private struct CertRow: View {
     let cert: Certificate
 
     var body: some View {
-        HStack(spacing: 14) {
-            HIcon(AppIcon.certificate)
-                .font(.body)
-                .foregroundStyle(cert.isExpired ? Color.dsAccentPink : Color.dsAccentPurple)
-                .frame(width: 40, height: 40)
-                .background(
-                    (cert.isExpired ? Color.dsAccentPink : Color.dsAccentPurple).opacity(0.12),
-                    in: RoundedRectangle(cornerRadius: 10)
-                )
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(cert.displayName)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.dsText)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text(Localized.certType(cert.type ?? ""))
-                        .font(.caption)
-                        .foregroundStyle(Color.dsMuted)
-                    if cert.canDownloadP12 {
-                        StatusBadge("P12", color: .dsAccentBlue)
-                    } else {
-                        StatusBadge("CER", color: .dsAccentOrange)
+        DSRow(
+            icon: AppIcon.certificate,
+            iconColor: cert.isExpired ? Color.dsPink : Color.dsPurple,
+            title: cert.displayName,
+            subtitle: Localized.certType(cert.type ?? ""),
+            trailing: AnyView(
+                HStack(spacing: DS.spacingSM) {
+                    DSBadge(
+                        text: cert.canDownloadP12 ? "P12" : "CER",
+                        color: cert.canDownloadP12 ? .dsBlue : .dsOrange
+                    )
+                    if cert.isExpired {
+                        DSBadge(text: Localized.status("EXPIRED"), color: .dsPink)
                     }
                 }
-            }
-
-            Spacer()
-
-            if cert.isExpired {
-                StatusBadge(Localized.status("EXPIRED"), color: .dsAccentPink)
-            }
-
-            HIcon(AppIcon.chevronRight)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.dsMuted.opacity(0.4))
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .contentShape(Rectangle())
-    }
-}
-
-// MARK: - Filter Chip
-
-private struct FilterChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .foregroundStyle(isSelected ? .white : Color.dsMuted)
-                .background(
-                    isSelected ? AnyShapeStyle(Color.dsAccentBlue) : AnyShapeStyle(Color.dsSurface),
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? Color.clear : Color.dsBorder, lineWidth: 1)
-                )
-        }
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
+            ),
+            showChevron: true
+        )
     }
 }

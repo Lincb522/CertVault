@@ -7,66 +7,71 @@ struct LoginView: View {
     @State private var password = ""
     @State private var animateIn = false
     @State private var showRegister = false
+    @State private var logoFloat = false
 
     var body: some View {
-        GeometryReader { geo in
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Spacer(minLength: geo.size.height * 0.10)
-                    appHeader
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : -20)
+        NavigationStack {
+            GeometryReader { geo in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: geo.size.height * 0.12)
 
-                    Spacer(minLength: 32)
+                        appHeader
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : -16)
 
-                    loginCard
-                        .opacity(animateIn ? 1 : 0)
-                        .offset(y: animateIn ? 0 : 20)
+                        Spacer(minLength: DS.spacing3XL)
 
-                    Spacer(minLength: geo.size.height * 0.08)
+                        loginCard
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 16)
+
+                        Spacer(minLength: geo.size.height * 0.10)
+                    }
+                    .frame(minHeight: geo.size.height)
+                    .frame(maxWidth: 400)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, DS.spacing2XL)
                 }
-                .frame(minHeight: geo.size.height)
-                .frame(maxWidth: 420)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 24)
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .background { AppBackground() }
+            .navigationBarHidden(true)
         }
-        .background { AppBackground() }
         .onAppear {
-            AppLogger.ui.info("🖼️ LoginView appeared")
             if let saved = UserDefaults.standard.string(forKey: AppConstants.usernameKey) {
                 username = saved
             }
-            withAnimation(.easeOut(duration: 0.6).delay(0.1)) {
+            withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
                 animateIn = true
             }
         }
         .fullScreenCover(isPresented: $showRegister) {
-            RegisterView()
-                .environmentObject(authVM)
+            RegisterView().environmentObject(authVM)
         }
     }
 
     // MARK: - Header
 
     private var appHeader: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DS.spacingLG) {
             Image("AppLogo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 80, height: 80)
+                .frame(width: 72, height: 72)
                 .clipShape(RoundedRectangle(cornerRadius: 18))
-                .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+                .shadow(color: .black.opacity(0.1), radius: 12, y: 4)
+                .offset(y: logoFloat ? -4 : 4)
+                .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoFloat)
+                .onAppear { logoFloat = true }
 
-            VStack(spacing: 6) {
+            VStack(spacing: DS.spacingSM) {
                 Text("CertVault")
                     .font(.title.bold())
                     .foregroundStyle(Color.dsText)
-
                 Text(L10n.Login.subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted)
+                    .foregroundStyle(Color.dsTextSecondary)
             }
         }
     }
@@ -74,21 +79,15 @@ struct LoginView: View {
     // MARK: - Login Card
 
     private var loginCard: some View {
-        VStack(spacing: 18) {
-            VStack(spacing: 12) {
-                inputField(icon: AppIcon.user, placeholder: L10n.Login.username) {
-                    TextField("", text: $username, prompt: Text(L10n.Login.username).foregroundColor(.dsMuted.opacity(0.6)))
-                        .textContentType(.username)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .foregroundStyle(Color.dsText)
-                }
+        VStack(spacing: DS.spacingXL) {
+            VStack(spacing: DS.spacingMD) {
+                DSInputField(icon: AppIcon.user, placeholder: L10n.Login.username, text: $username)
+                    .textContentType(.username)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
 
-                inputField(icon: AppIcon.lock, placeholder: L10n.Login.password) {
-                    SecureField("", text: $password, prompt: Text(L10n.Login.password).foregroundColor(.dsMuted.opacity(0.6)))
-                        .textContentType(.password)
-                        .foregroundStyle(Color.dsText)
-                }
+                DSInputField(icon: AppIcon.lock, placeholder: L10n.Login.password, text: $password, isSecure: true)
+                    .textContentType(.password)
             }
 
             if let error = authVM.errorMessage {
@@ -96,81 +95,65 @@ struct LoginView: View {
                     HIcon(AppIcon.warning).font(.caption)
                     Text(error).font(.caption)
                 }
-                .foregroundStyle(Color.dsAccentPink)
+                .foregroundStyle(Color.dsDanger)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
             }
 
-            loginButton
+            DSPrimaryButton(
+                title: L10n.Login.submit,
+                isLoading: authVM.isLoading,
+                isDisabled: username.isEmpty || password.isEmpty
+            ) {
+                Task { await authVM.login(username: username, password: password) }
+            }
 
-            registerLink
-        }
-        .padding(24)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
-    }
-
-    private func inputField<Content: View>(icon: UIImage, placeholder: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(spacing: 12) {
-            HIcon(icon)
-                .foregroundStyle(Color.dsMuted)
-                .frame(width: 20)
-            content()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color.dsSurfaceLight.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
-    }
-
-    // MARK: - Login Button
-
-    private var loginButton: some View {
-        Button {
-            Task { await authVM.login(username: username, password: password) }
-        } label: {
-            HStack(spacing: 8) {
-                if authVM.isLoading {
-                    ProgressView().tint(.white)
-                } else {
-                    Text(L10n.Login.submit)
-                        .font(.body.weight(.semibold))
+            HStack(spacing: 4) {
+                Text(L10n.Login.noAccount)
+                    .font(.footnote)
+                    .foregroundStyle(Color.dsTextSecondary)
+                Button {
+                    authVM.errorMessage = nil
+                    showRegister = true
+                } label: {
+                    Text(L10n.Login.goRegister)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Color.dsBrand)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .foregroundStyle(.white)
-            .background(
-                LinearGradient(colors: [.dsAccentBlue, .dsAccentPurple],
-                               startPoint: .leading, endPoint: .trailing),
-                in: RoundedRectangle(cornerRadius: 12)
-            )
+
+            agreementLinks
         }
-        .disabled(username.isEmpty || password.isEmpty || authVM.isLoading)
-        .opacity(username.isEmpty || password.isEmpty ? 0.5 : 1)
+        .padding(DS.spacing2XL)
+        .cardStyle()
     }
 
-    // MARK: - Register Link
+    @State private var showTerms = false
+    @State private var showPrivacy = false
 
-    private var registerLink: some View {
+    private var agreementLinks: some View {
         HStack(spacing: 4) {
-            Text(L10n.Login.noAccount)
-                .font(.footnote)
-                .foregroundStyle(Color.dsMuted)
-            Button {
-                authVM.errorMessage = nil
-                showRegister = true
-            } label: {
-                Text(L10n.Login.goRegister)
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Color.dsAccentBlue)
+            Text("登录即表示同意")
+                .font(.caption2)
+                .foregroundStyle(Color.dsTextTertiary)
+            Button { showTerms = true } label: {
+                Text("用户协议")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.dsBrand)
             }
+            Text("与")
+                .font(.caption2)
+                .foregroundStyle(Color.dsTextTertiary)
+            Button { showPrivacy = true } label: {
+                Text("隐私政策")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.dsBrand)
+            }
+        }
+        .sheet(isPresented: $showTerms) {
+            NavigationStack { TermsOfServiceView() }
+        }
+        .sheet(isPresented: $showPrivacy) {
+            NavigationStack { PrivacyPolicyView() }
         }
     }
 }

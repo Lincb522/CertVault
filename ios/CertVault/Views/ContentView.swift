@@ -15,16 +15,7 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: authVM.isLoggedIn)
         .task {
-            AppLogger.ui.info("🖼️ ContentView task — checking auth")
             await authVM.checkAuth()
-        }
-        .onChange(of: authVM.isLoggedIn) { newValue in
-            AppLogger.ui.info("🖼️ isLoggedIn changed → \(newValue)")
-        }
-        .onChange(of: selectedTab) { newValue in
-            let tabNames = [L10n.Tab.dashboard, L10n.Tab.accounts, L10n.Tab.devices, L10n.Tab.certificates, L10n.Tab.more]
-            let name = newValue < tabNames.count ? tabNames[newValue] : "?\(newValue)"
-            AppLogger.ui.info("🖼️ Tab switched → \(name)")
         }
     }
 }
@@ -34,7 +25,7 @@ struct MainTabView: View {
 
     var body: some View {
         tabContent
-            .tint(Color.dsAccentBlue)
+            .tint(Color.dsBrand)
     }
 
     @ViewBuilder
@@ -93,102 +84,83 @@ struct MainTabView: View {
 // MARK: - More View
 
 struct MoreView: View {
+    @State private var animateIn = false
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: DS.spacingXL) {
                 moreSection(L10n.More.sectionResources, items: [
-                    MoreItem(icon: AppIcon.profile, title: NSLocalizedString("more.profiles", comment: ""), subtitle: NSLocalizedString("more.profiles.sub", comment: ""), color: .dsAccentOrange) {
+                    MoreItem(icon: AppIcon.profile, title: NSLocalizedString("more.profiles", comment: ""), subtitle: NSLocalizedString("more.profiles.sub", comment: ""), color: .dsOrange) {
                         AnyView(ProfileListView())
                     },
-                    MoreItem(icon: AppIcon.bundleID, title: NSLocalizedString("more.bundleId", comment: ""), subtitle: NSLocalizedString("more.bundleId.sub", comment: ""), color: .dsAccentCyan) {
+                    MoreItem(icon: AppIcon.bundleID, title: NSLocalizedString("more.bundleId", comment: ""), subtitle: NSLocalizedString("more.bundleId.sub", comment: ""), color: .dsCyan) {
                         AnyView(BundleIDListView())
                     },
-                    MoreItem(icon: AppIcon.capability, title: NSLocalizedString("more.capabilities", comment: ""), subtitle: NSLocalizedString("more.capabilities.sub", comment: ""), color: .dsAccentPurple) {
+                    MoreItem(icon: AppIcon.capability, title: NSLocalizedString("more.capabilities", comment: ""), subtitle: NSLocalizedString("more.capabilities.sub", comment: ""), color: .dsPurple) {
                         AnyView(CapabilityView())
                     },
                 ])
 
                 moreSection(L10n.More.sectionPush, items: [
-                    MoreItem(icon: AppIcon.pushKey, title: NSLocalizedString("more.pushKeys", comment: ""), subtitle: NSLocalizedString("more.pushKeys.sub", comment: ""), color: .dsAccentPink) {
+                    MoreItem(icon: AppIcon.pushKey, title: NSLocalizedString("more.pushKeys", comment: ""), subtitle: NSLocalizedString("more.pushKeys.sub", comment: ""), color: .dsPink) {
                         AnyView(PushKeyListView())
                     },
-                    MoreItem(icon: AppIcon.pushTest, title: NSLocalizedString("more.pushTest", comment: ""), subtitle: NSLocalizedString("more.pushTest.sub", comment: ""), color: .dsAccentBlue) {
+                    MoreItem(icon: AppIcon.pushTest, title: NSLocalizedString("more.pushTest", comment: ""), subtitle: NSLocalizedString("more.pushTest.sub", comment: ""), color: .dsBlue) {
                         AnyView(PushTestView())
                     },
-                    MoreItem(icon: AppIcon.info, title: NSLocalizedString("more.pushGuide", comment: ""), subtitle: NSLocalizedString("more.pushGuide.sub", comment: ""), color: .dsAccentCyan) {
+                    MoreItem(icon: AppIcon.info, title: NSLocalizedString("more.pushGuide", comment: ""), subtitle: NSLocalizedString("more.pushGuide.sub", comment: ""), color: .dsCyan) {
                         AnyView(PushGuideView())
                     },
                 ])
 
                 moreSection(L10n.More.sectionTools, items: [
-                    MoreItem(icon: AppIcon.udid, title: NSLocalizedString("more.udid", comment: ""), subtitle: NSLocalizedString("more.udid.sub", comment: ""), color: .dsAccent) {
+                    MoreItem(icon: AppIcon.udid, title: NSLocalizedString("more.udid", comment: ""), subtitle: NSLocalizedString("more.udid.sub", comment: ""), color: .dsBlue) {
                         AnyView(GetUDIDView())
                     },
-                    MoreItem(icon: AppIcon.health, title: NSLocalizedString("more.healthCheck", comment: ""), subtitle: NSLocalizedString("more.healthCheck.sub", comment: ""), color: .dsAccentOrange) {
+                    MoreItem(icon: AppIcon.health, title: NSLocalizedString("more.healthCheck", comment: ""), subtitle: NSLocalizedString("more.healthCheck.sub", comment: ""), color: .dsOrange) {
                         AnyView(HealthCheckView())
                     },
                 ])
 
                 moreSection("", items: [
-                    MoreItem(icon: AppIcon.settings, title: NSLocalizedString("more.settings", comment: ""), subtitle: NSLocalizedString("more.settings.sub", comment: ""), color: .dsMuted) {
+                    MoreItem(icon: AppIcon.settings, title: NSLocalizedString("more.settings", comment: ""), subtitle: NSLocalizedString("more.settings.sub", comment: ""), color: .dsTextSecondary) {
                         AnyView(SettingsView())
                     },
                 ])
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20)
+            .padding(.horizontal, DS.spacingLG)
+            .padding(.bottom, DS.spacingXL)
+            .opacity(animateIn ? 1 : 0)
+            .offset(y: animateIn ? 0 : 10)
         }
         .pageBackground()
         .navigationTitle(L10n.More.title)
+        .onAppear {
+            guard !animateIn else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                animateIn = true
+            }
+        }
     }
 
     private func moreSection(_ title: String, items: [MoreItem]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
             if !title.isEmpty {
-                sectionHeader(title)
+                DSSectionHeader(title)
             }
 
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.title) { index, item in
+            DSGroupedCard {
+                ForEach(Swift.Array(items.enumerated()), id: \.element.title) { (index: Int, item: MoreItem) in
                     NavigationLink { item.destination() } label: {
-                        HStack(spacing: 14) {
-                            HIcon(item.icon)
-                                .font(.body)
-                                .foregroundStyle(item.color)
-                                .frame(width: 36, height: 36)
-                                .background(item.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(Color.dsText)
-                                Text(item.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(Color.dsMuted)
-                            }
-
-                            Spacer()
-
-                            HIcon(AppIcon.chevronRight)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted.opacity(0.4))
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                        .contentShape(Rectangle())
+                        DSRow(icon: item.icon, iconColor: item.color, title: item.title, subtitle: item.subtitle)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.dsPressed)
 
                     if index < items.count - 1 {
-                        Divider().padding(.leading, 66)
+                        DSDivider()
                     }
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
         }
     }
 }

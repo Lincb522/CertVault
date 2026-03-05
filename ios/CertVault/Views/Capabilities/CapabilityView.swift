@@ -6,16 +6,19 @@ struct CapabilityView: View {
     @State private var showDisableAllConfirm = false
 
     var body: some View {
-        List {
-            pickerSection
+        ScrollView {
+            VStack(spacing: DS.spacing2XL) {
+                pickerSection
 
-            if !vm.selectedBundleId.isEmpty {
-                enabledCountSection
-                presetsSection
-                capabilitiesSection
+                if !vm.selectedBundleId.isEmpty {
+                    enabledCountSection
+                    presetsSection
+                    capabilitiesSection
+                }
             }
+            .padding(DS.spacingLG)
         }
-        .listStyle(.insetGrouped)
+        .pageBackground()
         .navigationTitle(L10n.Capability.title)
         .overlay {
             if vm.isLoading {
@@ -45,113 +48,160 @@ struct CapabilityView: View {
     }
 
     private var pickerSection: some View {
-        Section {
+        DSGroupedCard {
             if vm.accounts.count > 1 {
-                Picker(L10n.account, selection: $vm.selectedAccountId) {
-                    ForEach(vm.accounts) { acc in
-                        Text(acc.displayName).tag(acc.id)
+                HStack {
+                    Text(L10n.account)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.dsTextSecondary)
+                    Spacer()
+                    Picker("", selection: $vm.selectedAccountId) {
+                        ForEach(vm.accounts) { acc in
+                            Text(acc.displayName).tag(acc.id)
+                        }
                     }
+                    .onChange(of: vm.selectedAccountId) { _ in
+                        Task { await vm.loadBundleIds() }
+                    }
+                    .tint(Color.dsBrand)
                 }
-                .onChange(of: vm.selectedAccountId) { _ in
-                    Task { await vm.loadBundleIds() }
-                }
+                .padding(.vertical, DS.spacingMD)
+                .padding(.horizontal, DS.spacingLG)
+
+                DSDivider(leadingPadding: DS.spacingLG)
             }
 
-            Picker(L10n.Profile.bundleId, selection: $vm.selectedBundleId) {
-                Text(L10n.select).tag("")
-                ForEach(vm.bundleIds) { bid in
-                    Text(bid.identifier ?? bid.displayName).tag(bid.id)
+            HStack {
+                Text(L10n.Profile.bundleId)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.dsTextSecondary)
+                Spacer()
+                Picker("", selection: $vm.selectedBundleId) {
+                    Text(L10n.select).tag("")
+                    ForEach(vm.bundleIds) { bid in
+                        Text(bid.identifier ?? bid.displayName).tag(bid.id)
+                    }
                 }
+                .onChange(of: vm.selectedBundleId) { _ in
+                    Task { await vm.loadEnabled() }
+                }
+                .tint(Color.dsBrand)
             }
-            .onChange(of: vm.selectedBundleId) { _ in
-                Task { await vm.loadEnabled() }
-            }
+            .padding(.vertical, DS.spacingMD)
+            .padding(.horizontal, DS.spacingLG)
         }
     }
 
     private var enabledCountSection: some View {
-        Section {
+        DSGroupedCard {
             HStack {
                 Text(L10n.Capability.enabled)
                     .font(.subheadline)
+                    .foregroundStyle(Color.dsText)
                 Spacer()
                 let count = vm.enabledCapabilities.filter(\.isEnabled).count
                 let total = vm.availableCapabilities.count
                 Text("\(count) / \(total)")
                     .font(.subheadline.monospacedDigit().weight(.medium))
-                    .foregroundStyle(count > 0 ? Color.dsAccent : Color.dsMuted)
+                    .foregroundStyle(count > 0 ? Color.dsSuccess : Color.dsTextSecondary)
             }
+            .padding(.vertical, DS.spacingMD)
+            .padding(.horizontal, DS.spacingLG)
         }
     }
 
     private var presetsSection: some View {
-        Section(NSLocalizedString("capability.presets", comment: "")) {
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(NSLocalizedString("capability.presets", comment: ""))
+
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: DS.spacingMD) {
                     ForEach(Array(vm.presets.keys.sorted()), id: \.self) { name in
                         Button {
                             if let types = vm.presets[name] {
                                 Task { await vm.applyPreset(types) }
                             }
                         } label: {
-                            VStack(spacing: 4) {
+                            VStack(spacing: DS.spacingXS) {
                                 HIcon(iconForPreset(name))
                                     .font(.title3)
                                 Text(labelForPreset(name))
                                     .font(.caption2)
                             }
+                            .foregroundStyle(Color.dsText)
                             .frame(width: 70, height: 60)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                            .background(Color.dsSurfaceElevated, in: RoundedRectangle(cornerRadius: DS.radiusMD))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DS.radiusMD)
+                                    .stroke(Color.dsBorder, lineWidth: 1)
+                            )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.dsPressed)
                     }
 
                     Button {
                         showDisableAllConfirm = true
                     } label: {
-                        VStack(spacing: 4) {
+                        VStack(spacing: DS.spacingXS) {
                             HIcon(AppIcon.close)
                                 .font(.title3)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Color.dsDanger)
                             Text(L10n.Capability.disableAll)
                                 .font(.caption2)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Color.dsDanger)
                         }
                         .frame(width: 70, height: 60)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .background(Color.dsSurfaceElevated, in: RoundedRectangle(cornerRadius: DS.radiusMD))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DS.radiusMD)
+                                .stroke(Color.dsBorder, lineWidth: 1)
+                        )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.dsPressed)
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, DS.spacingXS)
             }
-            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         }
     }
 
     private var capabilitiesSection: some View {
         ForEach(groupedCategories, id: \.0) { category, capabilities in
-            Section(category) {
-                ForEach(capabilities) { cap in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(cap.name)
-                                .font(.subheadline)
-                            if let desc = cap.description, !desc.isEmpty {
-                                Text(desc)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
+            VStack(alignment: .leading, spacing: DS.spacingMD) {
+                DSSectionHeader(category)
+
+                DSGroupedCard {
+                    ForEach(Array(capabilities.enumerated()), id: \.element.id) { idx, cap in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(cap.name)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.dsText)
+                                if let desc = cap.description, !desc.isEmpty {
+                                    Text(desc)
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.dsTextSecondary)
+                                        .lineLimit(2)
+                                }
+                            }
+                            Spacer()
+                            if vm.togglingTypes.contains(cap.type) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(Color.dsBrand)
+                            } else {
+                                Toggle("", isOn: .init(
+                                    get: { vm.isEnabled(cap.type) },
+                                    set: { _ in Task { await vm.toggle(cap.type) } }
+                                ))
+                                .labelsHidden()
+                                .tint(Color.dsBrand)
                             }
                         }
-                        Spacer()
-                        if vm.togglingTypes.contains(cap.type) {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Toggle("", isOn: .init(
-                                get: { vm.isEnabled(cap.type) },
-                                set: { _ in Task { await vm.toggle(cap.type) } }
-                            ))
-                            .labelsHidden()
+                        .padding(.vertical, DS.spacingMD)
+                        .padding(.horizontal, DS.spacingLG)
+
+                        if idx < capabilities.count - 1 {
+                            DSDivider(leadingPadding: DS.spacingLG)
                         }
                     }
                 }

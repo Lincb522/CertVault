@@ -7,38 +7,38 @@ struct HealthCheckView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: DS.spacingLG) {
                 modeSelector
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, DS.spacingLG)
 
                 if checkMode == 1 {
                     accountSelector
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DS.spacingLG)
                 }
 
                 startButton
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, DS.spacingLG)
 
                 if let result = currentResult {
                     summarySection(result)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DS.spacingLG)
                     issuesSection(result)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DS.spacingLG)
                     certsSection(result)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DS.spacingLG)
                     profilesSection(result)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DS.spacingLG)
                 }
 
                 if let err = vm.errorMessage {
                     Text(err)
                         .font(.caption)
-                        .foregroundStyle(Color.dsAccentPink)
-                        .padding(.horizontal, 16)
+                        .foregroundStyle(Color.dsDanger)
+                        .padding(.horizontal, DS.spacingLG)
                 }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 20)
+            .padding(.top, DS.spacingSM)
+            .padding(.bottom, DS.spacingXL)
         }
         .pageBackground()
         .navigationTitle(L10n.HealthCheck.title)
@@ -64,41 +64,40 @@ struct HealthCheckView: View {
     }
 
     private var accountSelector: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        Group {
             if vm.accounts.isEmpty {
-                HStack {
+                HStack(spacing: DS.spacingMD) {
                     HIcon(AppIcon.warning)
-                        .foregroundStyle(Color.dsAccentOrange)
+                        .font(.callout)
+                        .foregroundStyle(Color.dsWarning)
                     Text(L10n.HealthCheck.addAccount)
                         .font(.subheadline)
-                        .foregroundStyle(Color.dsMuted)
+                        .foregroundStyle(Color.dsTextSecondary)
                 }
-                .padding(14)
+                .padding(DS.spacingLG)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
+                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: DS.radiusLG))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: DS.radiusLG)
                         .stroke(Color.dsBorder, lineWidth: 1)
                 )
             } else {
-                HStack {
-                    Text(L10n.account)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.dsMuted)
-                    Spacer()
-                    Picker("", selection: $vm.selectedAccountId) {
-                        ForEach(vm.accounts) { acc in
-                            Text(acc.displayName).tag(acc.id)
+                DSGroupedCard {
+                    HStack {
+                        Text(L10n.account)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.dsTextSecondary)
+                        Spacer()
+                        Picker("", selection: $vm.selectedAccountId) {
+                            ForEach(vm.accounts) { acc in
+                                Text(acc.displayName).tag(acc.id)
+                            }
                         }
+                        .tint(Color.dsBrand)
                     }
-                    .tint(Color.dsAccentBlue)
+                    .padding(.vertical, DS.spacingMD)
+                    .padding(.horizontal, DS.spacingLG)
                 }
-                .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
             }
         }
     }
@@ -106,49 +105,31 @@ struct HealthCheckView: View {
     // MARK: - Start
 
     private var startButton: some View {
-        Button {
-            Task {
-                if checkMode == 0 {
-                    await vm.runLocalCheck()
-                } else {
-                    await vm.runRemoteCheck()
-                }
+        DSPrimaryButton(
+            title: L10n.HealthCheck.startCheck,
+            isLoading: isLoading,
+            isDisabled: isLoading || (checkMode == 1 && vm.selectedAccountId.isEmpty)
+        ) {
+            if checkMode == 0 {
+                Task { await vm.runLocalCheck() }
+            } else {
+                Task { await vm.runRemoteCheck() }
             }
-        } label: {
-            HStack(spacing: 8) {
-                if isLoading {
-                    ProgressView().tint(.white)
-                } else {
-                    HIcon(AppIcon.health).font(.body)
-                }
-                Text(L10n.HealthCheck.startCheck)
-                    .fontWeight(.semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 13)
-            .foregroundStyle(.white)
-            .background(
-                (isLoading || (checkMode == 1 && vm.selectedAccountId.isEmpty))
-                    ? Color.dsSurfaceLight
-                    : Color.dsAccentBlue,
-                in: RoundedRectangle(cornerRadius: 12)
-            )
         }
-        .disabled(isLoading || (checkMode == 1 && vm.selectedAccountId.isEmpty))
     }
 
     // MARK: - Summary
 
     private func summarySection(_ result: HealthCheckResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(L10n.HealthCheck.summary)
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.HealthCheck.summary)
 
             if let summary = result.summary {
-                LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: 10), count: 4), spacing: 10) {
-                    SummaryBadge(label: NSLocalizedString("health.critical", comment: ""), count: summary.critical ?? 0, color: .dsAccentPink)
-                    SummaryBadge(label: NSLocalizedString("health.warning", comment: ""), count: summary.warning ?? 0, color: .dsAccentOrange)
-                    SummaryBadge(label: NSLocalizedString("health.info", comment: ""), count: summary.info ?? 0, color: .dsAccentBlue)
-                    SummaryBadge(label: NSLocalizedString("health.ok", comment: ""), count: summary.ok ?? 0, color: .dsAccent)
+                LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: DS.spacingMD), count: 4), spacing: DS.spacingMD) {
+                    SummaryBadge(label: NSLocalizedString("health.critical", comment: ""), count: summary.critical ?? 0, color: .dsDanger)
+                    SummaryBadge(label: NSLocalizedString("health.warning", comment: ""), count: summary.warning ?? 0, color: .dsWarning)
+                    SummaryBadge(label: NSLocalizedString("health.info", comment: ""), count: summary.info ?? 0, color: .dsBlue)
+                    SummaryBadge(label: NSLocalizedString("health.ok", comment: ""), count: summary.ok ?? 0, color: .dsSuccess)
                 }
             }
         }
@@ -159,15 +140,17 @@ struct HealthCheckView: View {
     private func issuesSection(_ result: HealthCheckResult) -> some View {
         Group {
             if let issues = result.issues, !issues.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader(L10n.HealthCheck.issues)
+                VStack(alignment: .leading, spacing: DS.spacingMD) {
+                    DSSectionHeader(L10n.HealthCheck.issues)
 
-                    VStack(spacing: 0) {
+                    DSGroupedCard {
                         ForEach(Array(issues.enumerated()), id: \.element.id) { index, issue in
-                            HStack(alignment: .top, spacing: 12) {
+                            HStack(alignment: .top, spacing: DS.spacingMD) {
                                 HIcon(iconForLevel(issue.level ?? "info"))
+                                    .font(.callout)
                                     .foregroundStyle(colorForLevel(issue.level ?? "info"))
-                                    .frame(width: 20)
+                                    .frame(width: DS.iconMD)
+
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(issue.message ?? "")
                                         .font(.subheadline)
@@ -175,24 +158,19 @@ struct HealthCheckView: View {
                                     if let detail = issue.detail {
                                         Text(detail)
                                             .font(.caption)
-                                            .foregroundStyle(Color.dsMuted)
+                                            .foregroundStyle(Color.dsTextSecondary)
                                     }
                                 }
                                 Spacer()
                             }
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 14)
+                            .padding(.vertical, DS.spacingMD)
+                            .padding(.horizontal, DS.spacingLG)
 
                             if index < issues.count - 1 {
-                                Divider().padding(.leading, 46)
+                                DSDivider(leadingPadding: DS.spacingLG + DS.iconMD)
                             }
                         }
                     }
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
                 }
             }
         }
@@ -203,10 +181,10 @@ struct HealthCheckView: View {
     private func certsSection(_ result: HealthCheckResult) -> some View {
         Group {
             if let certs = result.certificates, !certs.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader(L10n.HealthCheck.certStatus)
+                VStack(alignment: .leading, spacing: DS.spacingMD) {
+                    DSSectionHeader(L10n.HealthCheck.certStatus)
 
-                    VStack(spacing: 0) {
+                    DSGroupedCard {
                         ForEach(Array(certs.enumerated()), id: \.element.id) { index, cert in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -215,29 +193,24 @@ struct HealthCheckView: View {
                                         .foregroundStyle(Color.dsText)
                                     Text(Localized.certType(cert.type ?? ""))
                                         .font(.caption)
-                                        .foregroundStyle(Color.dsMuted)
+                                        .foregroundStyle(Color.dsTextSecondary)
                                 }
                                 Spacer()
                                 if let expires = cert.expires_at {
                                     Text(String(expires.prefix(10)))
-                                        .font(.caption2.monospaced())
-                                        .foregroundStyle(Color.dsMuted.opacity(0.6))
+                                        .font(.dsMonoSmall)
+                                        .foregroundStyle(Color.dsTextTertiary)
                                 }
                                 certStatusBadge(cert)
                             }
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 14)
+                            .padding(.vertical, DS.spacingMD)
+                            .padding(.horizontal, DS.spacingLG)
 
                             if index < certs.count - 1 {
-                                Divider().padding(.leading, 14)
+                                DSDivider(leadingPadding: DS.spacingLG)
                             }
                         }
                     }
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
                 }
             }
         }
@@ -247,13 +220,22 @@ struct HealthCheckView: View {
         let text = cert.label ?? cert.status ?? L10n.unknown
         let color: Color = {
             if let days = cert.days_left {
-                if days < 0 { return .dsAccentPink }
-                if days <= 30 { return .dsAccentOrange }
-                return .dsAccent
+                if days < 0 { return .dsDanger }
+                if days <= 30 { return .dsWarning }
+                return .dsSuccess
             }
-            return StatusBadge.forStatus(cert.status ?? "UNKNOWN").color
+            return colorForCertStatus(cert.status ?? "UNKNOWN")
         }()
-        return StatusBadge(text, color: color)
+        return DSBadge(text: text, color: color)
+    }
+
+    private func colorForCertStatus(_ status: String) -> Color {
+        switch status.uppercased() {
+        case "ACTIVE", "VALID", "ENABLED", "ONLINE": return .dsSuccess
+        case "EXPIRED", "REVOKED", "INVALID", "DISABLED", "OFFLINE": return .dsDanger
+        case "PENDING", "PROCESSING": return .dsWarning
+        default: return .dsTextSecondary
+        }
     }
 
     // MARK: - Profiles
@@ -261,10 +243,10 @@ struct HealthCheckView: View {
     private func profilesSection(_ result: HealthCheckResult) -> some View {
         Group {
             if let profiles = result.profiles, !profiles.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    sectionHeader(L10n.HealthCheck.profileStatus)
+                VStack(alignment: .leading, spacing: DS.spacingMD) {
+                    DSSectionHeader(L10n.HealthCheck.profileStatus)
 
-                    VStack(spacing: 0) {
+                    DSGroupedCard {
                         ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -273,24 +255,19 @@ struct HealthCheckView: View {
                                         .foregroundStyle(Color.dsText)
                                     Text(Localized.profileType(profile.type ?? ""))
                                         .font(.caption)
-                                        .foregroundStyle(Color.dsMuted)
+                                        .foregroundStyle(Color.dsTextSecondary)
                                 }
                                 Spacer()
                                 profileStatusBadge(profile)
                             }
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 14)
+                            .padding(.vertical, DS.spacingMD)
+                            .padding(.horizontal, DS.spacingLG)
 
                             if index < profiles.count - 1 {
-                                Divider().padding(.leading, 14)
+                                DSDivider(leadingPadding: DS.spacingLG)
                             }
                         }
                     }
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
                 }
             }
         }
@@ -300,13 +277,13 @@ struct HealthCheckView: View {
         let text = profile.label ?? profile.state ?? profile.status ?? L10n.unknown
         let color: Color = {
             if let days = profile.days_left {
-                if days < 0 { return .dsAccentPink }
-                if days <= 30 { return .dsAccentOrange }
-                return .dsAccent
+                if days < 0 { return .dsDanger }
+                if days <= 30 { return .dsWarning }
+                return .dsSuccess
             }
-            return StatusBadge.forStatus(profile.status ?? "UNKNOWN").color
+            return colorForCertStatus(profile.status ?? "UNKNOWN")
         }()
-        return StatusBadge(text, color: color)
+        return DSBadge(text: text, color: color)
     }
 
     // MARK: - Helpers
@@ -322,10 +299,10 @@ struct HealthCheckView: View {
 
     private func colorForLevel(_ level: String) -> Color {
         switch level.lowercased() {
-        case "critical": return .dsAccentPink
-        case "warning": return .dsAccentOrange
-        case "info": return .dsAccentBlue
-        default: return .dsAccent
+        case "critical": return .dsDanger
+        case "warning": return .dsWarning
+        case "info": return .dsBlue
+        default: return .dsSuccess
         }
     }
 }
@@ -338,22 +315,22 @@ private struct SummaryBadge: View {
     let color: Color
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: DS.spacingXS) {
             Text("\(count)")
                 .font(.title2.bold())
-                .foregroundStyle(count > 0 ? color : Color.dsMuted)
+                .foregroundStyle(count > 0 ? color : Color.dsTextSecondary)
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+        .padding(.vertical, DS.spacingMD)
         .background(
             (count > 0 ? color.opacity(0.1) : Color.dsSurface),
-            in: RoundedRectangle(cornerRadius: 10)
+            in: RoundedRectangle(cornerRadius: DS.radiusMD)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: DS.radiusMD)
                 .stroke(count > 0 ? color.opacity(0.2) : Color.dsBorder, lineWidth: 1)
         )
     }

@@ -10,13 +10,13 @@ struct ProfileListView: View {
     var body: some View {
         Group {
             if !vm.isLoading && vm.accounts.isEmpty {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.account,
                     title: L10n.Profile.noAccountTitle,
                     message: L10n.Profile.noAccountMessage
                 )
             } else if vm.profiles.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.profile,
                     title: L10n.Profile.emptyTitle,
                     message: L10n.Profile.emptyMessage,
@@ -24,34 +24,14 @@ struct ProfileListView: View {
                 ) { showCreate = true }
             } else {
                 ScrollView {
-                    VStack(spacing: 12) {
+                    VStack(spacing: DS.spacingLG) {
                         if vm.accounts.count > 1 {
-                            HStack {
-                                Text(L10n.account)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.dsMuted)
-                                Spacer()
-                                Picker("", selection: $vm.selectedAccountId) {
-                                    ForEach(vm.accounts) { acc in
-                                        Text(acc.displayName).tag(acc.id)
-                                    }
-                                }
-                                .tint(Color.dsAccentBlue)
-                                .onChange(of: vm.selectedAccountId) { _ in
-                                    Task { await vm.loadAll() }
-                                }
-                            }
-                            .padding(14)
-                            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.dsBorder, lineWidth: 1)
-                            )
-                            .padding(.horizontal, 16)
+                            accountPicker
+                                .padding(.horizontal, DS.spacingLG)
                         }
 
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(vm.profiles.enumerated()), id: \.element.id) { index, profile in
+                        DSGroupedCard {
+                            ForEach(vm.profiles) { profile in
                                 NavigationLink {
                                     ProfileDetailView(profileId: profile.id) {
                                         try? await vm.deleteProfile(id: profile.id)
@@ -61,7 +41,7 @@ struct ProfileListView: View {
                                         Task { await downloadService.download(endpoint: "/profiles/\(profile.id)/download") }
                                     }
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.dsPressed)
                                 .contextMenu {
                                     Button {
                                         Task { await downloadService.download(endpoint: "/profiles/\(profile.id)/download") }
@@ -75,21 +55,15 @@ struct ProfileListView: View {
                                     }
                                 }
 
-                                if index < vm.profiles.count - 1 {
-                                    Divider().padding(.leading, 68)
+                                if profile.id != vm.profiles.last?.id {
+                                    DSDivider(leadingPadding: 56)
                                 }
                             }
                         }
-                        .padding(.vertical, 4)
-                        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.dsBorder, lineWidth: 1)
-                        )
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DS.spacingLG)
                     }
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
+                    .padding(.top, DS.spacingSM)
+                    .padding(.bottom, DS.spacingXL)
                 }
                 .pageBackground()
                 .refreshable { await vm.loadAll() }
@@ -101,6 +75,7 @@ struct ProfileListView: View {
                 Button { showCreate = true } label: {
                     HIcon(AppIcon.addCircle)
                 }
+                .buttonStyle(.dsPressed)
             }
         }
         .overlay {
@@ -129,31 +104,65 @@ struct ProfileListView: View {
             Button(L10n.cancel, role: .cancel) {}
         }
     }
+
+    @ViewBuilder
+    private var accountPicker: some View {
+        HStack(spacing: DS.spacingMD) {
+            HIcon(AppIcon.account)
+                .font(.callout)
+                .foregroundStyle(Color.dsBlue)
+                .frame(width: 20)
+
+            Text(L10n.account)
+                .font(.subheadline)
+                .foregroundStyle(Color.dsTextSecondary)
+
+            Spacer()
+
+            Picker("", selection: $vm.selectedAccountId) {
+                ForEach(vm.accounts) { acc in
+                    Text(acc.displayName).tag(acc.id)
+                }
+            }
+            .tint(Color.dsBlue)
+            .onChange(of: vm.selectedAccountId) { _ in
+                Task { await vm.loadAll() }
+            }
+        }
+        .padding(DS.spacingMD)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: DS.radiusLG))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.radiusLG)
+                .stroke(Color.dsBorder, lineWidth: 1)
+        )
+    }
 }
+
+// MARK: - Profile Row
 
 private struct ProfileRow: View {
     let profile: Profile
     let onDownload: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: DS.spacingMD) {
             HIcon(AppIcon.profile)
-                .font(.body)
-                .foregroundStyle(Color.dsAccentOrange)
-                .frame(width: 40, height: 40)
-                .background(Color.dsAccentOrange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                .font(.callout)
+                .foregroundStyle(Color.dsOrange)
+                .frame(width: 32, height: 32)
+                .background(Color.dsOrange.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.radiusSM))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(profile.displayName)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.dsText)
                     .lineLimit(1)
-                HStack(spacing: 6) {
+                HStack(spacing: DS.spacingSM) {
                     Text(Localized.profileType(profile.type ?? ""))
                         .font(.caption)
-                        .foregroundStyle(Color.dsMuted)
+                        .foregroundStyle(Color.dsTextSecondary)
                     if profile.has_file == true {
-                        StatusBadge(L10n.Profile.downloadable, color: .dsAccent)
+                        DSBadge(text: L10n.Profile.downloadable, color: .dsGreen)
                     }
                 }
             }
@@ -163,17 +172,19 @@ private struct ProfileRow: View {
             if profile.has_file == true {
                 Button(action: onDownload) {
                     HIcon(AppIcon.docDownload)
-                        .font(.body)
-                        .foregroundStyle(Color.dsAccentBlue)
+                        .font(.callout)
+                        .foregroundStyle(Color.dsBlue)
                 }
                 .buttonStyle(.borderless)
             }
 
             HIcon(AppIcon.chevronRight)
-                .font(.caption)
-                .foregroundStyle(Color.dsMuted)
+                .font(.caption2)
+                .foregroundStyle(Color.dsTextTertiary)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .padding(.vertical, DS.spacingMD)
+        .padding(.horizontal, DS.spacingLG)
+        .frame(minHeight: DS.minTouchTarget)
+        .contentShape(Rectangle())
     }
 }

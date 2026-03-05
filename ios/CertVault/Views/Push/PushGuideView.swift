@@ -7,14 +7,14 @@ struct PushGuideView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: DS.spacingXL) {
                 Picker("", selection: $selectedTab) {
                     Text(L10n.Push.guideMethods).tag(0)
                     Text(L10n.Push.guideServices).tag(1)
                     Text(L10n.Push.guideErrors).tag(2)
                 }
                 .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, DS.spacingLG)
 
                 switch selectedTab {
                 case 0: methodsSection
@@ -22,8 +22,8 @@ struct PushGuideView: View {
                 default: errorCodesSection
                 }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 32)
+            .padding(.top, DS.spacingSM)
+            .padding(.bottom, DS.spacing3XL)
         }
         .pageBackground()
         .navigationTitle(L10n.Push.guideTitle)
@@ -44,15 +44,15 @@ struct PushGuideView: View {
     private var methodsSection: some View {
         if let methods = vm.pushGuide?.methods {
             ForEach(methods) { method in
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: DS.spacingMD) {
+                    HStack(spacing: DS.spacingMD) {
                         HIcon(method.id == "p8_key" ? AppIcon.pushKey : AppIcon.certificate)
                             .font(.body)
-                            .foregroundStyle(method.id == "p8_key" ? Color.dsAccentBlue : Color.dsAccentOrange)
-                            .frame(width: 36, height: 36)
+                            .foregroundStyle(method.id == "p8_key" ? Color.dsBlue : Color.dsWarning)
+                            .frame(width: DS.iconXL, height: DS.iconXL)
                             .background(
-                                (method.id == "p8_key" ? Color.dsAccentBlue : Color.dsAccentOrange).opacity(0.12),
-                                in: RoundedRectangle(cornerRadius: 8)
+                                (method.id == "p8_key" ? Color.dsBlue : Color.dsWarning).opacity(0.12),
+                                in: RoundedRectangle(cornerRadius: DS.radiusSM)
                             )
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -62,49 +62,49 @@ struct PushGuideView: View {
                             if let desc = method.desc {
                                 Text(desc)
                                     .font(.caption)
-                                    .foregroundStyle(Color.dsMuted)
+                                    .foregroundStyle(Color.dsTextSecondary)
                             }
                         }
                     }
 
                     if let pros = method.pros, !pros.isEmpty {
-                        tagSection(title: L10n.Push.guidePros, items: pros, color: .dsAccent)
+                        tagSection(title: L10n.Push.guidePros, items: pros, color: .dsSuccess)
                     }
 
                     if let cons = method.cons, !cons.isEmpty {
-                        tagSection(title: L10n.Push.guideCons, items: cons, color: .dsAccentPink)
+                        tagSection(title: L10n.Push.guideCons, items: cons, color: .dsDanger)
                     }
 
                     if let steps = method.steps, !steps.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: DS.spacingXS) {
                             Text(L10n.Push.guideSteps)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.dsMuted)
+                                .foregroundStyle(Color.dsTextSecondary)
                             ForEach(Array(steps.enumerated()), id: \.offset) { idx, step in
-                                HStack(alignment: .top, spacing: 8) {
+                                HStack(alignment: .top, spacing: DS.spacingSM) {
                                     Text("\(idx + 1)")
                                         .font(.caption2.weight(.bold).monospaced())
                                         .foregroundStyle(.white)
                                         .frame(width: 20, height: 20)
-                                        .background(Color.dsAccentBlue, in: Circle())
+                                        .background(Color.dsBlue, in: Circle())
                                     Text(step)
                                         .font(.caption)
-                                        .foregroundStyle(Color.dsText.opacity(0.85))
+                                        .foregroundStyle(Color.dsTextSecondary)
                                 }
                             }
                         }
                     }
                 }
-                .padding(16)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
-                .padding(.horizontal, 16)
+                .padding(DS.spacingLG)
+                .cardStyle()
+                .padding(.horizontal, DS.spacingLG)
             }
         } else {
-            emptyPlaceholder(L10n.Push.guideEmptyMethods)
+            DSEmptyState(
+                icon: AppIcon.info,
+                title: L10n.Push.guideEmptyMethods
+            )
+            .padding(.vertical, DS.spacing3XL)
         }
     }
 
@@ -113,23 +113,23 @@ struct PushGuideView: View {
     @ViewBuilder
     private var servicesSection: some View {
         if let services = vm.pushGuide?.common_services, !services.isEmpty {
-            VStack(spacing: 0) {
+            DSGroupedCard {
                 ForEach(Array(services.enumerated()), id: \.element.id) { idx, svc in
-                    HStack(spacing: 12) {
+                    HStack(spacing: DS.spacingMD) {
                         HIcon(AppIcon.link)
                             .font(.caption)
-                            .foregroundStyle(Color.dsAccentCyan)
-                            .frame(width: 32, height: 32)
-                            .background(Color.dsAccentCyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(Color.dsCyan)
+                            .frame(width: DS.iconXL, height: DS.iconXL)
+                            .background(Color.dsCyan.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.radiusSM))
 
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(svc.name ?? "")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Color.dsText)
                             if let config = svc.config {
                                 Text(config)
                                     .font(.caption)
-                                    .foregroundStyle(Color.dsMuted)
+                                    .foregroundStyle(Color.dsTextSecondary)
                             }
                         }
                         Spacer()
@@ -137,26 +137,25 @@ struct PushGuideView: View {
                             Link(destination: u) {
                                 HIcon(AppIcon.link)
                                     .font(.caption2)
-                                    .foregroundStyle(Color.dsAccentBlue)
+                                    .foregroundStyle(Color.dsBrand)
                             }
                         }
                     }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
+                    .padding(.vertical, DS.spacingMD)
+                    .padding(.horizontal, DS.spacingLG)
 
                     if idx < services.count - 1 {
-                        Divider().padding(.leading, 60)
+                        DSDivider(leadingPadding: DS.spacingLG + DS.iconXL + DS.spacingMD)
                     }
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
-            .padding(.horizontal, 16)
+            .padding(.horizontal, DS.spacingLG)
         } else {
-            emptyPlaceholder(L10n.Push.guideEmptyServices)
+            DSEmptyState(
+                icon: AppIcon.link,
+                title: L10n.Push.guideEmptyServices
+            )
+            .padding(.vertical, DS.spacing3XL)
         }
     }
 
@@ -165,61 +164,60 @@ struct PushGuideView: View {
     @ViewBuilder
     private var errorCodesSection: some View {
         if !vm.errorCodes.isEmpty {
-            VStack(spacing: 0) {
+            DSGroupedCard {
                 ForEach(Array(vm.errorCodes.enumerated()), id: \.element.id) { idx, err in
-                    HStack(alignment: .top, spacing: 12) {
+                    HStack(alignment: .top, spacing: DS.spacingMD) {
                         Text("\(err.code ?? 0)")
                             .font(.caption.weight(.bold).monospaced())
                             .foregroundStyle(codeColor(err.code ?? 0))
                             .frame(width: 36)
 
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(err.reason ?? "")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(Color.dsText)
                             if let desc = err.desc {
                                 Text(desc)
                                     .font(.caption2)
-                                    .foregroundStyle(Color.dsMuted)
+                                    .foregroundStyle(Color.dsTextSecondary)
                             }
                         }
                         Spacer()
                     }
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 16)
+                    .padding(.vertical, DS.spacingMD)
+                    .padding(.horizontal, DS.spacingLG)
 
                     if idx < vm.errorCodes.count - 1 {
-                        Divider().padding(.leading, 64)
+                        DSDivider(leadingPadding: 52)
                     }
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
-            .padding(.horizontal, 16)
+            .padding(.horizontal, DS.spacingLG)
         } else {
-            emptyPlaceholder(L10n.Push.guideEmptyErrors)
+            DSEmptyState(
+                icon: AppIcon.warning,
+                title: L10n.Push.guideEmptyErrors
+            )
+            .padding(.vertical, DS.spacing3XL)
         }
     }
 
     // MARK: - Helpers
 
     private func tagSection(title: String, items: [String], color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: DS.spacingXS) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
             ForEach(items, id: \.self) { item in
-                HStack(alignment: .top, spacing: 6) {
+                HStack(alignment: .top, spacing: DS.spacingXS) {
                     Circle()
                         .fill(color)
                         .frame(width: 5, height: 5)
                         .padding(.top, 5)
                     Text(item)
                         .font(.caption)
-                        .foregroundStyle(Color.dsText.opacity(0.85))
+                        .foregroundStyle(Color.dsTextSecondary)
                 }
             }
         }
@@ -227,18 +225,10 @@ struct PushGuideView: View {
 
     private func codeColor(_ code: Int) -> Color {
         switch code {
-        case 200: return .dsAccent
-        case 400...499: return .dsAccentOrange
-        case 500...599: return .dsAccentPink
-        default: return .dsMuted
+        case 200: return .dsSuccess
+        case 400...499: return .dsWarning
+        case 500...599: return .dsDanger
+        default: return .dsTextSecondary
         }
-    }
-
-    private func emptyPlaceholder(_ text: String) -> some View {
-        Text(text)
-            .font(.subheadline)
-            .foregroundStyle(Color.dsMuted)
-            .frame(maxWidth: .infinity)
-            .padding(40)
     }
 }

@@ -11,12 +11,12 @@ struct CertificateDetailView: View {
         Group {
             if let cert = vm.selectedCert {
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: DS.spacingXL) {
                         certInfoCard(cert)
                         downloadActions(cert)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    .padding(.horizontal, DS.spacingLG)
+                    .padding(.bottom, DS.spacing2XL)
                 }
                 .pageBackground()
                 .refreshable { await vm.loadDetail(id: certId) }
@@ -39,110 +39,128 @@ struct CertificateDetailView: View {
     }
 
     private func certInfoCard(_ cert: Certificate) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                HIcon(AppIcon.certificate)
-                    .font(.title2)
-                    .foregroundStyle(cert.isExpired ? Color.dsAccentPink : Color.dsAccentPurple)
-                    .frame(width: 48, height: 48)
-                    .background(
-                        (cert.isExpired ? Color.dsAccentPink : Color.dsAccentPurple).opacity(0.12),
-                        in: RoundedRectangle(cornerRadius: 14)
-                    )
+        DSGroupedCard {
+            VStack(spacing: 0) {
+                HStack(spacing: DS.spacingMD) {
+                    HIcon(AppIcon.certificate)
+                        .font(.title2)
+                        .foregroundStyle(cert.isExpired ? Color.dsPink : Color.dsPurple)
+                        .frame(width: 48, height: 48)
+                        .background(
+                            (cert.isExpired ? Color.dsPink : Color.dsPurple).opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: DS.radiusMD)
+                        )
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(cert.displayName)
-                        .font(.title3.bold())
-                        .foregroundStyle(Color.dsText)
-                    HStack(spacing: 8) {
-                        if cert.canDownloadP12 {
-                            StatusBadge("P12", color: .dsAccentBlue)
+                    VStack(alignment: .leading, spacing: DS.spacingSM) {
+                        Text(cert.displayName)
+                            .font(.title3.bold())
+                            .foregroundStyle(Color.dsText)
+                        HStack(spacing: DS.spacingSM) {
+                            if cert.canDownloadP12 {
+                                DSBadge(text: "P12", color: .dsBlue)
+                            }
+                            if cert.isExpired {
+                                StatusBadge.forStatus("EXPIRED")
+                            } else {
+                                StatusBadge.forStatus("VALID")
+                            }
                         }
-                        if cert.isExpired {
-                            StatusBadge(Localized.status("EXPIRED"), color: .dsAccentPink)
-                        } else {
-                            StatusBadge(Localized.status("VALID"), color: .dsAccent)
-                        }
+                    }
+                    Spacer()
+                }
+                .padding(DS.spacingLG)
+
+                DSDivider(leadingPadding: 0)
+
+                VStack(spacing: 0) {
+                    CertInfoRow(label: L10n.Cert.typeLabel, value: Localized.certType(cert.type ?? L10n.na))
+                    if let platform = cert.platform {
+                        DSDivider(leadingPadding: 0)
+                        CertInfoRow(label: L10n.Cert.platform, value: Localized.platform(platform))
+                    }
+                    if let serial = cert.serial_number {
+                        DSDivider(leadingPadding: 0)
+                        CertInfoRow(label: L10n.Cert.serial, value: serial, mono: true)
+                    }
+                    if let expires = cert.expires_at {
+                        DSDivider(leadingPadding: 0)
+                        CertInfoRow(label: L10n.Cert.expiresAt, value: String(expires.prefix(19)))
+                    }
+                    if let created = cert.created_at {
+                        DSDivider(leadingPadding: 0)
+                        CertInfoRow(label: L10n.Cert.createdAt, value: String(created.prefix(19)))
+                    }
+                    if let password = cert.password {
+                        DSDivider(leadingPadding: 0)
+                        CertInfoRow(label: L10n.Cert.password, value: password, mono: true, copiable: true)
                     }
                 }
             }
-
-            Divider().overlay(Color.dsBorder)
-
-            Group {
-                CertDetailRow(label: L10n.Cert.typeLabel, value: Localized.certType(cert.type ?? L10n.na))
-                if let platform = cert.platform {
-                    CertDetailRow(label: L10n.Cert.platform, value: Localized.platform(platform))
-                }
-                if let serial = cert.serial_number {
-                    CertDetailRow(label: L10n.Cert.serial, value: serial, mono: true)
-                }
-                if let expires = cert.expires_at {
-                    CertDetailRow(label: L10n.Cert.expiresAt, value: String(expires.prefix(19)))
-                }
-                if let created = cert.created_at {
-                    CertDetailRow(label: L10n.Cert.createdAt, value: String(created.prefix(19)))
-                }
-                if let password = cert.password {
-                    CertDetailRow(label: L10n.Cert.password, value: password, mono: true, copiable: true)
-                }
-            }
         }
-        .cardStyle()
     }
 
     private func downloadActions(_ cert: Certificate) -> some View {
-        VStack(spacing: 10) {
-            if cert.canDownloadP12 {
-                Button {
-                    Task { await downloadService.download(endpoint: "/certificates/\(certId)/download") }
-                } label: {
-                    HStack(spacing: 8) {
-                        if downloadService.isDownloading {
-                            ProgressView().tint(.white)
-                        } else {
-                            HIcon(AppIcon.docDownload).font(.body)
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.download)
+
+            VStack(spacing: DS.spacingMD) {
+                if cert.canDownloadP12 {
+                    Button {
+                        Task { await downloadService.download(endpoint: "/certificates/\(certId)/download") }
+                    } label: {
+                        HStack(spacing: DS.spacingSM) {
+                            if downloadService.isDownloading {
+                                ProgressView().tint(.white)
+                            } else {
+                                HIcon(AppIcon.docDownload).font(.callout)
+                            }
+                            Text(L10n.Cert.downloadP12)
+                                .fontWeight(.medium)
                         }
-                        Text(L10n.Cert.downloadP12)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .foregroundStyle(.white)
+                        .background(Color.dsBrandGradient, in: RoundedRectangle(cornerRadius: DS.radiusMD))
+                    }
+                    .buttonStyle(.dsPressed)
+                    .disabled(downloadService.isDownloading)
+                }
+
+                Button {
+                    Task { await downloadService.download(endpoint: "/certificates/\(certId)/download-cer") }
+                } label: {
+                    HStack(spacing: DS.spacingSM) {
+                        HIcon(AppIcon.docDownload).font(.callout)
+                        Text(L10n.Cert.downloadCER)
                             .fontWeight(.medium)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(.white)
-                    .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.vertical, 13)
+                    .foregroundStyle(Color.dsOrange)
+                    .background(Color.dsOrange.opacity(0.1), in: RoundedRectangle(cornerRadius: DS.radiusMD))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.radiusMD)
+                            .stroke(Color.dsOrange.opacity(0.2), lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.dsPressed)
                 .disabled(downloadService.isDownloading)
-            }
 
-            Button {
-                Task { await downloadService.download(endpoint: "/certificates/\(certId)/download-cer") }
-            } label: {
-                HStack(spacing: 8) {
-                    HIcon(AppIcon.docDownload).font(.body)
-                    Text(L10n.Cert.downloadCER)
-                        .fontWeight(.medium)
+                if let err = downloadService.errorMessage {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(Color.dsDanger)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .foregroundStyle(Color.dsAccentOrange)
-                .background(Color.dsAccentOrange.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsAccentOrange.opacity(0.2), lineWidth: 1)
-                )
-            }
-            .disabled(downloadService.isDownloading)
-
-            if let err = downloadService.errorMessage {
-                Text(err).font(.caption).foregroundStyle(Color.dsAccentPink)
             }
         }
+        .padding(DS.spacingLG)
+        .cardStyle()
     }
 }
 
-// MARK: - Detail Row
+// MARK: - Info Row
 
-private struct CertDetailRow: View {
+private struct CertInfoRow: View {
     let label: String
     let value: String
     var mono: Bool = false
@@ -152,10 +170,10 @@ private struct CertDetailRow: View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
                 .frame(width: 80, alignment: .leading)
             Spacer()
-            HStack(spacing: 6) {
+            HStack(spacing: DS.spacingSM) {
                 Text(value)
                     .font(mono ? .subheadline.monospaced() : .subheadline)
                     .foregroundStyle(Color.dsText)
@@ -166,10 +184,12 @@ private struct CertDetailRow: View {
                     } label: {
                         HIcon(AppIcon.copy)
                             .font(.caption)
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsTextSecondary)
                     }
                 }
             }
         }
+        .padding(.vertical, DS.spacingMD)
+        .padding(.horizontal, DS.spacingLG)
     }
 }

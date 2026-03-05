@@ -107,17 +107,17 @@ struct AutoBindView: View {
 
         var color: Color {
             switch self {
-            case .iosDev:      return .dsAccentBlue
-            case .iosDist:     return .dsAccentPurple
-            case .iosAdhoc:    return .dsAccentOrange
-            case .iosInhouse:  return .dsAccentPink
-            case .macDev:      return .dsAccent
-            case .macDist:     return .dsAccentPurple
-            case .macDirect:   return .dsAccentOrange
-            case .tvosDev:     return .dsAccentBlue
-            case .tvosDist:    return .dsAccentPurple
-            case .tvosAdhoc:   return .dsAccentOrange
-            case .tvosInhouse: return .dsAccentPink
+            case .iosDev:      return .dsBlue
+            case .iosDist:     return .dsPurple
+            case .iosAdhoc:    return .dsOrange
+            case .iosInhouse:  return .dsPink
+            case .macDev:      return .dsGreen
+            case .macDist:     return .dsPurple
+            case .macDirect:   return .dsOrange
+            case .tvosDev:     return .dsBlue
+            case .tvosDist:    return .dsPurple
+            case .tvosAdhoc:   return .dsOrange
+            case .tvosInhouse: return .dsPink
             }
         }
 
@@ -186,15 +186,15 @@ struct AutoBindView: View {
     // MARK: - Account
 
     private var accountSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(L10n.account, icon: AppIcon.account, color: .dsAccentBlue)
+        VStack(alignment: .leading, spacing: DS.spacingSM) {
+            sectionHeader(L10n.account, icon: AppIcon.account, color: .dsBlue)
             Picker(L10n.select, selection: $vm.selectedAccountId) {
                 ForEach(vm.accounts) { acc in
                     Text(acc.displayName).tag(acc.id)
                 }
             }
             .pickerStyle(.menu)
-            .tint(.dsAccentBlue)
+            .tint(.dsBrand)
         }
         .cardStyle()
     }
@@ -203,11 +203,11 @@ struct AutoBindView: View {
 
     private var bindTypeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(NSLocalizedString("autoBind.section.bindType", comment: ""), icon: AppIcon.certificate, color: .dsAccentPurple)
+            sectionHeader(NSLocalizedString("autoBind.section.bindType", comment: ""), icon: AppIcon.certificate, color: .dsPurple)
 
             Text(L10n.AutoBind.desc)
                 .font(.caption)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
 
             platformGroup("iOS", types: BindType.iosTypes)
             platformGroup("macOS", types: BindType.macTypes)
@@ -220,7 +220,7 @@ struct AutoBindView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
                 .padding(.top, 4)
 
             ForEach(types) { type in
@@ -234,7 +234,7 @@ struct AutoBindView: View {
                             .fill(selectedBindType == type ? type.color : Color.clear)
                             .frame(width: 20, height: 20)
                             .overlay(
-                                Circle().stroke(selectedBindType == type ? type.color : Color.dsMuted.opacity(0.5), lineWidth: 2)
+                                Circle().stroke(selectedBindType == type ? type.color : Color.dsTextSecondary.opacity(0.5), lineWidth: 2)
                             )
                             .overlay {
                                 if selectedBindType == type {
@@ -250,7 +250,7 @@ struct AutoBindView: View {
                                 .foregroundStyle(Color.dsText)
                             Text(type.desc)
                                 .font(.caption)
-                                .foregroundStyle(Color.dsMuted)
+                                .foregroundStyle(Color.dsTextSecondary)
                         }
 
                         Spacer()
@@ -273,13 +273,13 @@ struct AutoBindView: View {
 
     private var deviceInfoSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("autoBind.section.deviceInfo", comment: ""), icon: AppIcon.device, color: .dsAccent)
+            sectionHeader(NSLocalizedString("autoBind.section.deviceInfo", comment: ""), icon: AppIcon.device, color: .dsGreen)
             VStack(spacing: 0) {
                 inputRow(L10n.Device.formName, text: $deviceName, placeholder: "iPhone 15 Pro")
                 Divider()
                 inputRow(L10n.Device.formUdid, text: $udid, placeholder: "00008030-001A29D82280802E", monospaced: true)
             }
-            .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.dsSurfaceElevated, in: RoundedRectangle(cornerRadius: 10))
         }
         .cardStyle()
     }
@@ -288,13 +288,13 @@ struct AutoBindView: View {
 
     private var appInfoSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(NSLocalizedString("autoBind.section.appInfo", comment: ""), icon: AppIcon.bundleID, color: .dsAccentOrange)
+            sectionHeader(NSLocalizedString("autoBind.section.appInfo", comment: ""), icon: AppIcon.bundleID, color: .dsOrange)
             VStack(spacing: 0) {
                 inputRow(L10n.Profile.bundleId, text: $bundleId, placeholder: "com.example.app", monospaced: true)
                 Divider()
                 inputRow(NSLocalizedString("autoBind.appName", comment: ""), text: $bundleName, placeholder: "MyApp")
             }
-            .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.dsSurfaceElevated, in: RoundedRectangle(cornerRadius: 10))
         }
         .cardStyle()
     }
@@ -303,9 +303,9 @@ struct AutoBindView: View {
 
     private var passwordSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(L10n.Cert.password, icon: AppIcon.lock, color: .dsAccentPink)
+            sectionHeader(L10n.Cert.password, icon: AppIcon.lock, color: .dsPink)
             inputRow(NSLocalizedString("autoBind.password", comment: ""), text: $password, placeholder: "123456", monospaced: true)
-                .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
+                .background(Color.dsSurfaceElevated, in: RoundedRectangle(cornerRadius: 10))
         }
         .cardStyle()
     }
@@ -347,12 +347,12 @@ struct AutoBindView: View {
 
             HStack(spacing: 4) {
                 Text(L10n.AutoBind.willCreate)
-                    .foregroundStyle(Color.dsMuted)
+                    .foregroundStyle(Color.dsTextSecondary)
                 Text(selectedBindType.label)
                     .foregroundStyle(selectedBindType.color)
                     .fontWeight(.medium)
                 Text(L10n.AutoBind.typeCert)
-                    .foregroundStyle(Color.dsMuted)
+                    .foregroundStyle(Color.dsTextSecondary)
             }
             .font(.caption)
         }
@@ -430,7 +430,7 @@ struct AutoBindView: View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
+                .foregroundStyle(Color.dsTextSecondary)
                 .frame(width: 80, alignment: .leading)
             TextField(placeholder, text: text)
                 .font(monospaced ? .subheadline.monospaced() : .subheadline)

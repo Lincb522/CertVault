@@ -9,13 +9,13 @@ struct BundleIDListView: View {
     var body: some View {
         Group {
             if !vm.isLoading && vm.accounts.isEmpty {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.account,
                     title: L10n.Device.noAccountTitle,
                     message: L10n.Device.noAccountMessage
                 )
             } else if vm.bundleIds.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
-                EmptyStateView(
+                DSEmptyState(
                     icon: AppIcon.bundleID,
                     title: L10n.BundleID.emptyTitle,
                     message: L10n.BundleID.emptyMessage,
@@ -23,34 +23,30 @@ struct BundleIDListView: View {
                 ) { showCreate = true }
             } else {
                 ScrollView {
-                    VStack(spacing: 12) {
+                    VStack(spacing: DS.spacingMD) {
                         if vm.accounts.count > 1 {
                             HStack {
                                 Text(L10n.account)
                                     .font(.subheadline)
-                                    .foregroundStyle(Color.dsMuted)
+                                    .foregroundStyle(Color.dsTextSecondary)
                                 Spacer()
                                 Picker("", selection: $vm.selectedAccountId) {
                                     ForEach(vm.accounts) { acc in
                                         Text(acc.displayName).tag(acc.id)
                                     }
                                 }
-                                .tint(Color.dsAccentBlue)
+                                .tint(Color.dsBrand)
                                 .onChange(of: vm.selectedAccountId) { _ in
                                     Task { await vm.loadBundleIds() }
                                 }
                             }
-                            .padding(14)
-                            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.dsBorder, lineWidth: 1)
-                            )
-                            .padding(.horizontal, 16)
+                            .padding(DS.spacingLG)
+                            .cardStyle()
+                            .padding(.horizontal, DS.spacingLG)
                         }
 
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(vm.bundleIds.enumerated()), id: \.element.id) { index, item in
+                        DSGroupedCard {
+                            ForEach(vm.bundleIds) { item in
                                 NavigationLink {
                                     BundleIDDetailView(
                                         bundleId: item,
@@ -58,56 +54,26 @@ struct BundleIDListView: View {
                                         onDelete: { try? await vm.deleteBundleId(id: item.id) }
                                     )
                                 } label: {
-                                    HStack(spacing: 14) {
-                                        HIcon(AppIcon.bundleID)
-                                            .font(.body)
-                                            .foregroundStyle(Color.dsAccentCyan)
-                                            .frame(width: 40, height: 40)
-                                            .background(Color.dsAccentCyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(item.displayName)
-                                                .font(.subheadline.weight(.medium))
-                                                .foregroundStyle(Color.dsText)
-                                            Text(item.identifier ?? "")
-                                                .font(.caption.monospaced())
-                                                .foregroundStyle(Color.dsMuted)
-                                        }
-
-                                        Spacer()
-
-                                        HIcon(AppIcon.chevronRight)
-                                            .font(.caption)
-                                            .foregroundStyle(Color.dsMuted.opacity(0.5))
-                                    }
+                                    BundleIDRow(item: item)
                                 }
-                                .buttonStyle(.plain)
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                .contentShape(Rectangle())
+                                .buttonStyle(.dsPressed)
                                 .contextMenu {
                                     Button(role: .destructive) {
                                         itemToDelete = item
                                     } label: {
-                                        Label(L10n.delete, systemImage: "trash")
+                                        Label { Text(L10n.delete) } icon: { HIcon(AppIcon.delete) }
                                     }
                                 }
 
-                                if index < vm.bundleIds.count - 1 {
-                                    Divider().padding(.leading, 68)
+                                if item.id != vm.bundleIds.last?.id {
+                                    DSDivider(leadingPadding: 56)
                                 }
                             }
                         }
-                        .padding(.vertical, 4)
-                        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.dsBorder, lineWidth: 1)
-                        )
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DS.spacingLG)
                     }
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
+                    .padding(.top, DS.spacingSM)
+                    .padding(.bottom, DS.spacingXL)
                 }
                 .pageBackground()
                 .refreshable { await vm.loadBundleIds() }
@@ -141,5 +107,22 @@ struct BundleIDListView: View {
             }
             Button(L10n.cancel, role: .cancel) {}
         }
+    }
+}
+
+// MARK: - Bundle ID Row
+
+private struct BundleIDRow: View {
+    let item: BundleIDItem
+
+    var body: some View {
+        DSRow(
+            icon: AppIcon.bundleID,
+            iconColor: .dsBlue,
+            title: item.displayName,
+            subtitle: item.identifier,
+            trailing: nil,
+            showChevron: true
+        )
     }
 }

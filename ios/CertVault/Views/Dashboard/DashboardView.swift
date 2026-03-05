@@ -16,26 +16,33 @@ struct DashboardView: View {
                 if let stats = vm.stats {
                     heroSection(stats)
                         .opacity(animateCards ? 1 : 0)
-                        .offset(y: animateCards ? 0 : -10)
+                        .offset(y: animateCards ? 0 : -12)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0), value: animateCards)
 
-                    statsStrip(stats)
-                        .padding(.top, 20)
+                    overviewCard(stats)
+                        .padding(.top, DS.spacingXL)
                         .opacity(animateCards ? 1 : 0)
-                        .offset(y: animateCards ? 0 : 12)
+                        .offset(y: animateCards ? 0 : 14)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.05), value: animateCards)
 
                     quickActionsSection
-                        .padding(.top, 24)
+                        .padding(.top, DS.spacing2XL)
                         .opacity(animateCards ? 1 : 0)
-                        .offset(y: animateCards ? 0 : 12)
+                        .offset(y: animateCards ? 0 : 14)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1), value: animateCards)
 
                     recentCertificatesSection
-                        .padding(.top, 24)
+                        .padding(.top, DS.spacing2XL)
                         .opacity(animateCards ? 1 : 0)
+                        .offset(y: animateCards ? 0 : 14)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.15), value: animateCards)
 
                     recentDevicesSection
-                        .padding(.top, 24)
-                        .padding(.bottom, 20)
+                        .padding(.top, DS.spacing2XL)
+                        .padding(.bottom, DS.spacingXL)
                         .opacity(animateCards ? 1 : 0)
+                        .offset(y: animateCards ? 0 : 14)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.2), value: animateCards)
                 } else if vm.isLoading {
                     LoadingView()
                         .frame(maxWidth: .infinity, minHeight: 300)
@@ -47,22 +54,19 @@ struct DashboardView: View {
                         .frame(maxWidth: .infinity, minHeight: 300)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, DS.spacingLG)
         }
         .pageBackground()
         .navigationTitle("CertVault")
         .refreshable { await vm.load() }
         .onAppear {
-            AppLogger.ui.info("🖼️ DashboardView appeared")
             vm.startObserving()
             vm.loadCached()
             if vm.stats != nil {
                 withAnimation(.easeOut(duration: 0.3)) { animateCards = true }
             }
         }
-        .task {
-            await loadAllData()
-        }
+        .task { await loadAllData() }
         .onChange(of: vm.needsRefresh) { refresh in
             if refresh {
                 vm.needsRefresh = false
@@ -92,20 +96,20 @@ struct DashboardView: View {
             Image("AppLogo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 48, height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: DS.radiusMD))
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(greeting)
                     .font(.title3.bold())
                     .foregroundStyle(Color.dsText)
                 Text(Date.now, format: .dateTime.year().month().day().weekday(.wide))
                     .font(.caption)
-                    .foregroundStyle(Color.dsMuted)
+                    .foregroundStyle(Color.dsTextSecondary)
             }
             Spacer()
         }
-        .padding(.top, 8)
+        .padding(.top, DS.spacingSM)
     }
 
     private var greeting: String {
@@ -118,68 +122,135 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Stats Strip
+    // MARK: - Overview Card
 
-    private func statsStrip(_ stats: DashboardStats) -> some View {
-        LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: 10), count: 2), spacing: 10) {
-            MiniStatCard(title: L10n.Dashboard.statAccounts, value: stats.accounts, icon: AppIcon.account, color: .dsAccentBlue)
-            MiniStatCard(title: L10n.Dashboard.statDevices, value: stats.devices, total: 100, icon: AppIcon.device, color: .dsAccent)
-            MiniStatCard(title: L10n.Dashboard.statCerts, value: stats.certificates, icon: AppIcon.certificate, color: .dsAccentPurple)
-            MiniStatCard(title: L10n.Dashboard.statProfiles, value: stats.profiles, icon: AppIcon.profile, color: .dsAccentOrange)
+    private func overviewCard(_ stats: DashboardStats) -> some View {
+        VStack(spacing: DS.spacingLG) {
+            LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: DS.spacingMD) {
+                statItem(L10n.Dashboard.statAccounts, value: stats.accounts, icon: AppIcon.account, color: .dsBlue)
+                statItem(L10n.Dashboard.statDevices, value: stats.devices, icon: AppIcon.device, color: .dsGreen, total: 100)
+                statItem(L10n.Dashboard.statCerts, value: stats.certificates, icon: AppIcon.certificate, color: .dsPurple)
+                statItem(L10n.Dashboard.statProfiles, value: stats.profiles, icon: AppIcon.profile, color: .dsOrange)
+            }
+
+            if stats.devices > 0 {
+                VStack(spacing: DS.spacingSM) {
+                    HStack {
+                        Text(L10n.Dashboard.statDevices)
+                            .font(.caption)
+                            .foregroundStyle(Color.dsTextSecondary)
+                        Spacer()
+                        Text("\(stats.devices) / 100")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(Color.dsTextSecondary)
+                    }
+                    ProgressView(value: Double(min(stats.devices, 100)), total: 100)
+                        .tint(Color.dsGreen)
+                }
+            }
+        }
+        .cardStyle()
+    }
+
+    private func statItem(_ title: String, value: Int, icon: UIImage, color: Color, total: Int? = nil) -> some View {
+        HStack(spacing: DS.spacingSM) {
+            HIcon(icon)
+                .font(.callout)
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(color.gradient, in: RoundedRectangle(cornerRadius: DS.radiusSM))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("\(value)")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.dsText)
+                    .contentTransition(.numericText())
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.dsTextSecondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
         }
     }
 
     // MARK: - Quick Actions
 
     private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle(L10n.Dashboard.quickActions)
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Dashboard.quickActions)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ActionChip(icon: AppIcon.addCircle, title: L10n.Dashboard.actionCreateCert, color: .dsAccentBlue) { showCreateCert = true }
-                    ActionChip(icon: AppIcon.addSquare, title: L10n.Dashboard.actionAddDevice, color: .dsAccent) { showRegisterDevice = true }
-                    ActionChip(icon: AppIcon.docAdd, title: L10n.Dashboard.actionProfiles, color: .dsAccentOrange) { showCreateProfile = true }
-                    NavigationLink { AccountListView() } label: {
-                        ActionChipLabel(icon: AppIcon.account, title: L10n.Dashboard.actionAccounts, color: .dsAccentPurple)
-                    }
+            LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: DS.spacingSM) {
+                actionCard(icon: AppIcon.addCircle, title: L10n.Dashboard.actionCreateCert, color: .dsBlue) { showCreateCert = true }
+                actionCard(icon: AppIcon.addSquare, title: L10n.Dashboard.actionAddDevice, color: .dsGreen) { showRegisterDevice = true }
+                actionCard(icon: AppIcon.docAdd, title: L10n.Dashboard.actionProfiles, color: .dsOrange) { showCreateProfile = true }
+                NavigationLink {
+                    AccountListView()
+                } label: {
+                    actionCardLabel(icon: AppIcon.account, title: L10n.Dashboard.actionAccounts, color: .dsPurple)
                 }
-                .padding(.horizontal, 1)
+                .buttonStyle(.dsPressed)
             }
         }
+    }
+
+    private func actionCard(icon: UIImage, title: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        }) {
+            actionCardLabel(icon: icon, title: title, color: color)
+        }
+        .buttonStyle(.dsPressed)
+    }
+
+    private func actionCardLabel(icon: UIImage, title: String, color: Color) -> some View {
+        HStack(spacing: DS.spacingSM) {
+            HIcon(icon)
+                .font(.callout)
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(color.gradient, in: RoundedRectangle(cornerRadius: DS.radiusSM))
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.dsText)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(DS.spacingMD)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: DS.radiusMD))
+        .overlay(RoundedRectangle(cornerRadius: DS.radiusMD).stroke(Color.dsBorder, lineWidth: 1))
     }
 
     // MARK: - Recent Certificates
 
     private var recentCertificatesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle(L10n.Dashboard.recentCerts)
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Dashboard.recentCerts)
 
             if vm.recentCerts.isEmpty {
-                emptyPlaceholder(icon: AppIcon.certificate, text: L10n.Dashboard.noCerts)
+                DSEmptyState(icon: AppIcon.certificate, title: L10n.Dashboard.noCerts)
+                    .cardStyle()
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(vm.recentCerts.prefix(5).enumerated()), id: \.element.id) { index, cert in
+                DSGroupedCard {
+                    ForEach(vm.recentCerts.prefix(5)) { cert in
                         NavigationLink {
                             CertificateDetailView(certId: cert.id)
                         } label: {
                             recentRow(
-                                icon: AppIcon.certificate,
-                                color: .dsAccentPurple,
+                                icon: AppIcon.certificate, color: .dsPurple,
                                 title: cert.name ?? L10n.unnamed,
-                                subtitle: certTypeLabel(cert.type),
+                                subtitle: Localized.certType(cert.type ?? ""),
                                 trailing: cert.created_at?.prefix(10).description
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.dsPressed)
 
-                        if index < min(vm.recentCerts.count, 5) - 1 {
-                            Divider().padding(.leading, 52)
+                        if cert.id != vm.recentCerts.prefix(5).last?.id {
+                            DSDivider()
                         }
                     }
                 }
-                .padding(.vertical, 4)
-                .cardStyle()
             }
         }
     }
@@ -187,65 +258,40 @@ struct DashboardView: View {
     // MARK: - Recent Devices
 
     private var recentDevicesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle(L10n.Dashboard.recentDevices)
+        VStack(alignment: .leading, spacing: DS.spacingMD) {
+            DSSectionHeader(L10n.Dashboard.recentDevices)
 
             if vm.recentDevices.isEmpty {
-                emptyPlaceholder(icon: AppIcon.device, text: L10n.Dashboard.noDevices)
+                DSEmptyState(icon: AppIcon.device, title: L10n.Dashboard.noDevices)
+                    .cardStyle()
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(vm.recentDevices.prefix(5).enumerated()), id: \.element.id) { index, device in
+                DSGroupedCard {
+                    ForEach(vm.recentDevices.prefix(5)) { device in
                         recentRow(
-                            icon: AppIcon.device,
-                            color: .dsAccent,
+                            icon: AppIcon.device, color: .dsGreen,
                             title: device.name ?? L10n.unnamed,
                             subtitle: (device.udid ?? "").truncated(16),
                             trailing: device.platform
                         )
 
-                        if index < min(vm.recentDevices.count, 5) - 1 {
-                            Divider().padding(.leading, 52)
+                        if device.id != vm.recentDevices.prefix(5).last?.id {
+                            DSDivider()
                         }
                     }
                 }
-                .padding(.vertical, 4)
-                .cardStyle()
             }
         }
     }
 
-    // MARK: - Shared Components
-
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Color.dsMuted)
-    }
-
-    private func emptyPlaceholder(icon: UIImage, text: String) -> some View {
-        HStack {
-            Spacer()
-            VStack(spacing: 8) {
-                HIcon(icon)
-                    .font(.title2)
-                    .foregroundStyle(Color.dsMuted.opacity(0.3))
-                Text(text)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsMuted.opacity(0.6))
-            }
-            .padding(.vertical, 28)
-            Spacer()
-        }
-        .cardStyle()
-    }
+    // MARK: - Shared Row
 
     private func recentRow(icon: UIImage, color: Color, title: String, subtitle: String?, trailing: String?) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DS.spacingMD) {
             HIcon(icon)
                 .font(.callout)
                 .foregroundStyle(color)
-                .padding(8)
-                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .frame(width: 32, height: 32)
+                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.radiusSM))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -255,124 +301,20 @@ struct DashboardView: View {
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundStyle(Color.dsMuted)
+                        .foregroundStyle(Color.dsTextSecondary)
                         .lineLimit(1)
                 }
             }
             Spacer()
             if let trailing {
                 Text(trailing)
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(Color.dsMuted.opacity(0.6))
+                    .font(.dsMonoSmall)
+                    .foregroundStyle(Color.dsTextTertiary)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 2)
+        .padding(.vertical, DS.spacingSM)
+        .padding(.horizontal, DS.spacingLG)
         .contentShape(Rectangle())
-    }
-
-    private func certTypeLabel(_ type: String?) -> String {
-        Localized.certType(type ?? "")
-    }
-}
-
-// MARK: - Mini Stat Card
-
-private struct MiniStatCard: View {
-    let title: String
-    let value: Int
-    var total: Int? = nil
-    let icon: UIImage
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 12) {
-            HIcon(icon)
-                .font(.body)
-                .foregroundStyle(.white)
-                .padding(10)
-                .background(
-                    LinearGradient(colors: [color, color.opacity(0.7)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 10)
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                if let total {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text("\(value)")
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.dsText)
-                            .contentTransition(.numericText())
-                        Text("/ \(total)")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.dsMuted)
-                    }
-                } else {
-                    Text("\(value)")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.dsText)
-                        .contentTransition(.numericText())
-                }
-                Text(title)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.dsMuted)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(color.opacity(0.15), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Action Chip
-
-private struct ActionChip: View {
-    let icon: UIImage
-    let title: String
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ActionChipLabel(icon: icon, title: title, color: color)
-        }
-    }
-}
-
-private struct ActionChipLabel: View {
-    let icon: UIImage
-    let title: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 8) {
-            HIcon(icon)
-                .font(.callout)
-                .foregroundStyle(.white)
-                .padding(7)
-                .background(
-                    LinearGradient(colors: [color, color.opacity(0.7)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.dsText)
-        }
-        .padding(.trailing, 14)
-        .padding(.leading, 4)
-        .padding(.vertical, 4)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
     }
 }
 
@@ -380,8 +322,5 @@ private struct ActionChipLabel: View {
 
 private struct CreateProfileSheetWrapper: View {
     @StateObject private var vm = ProfileViewModel()
-
-    var body: some View {
-        CreateProfileView(vm: vm)
-    }
+    var body: some View { CreateProfileView(vm: vm) }
 }
