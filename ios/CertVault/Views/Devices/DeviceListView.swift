@@ -25,13 +25,13 @@ struct DeviceListView: View {
     var body: some View {
         Group {
             if !vm.isLoading && vm.accounts.isEmpty {
-                DSEmptyState(
+                EmptyStateView(
                     icon: AppIcon.account,
                     title: L10n.Device.noAccountTitle,
                     message: L10n.Device.noAccountMessage
                 )
             } else if vm.devices.isEmpty && !vm.isLoading && !vm.selectedAccountId.isEmpty {
-                DSEmptyState(
+                EmptyStateView(
                     icon: AppIcon.device,
                     title: L10n.Device.emptyTitle,
                     message: L10n.Device.emptyMessage,
@@ -39,17 +39,17 @@ struct DeviceListView: View {
                 ) { showRegister = true }
             } else {
                 ScrollView {
-                    VStack(spacing: DS.spacingLG) {
+                    VStack(spacing: 16) {
                         if vm.accounts.count > 1 {
                             accountPicker
-                                .padding(.horizontal, DS.spacingLG)
+                                .padding(.horizontal, 16)
                         }
 
                         if !enabledDevices.isEmpty {
                             deviceSection(
                                 title: L10n.Device.enabledSection,
                                 count: enabledDevices.count,
-                                color: .dsGreen,
+                                color: .dsAccent,
                                 devices: enabledDevices
                             )
                         }
@@ -58,7 +58,7 @@ struct DeviceListView: View {
                             collapsibleSection(
                                 title: L10n.Device.disabledSection,
                                 count: disabledDevices.count,
-                                color: .dsRed,
+                                color: .dsAccentPink,
                                 devices: disabledDevices,
                                 isExpanded: $showDisabled
                             )
@@ -68,14 +68,14 @@ struct DeviceListView: View {
                             collapsibleSection(
                                 title: L10n.Device.ineligibleSection,
                                 count: ineligibleDevices.count,
-                                color: .dsOrange,
+                                color: .dsAccentOrange,
                                 devices: ineligibleDevices,
                                 isExpanded: $showIneligible
                             )
                         }
                     }
-                    .padding(.top, DS.spacingSM)
-                    .padding(.bottom, DS.spacingXL)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                 }
                 .pageBackground()
                 .searchable(text: $searchText, prompt: L10n.Device.search)
@@ -122,21 +122,29 @@ struct DeviceListView: View {
     }
 
     private func collapsibleSection(title: String, count: Int, color: Color, devices: [Device], isExpanded: Binding<Bool>) -> some View {
-        VStack(alignment: .leading, spacing: DS.spacingSM) {
+        VStack(alignment: .leading, spacing: 8) {
             Button {
                 withAnimation(.easeInOut(duration: 0.25)) { isExpanded.wrappedValue.toggle() }
             } label: {
-                DSSectionHeader(title) {
-                    HStack(spacing: DS.spacingSM) {
-                        DSBadge(text: "\(count)", color: color)
-                        Image(systemName: isExpanded.wrappedValue ? "chevron.up" : "chevron.down")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.dsTextSecondary)
-                    }
+                HStack(spacing: 6) {
+                    Circle().fill(color).frame(width: 8, height: 8)
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.dsText)
+                    Text("\(count)")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(color)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(color.opacity(0.12), in: Capsule())
+                    Spacer()
+                    HIcon(isExpanded.wrappedValue ? AppIcon.up : AppIcon.down)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.dsMuted)
                 }
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, DS.spacingXL)
+            .padding(.horizontal, 20)
 
             if isExpanded.wrappedValue {
                 deviceGroupView(devices: devices)
@@ -145,31 +153,36 @@ struct DeviceListView: View {
     }
 
     private func deviceSection(title: String, count: Int, color: Color, devices: [Device]) -> some View {
-        VStack(alignment: .leading, spacing: DS.spacingSM) {
-            DSSectionHeader(title) {
-                DSBadge(text: "\(count)", color: color)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.dsText)
+                Text("\(count)")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.12), in: Capsule())
             }
-            .padding(.horizontal, DS.spacingXL)
+            .padding(.horizontal, 20)
 
             deviceGroupView(devices: devices)
         }
     }
 
     private func deviceGroupView(devices: [Device]) -> some View {
-        DSGroupedCard {
+        LazyVStack(spacing: 0) {
             ForEach(Array(devices.enumerated()), id: \.element.id) { index, device in
                 NavigationLink {
                     DeviceDetailView(deviceId: device.id, accountId: vm.selectedAccountId)
                 } label: {
-                    DSRow(
-                        icon: iconForDevice(device),
-                        iconColor: tintColor(for: device),
-                        title: device.displayName,
-                        subtitle: device.udid ?? "N/A",
-                        trailing: AnyView(DSBadge.forStatus(device.status ?? "UNKNOWN"))
-                    )
+                    DeviceRow(device: device)
                 }
-                .buttonStyle(.dsPressed)
+                .buttonStyle(.plain)
                 .contextMenu {
                     if device.isEnabled {
                         Button(role: .destructive) {
@@ -187,42 +200,87 @@ struct DeviceListView: View {
                 }
 
                 if index < devices.count - 1 {
-                    DSDivider()
+                    Divider().padding(.leading, 68)
                 }
             }
         }
-        .padding(.horizontal, DS.spacingLG)
+        .padding(.vertical, 4)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.dsBorder, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
     }
 
     private var accountPicker: some View {
-        DSGroupedCard {
-            HStack {
-                Text(L10n.account)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.dsTextSecondary)
-                Spacer()
-                Picker("", selection: $vm.selectedAccountId) {
-                    ForEach(vm.accounts) { acc in
-                        Text(acc.displayName).tag(acc.id)
-                    }
-                }
-                .tint(Color.dsBlue)
-                .onChange(of: vm.selectedAccountId) { _ in
-                    Task { await vm.loadDevices() }
+        HStack {
+            Text(L10n.account)
+                .font(.subheadline)
+                .foregroundStyle(Color.dsMuted)
+            Spacer()
+            Picker("", selection: $vm.selectedAccountId) {
+                ForEach(vm.accounts) { acc in
+                    Text(acc.displayName).tag(acc.id)
                 }
             }
-            .padding(.vertical, DS.spacingMD)
-            .padding(.horizontal, DS.spacingLG)
+            .tint(Color.dsAccentBlue)
+            .onChange(of: vm.selectedAccountId) { _ in
+                Task { await vm.loadDevices() }
+            }
         }
+        .padding(14)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.dsBorder, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Device Row
+
+private struct DeviceRow: View {
+    let device: Device
+
+    private var tintColor: Color {
+        if device.isEnabled { return .dsAccent }
+        if device.isIneligible { return .dsAccentOrange }
+        return .dsAccentPink
     }
 
-    private func tintColor(for device: Device) -> Color {
-        if device.isEnabled { return .dsGreen }
-        if device.isIneligible { return .dsOrange }
-        return .dsRed
+    var body: some View {
+        HStack(spacing: 14) {
+            HIcon(iconForDevice)
+                .font(.body)
+                .foregroundStyle(tintColor)
+                .frame(width: 40, height: 40)
+                .background(tintColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(device.displayName)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(device.isEnabled ? Color.dsText : tintColor)
+                Text(device.udid ?? "N/A")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(Color.dsMuted)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            StatusBadge.forStatus(device.status ?? "UNKNOWN")
+
+            HIcon(AppIcon.chevronRight)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.dsMuted.opacity(0.4))
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .contentShape(Rectangle())
     }
 
-    private func iconForDevice(_ device: Device) -> UIImage {
+    private var iconForDevice: UIImage {
         switch device.device_class?.uppercased() ?? "" {
         case "IPAD": return AppIcon.display
         case "APPLE_WATCH": return AppIcon.watch
@@ -270,9 +328,10 @@ struct RegisterDeviceSheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(Color.dsDanger).font(.caption) }
+                    Section { Text(err).foregroundStyle(.red).font(.caption) }
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.Device.register)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -297,5 +356,6 @@ struct RegisterDeviceSheet: View {
                 }
             }
         }
+        .sheetStyle()
     }
 }

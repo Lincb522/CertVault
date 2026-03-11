@@ -107,7 +107,7 @@
             >
               <div style="display:flex; justify-content:space-between; align-items:center">
                 <span>{{ t.label }}</span>
-                <span style="color:#909399; font-size:12px; margin-left:12px">{{ t.desc }}</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; margin-left:12px">{{ t.desc }}</span>
               </div>
             </el-option>
           </el-select>

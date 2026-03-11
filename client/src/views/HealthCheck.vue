@@ -188,13 +188,13 @@
         <el-table-column label="推送" width="80" align="center">
           <template #default="{ row }">
             <el-icon v-if="row.has_push" color="#67c23a"><CircleCheckFilled /></el-icon>
-            <el-icon v-else color="#c0c4cc"><CircleCloseFilled /></el-icon>
+            <el-icon v-else color="var(--nask-text-muted)"><CircleCloseFilled /></el-icon>
           </template>
         </el-table-column>
         <el-table-column label="Apple登录" width="100" align="center">
           <template #default="{ row }">
             <el-icon v-if="row.has_sign_in" color="#67c23a"><CircleCheckFilled /></el-icon>
-            <el-icon v-else color="#c0c4cc"><CircleCloseFilled /></el-icon>
+            <el-icon v-else color="var(--nask-text-muted)"><CircleCloseFilled /></el-icon>
           </template>
         </el-table-column>
         <el-table-column label="已开启权限" min-width="300">
@@ -222,8 +222,8 @@
       <div class="empty-state">
         <HIcon name="tick-circle" :size="48" />
         <p style="margin-top: 12px; font-size: 15px">点击上方按钮开始检查</p>
-        <p style="color: #909399; font-size: 13px">本地检查：扫描数据库中的证书和描述文件有效期</p>
-        <p style="color: #909399; font-size: 13px">远程检查：通过 Apple API 验证证书、描述文件和 Bundle ID 权限状态</p>
+        <p style="color: var(--nask-text-secondary); font-size: 13px">本地检查：扫描数据库中的证书和描述文件有效期</p>
+        <p style="color: var(--nask-text-secondary); font-size: 13px">远程检查：通过 Apple API 验证证书、描述文件和 Bundle ID 权限状态</p>
       </div>
     </div>
   </div>

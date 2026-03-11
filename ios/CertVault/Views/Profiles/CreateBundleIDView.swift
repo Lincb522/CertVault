@@ -1,5 +1,4 @@
 import SwiftUI
-import HiconIcons
 
 struct CreateBundleIDView: View {
     @ObservedObject var vm: ProfileViewModel
@@ -11,40 +10,35 @@ struct CreateBundleIDView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: DS.spacingLG) {
-                    DSGroupedCard {
-                        VStack(alignment: .leading, spacing: DS.spacingMD) {
-                            DSSectionHeader(L10n.BundleID.identifier)
-                            DSInputField(icon: AppIcon.bundleID, placeholder: "com.example.myapp", text: $identifier)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                            Text(L10n.BundleID.identifierHint)
-                                .font(.caption)
-                                .foregroundStyle(Color.dsTextSecondary)
-                        }
-                        .padding(DS.spacingLG)
-                    }
+            Form {
+                Section {
+                    TextField("com.example.myapp", text: $identifier)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text(L10n.BundleID.identifier)
+                } footer: {
+                    Text(L10n.BundleID.identifierHint)
+                }
 
-                    DSGroupedCard {
-                        VStack(alignment: .leading, spacing: DS.spacingMD) {
-                            DSSectionHeader(NSLocalizedString("common.name", comment: ""))
-                            DSInputField(icon: AppIcon.edit, placeholder: "My App", text: $name)
-                        }
-                        .padding(DS.spacingLG)
-                    }
+                Section(NSLocalizedString("common.name", comment: "")) {
+                    TextField("My App", text: $name)
+                }
 
-                    if let err = errorMsg {
-                        Text(err)
-                            .foregroundStyle(Color.dsDanger)
-                            .font(.caption)
-                    }
-
-                    DSPrimaryButton(
-                        title: L10n.create,
-                        isLoading: isLoading,
-                        isDisabled: identifier.isEmpty || name.isEmpty
-                    ) {
+                if let err = errorMsg {
+                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .pageBackground()
+            .navigationTitle(L10n.BundleID.create)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.create) {
                         isLoading = true
                         errorMsg = nil
                         Task {
@@ -57,17 +51,10 @@ struct CreateBundleIDView: View {
                             isLoading = false
                         }
                     }
-                }
-                .padding(DS.spacingLG)
-            }
-            .pageBackground()
-            .navigationTitle(L10n.BundleID.create)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.cancel) { dismiss() }
+                    .disabled(identifier.isEmpty || name.isEmpty || isLoading)
                 }
             }
         }
+        .sheetStyle()
     }
 }

@@ -15,7 +15,7 @@
           <el-table-column label="应用" min-width="200">
             <template #default="{ row }">
               <div>{{ row.name }}</div>
-              <div v-if="row.ipa_info" style="font-size:12px;color:#999;margin-top:2px">
+              <div v-if="row.ipa_info" style="font-size:12px;color:var(--nask-text-secondary);margin-top:2px">
                 {{ row.ipa_info.app_name }} · {{ row.ipa_info.bundle_id }} · v{{ row.ipa_info.version }}({{ row.ipa_info.build }})
               </div>
             </template>
@@ -58,7 +58,7 @@
           <el-select v-model="versionForm.ipa_file" placeholder="选择要发布的 IPA 文件" style="width:100%" @change="onIpaSelect">
             <el-option v-for="f in ipaList" :key="f.name" :label="f.ipa_info ? `${f.ipa_info.app_name} v${f.ipa_info.version}(${f.ipa_info.build})` : f.name" :value="f.name">
               <span>{{ f.ipa_info ? `${f.ipa_info.app_name} v${f.ipa_info.version}(${f.ipa_info.build})` : f.name }}</span>
-              <span style="float:right;color:#999;font-size:12px">{{ formatSize(f.size) }}</span>
+              <span style="float:right;color:var(--nask-text-secondary);font-size:12px">{{ formatSize(f.size) }}</span>
             </el-option>
           </el-select>
         </el-form-item>
@@ -91,7 +91,7 @@
         <el-table-column label="关联 IPA" prop="ipa_file" min-width="180" show-overflow-tooltip />
         <el-table-column label="更新日志" min-width="160">
           <template #default="{ row }">
-            <span style="color:#666">{{ row.changelog || '-' }}</span>
+            <span style="color:var(--nask-text-secondary)">{{ row.changelog || '-' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="强制更新" width="80" align="center">
@@ -110,7 +110,7 @@
                 <el-button size="small" text type="danger">删除</el-button>
               </template>
             </el-popconfirm>
-            <span v-if="row.is_current" style="color:#999;font-size:12px">当前发布中</span>
+            <span v-if="row.is_current" style="color:var(--nask-text-secondary);font-size:12px">当前发布中</span>
           </template>
         </el-table-column>
       </el-table>

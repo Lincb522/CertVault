@@ -61,6 +61,7 @@ final class CertificateViewModel: ObservableObject {
             certificates = Self.deduplicate(freshCerts)
             certTypes = try await types
             try? db.saveCertificates(freshCerts, accountId: selectedAccountId)
+            WidgetHelper.reloadAll()
             AppLogger.data.info("🔏 Loaded \(self.certificates.count) certs, \(self.certTypes.count) types")
         } catch is CancellationError {
             return

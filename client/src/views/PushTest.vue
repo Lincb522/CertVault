@@ -5,17 +5,33 @@
       <p>自建 APNs 推送服务，使用 .p8 Key 通过 HTTP/2 直连 Apple 推送服务器</p>
     </div>
 
+    <!-- 模式切换 -->
+    <div class="content-card" style="margin-bottom: 20px; padding: 12px 20px">
+      <el-radio-group v-model="pushMode" size="large">
+        <el-radio-button value="single">
+          <el-icon style="margin-right:4px"><Promotion /></el-icon> 单设备推送
+        </el-radio-button>
+        <el-radio-button value="broadcast">
+          <el-icon style="margin-right:4px"><Position /></el-icon> 广播推送
+          <el-tag v-if="deviceCount !== null" size="small" type="info" effect="plain" round style="margin-left:6px">{{ deviceCount }} 台设备</el-tag>
+        </el-radio-button>
+      </el-radio-group>
+    </div>
+
     <el-row :gutter="20">
       <el-col :xs="24" :sm="14">
         <div class="content-card">
-          <div class="card-header"><h3>发送推送</h3></div>
+          <div class="card-header">
+            <h3>{{ pushMode === 'broadcast' ? '广播推送' : '发送推送' }}</h3>
+            <el-tag v-if="pushMode === 'broadcast'" type="warning" effect="dark" size="small">全部设备</el-tag>
+          </div>
 
           <el-form :model="form" label-width="100px">
             <el-form-item label="认证方式">
               <el-radio-group v-model="authMode">
                 <el-radio-button value="pushkey">已导入的推送密钥</el-radio-button>
                 <el-radio-button value="account">API 账号</el-radio-button>
-                <el-radio-button value="manual">手动填写</el-radio-button>
+                <el-radio-button v-if="pushMode === 'single'" value="manual">手动填写</el-radio-button>
               </el-radio-group>
             </el-form-item>
 
@@ -54,7 +70,7 @@
               </el-form-item>
             </template>
 
-            <template v-if="authMode === 'manual'">
+            <template v-if="authMode === 'manual' && pushMode === 'single'">
               <el-form-item label="Key ID" required>
                 <el-input v-model="form.key_id" placeholder="APNs Key 的 Key ID" />
               </el-form-item>
@@ -78,10 +94,16 @@
 
             <el-divider content-position="left">推送内容</el-divider>
 
-            <el-form-item label="Device Token" required>
+            <el-form-item v-if="pushMode === 'single'" label="Device Token" required>
               <el-input v-model="form.device_token" placeholder="64位十六进制字符串" />
               <div class="form-tip">在 App 中调用 registerForRemoteNotifications 获取</div>
             </el-form-item>
+
+            <el-alert v-if="pushMode === 'broadcast'" type="warning" :closable="false" style="margin-bottom: 16px">
+              <template #title>广播将发送到所有已注册设备 ({{ deviceCount || 0 }} 台)</template>
+              设备 Token 在用户使用服务时自动收集。已注销的设备(410)会自动清理。
+            </el-alert>
+
             <el-form-item label="Bundle ID" required>
               <el-input v-model="form.bundle_id" placeholder="例如：com.example.myapp" />
             </el-form-item>
@@ -108,8 +130,11 @@
             </el-form-item>
 
             <el-form-item>
-              <el-button type="primary" @click="sendPush" :loading="sending" size="large">
+              <el-button v-if="pushMode === 'single'" type="primary" @click="sendPush" :loading="sending" size="large">
                 <el-icon><Promotion /></el-icon> 发送推送
+              </el-button>
+              <el-button v-else type="warning" @click="sendBroadcast" :loading="broadcasting" size="large">
+                <el-icon><Position /></el-icon> 发送广播 ({{ deviceCount || 0 }} 台)
               </el-button>
             </el-form-item>
           </el-form>
@@ -124,8 +149,21 @@
               <strong>{{ result.message }}</strong>
               <div v-if="result.data" class="result-detail">
                 <span v-if="result.data.apns_id">APNs ID: {{ result.data.apns_id }}</span>
+                <span v-if="result.data.total !== undefined">总计: {{ result.data.total }}</span>
+                <span v-if="result.data.success !== undefined"> | 成功: {{ result.data.success }}</span>
+                <span v-if="result.data.failed"> | 失败: {{ result.data.failed }}</span>
+                <span v-if="result.data.unregistered"> | 已注销: {{ result.data.unregistered }}</span>
                 <span v-if="result.data.reason"> | Reason: {{ result.data.reason }}</span>
                 <span v-if="result.data.status"> | HTTP {{ result.data.status }}</span>
+              </div>
+              <div v-if="result.data?.errors?.length" style="margin-top: 8px">
+                <el-collapse>
+                  <el-collapse-item :title="`失败详情 (${result.data.errors.length})`">
+                    <div v-for="(e, i) in result.data.errors" :key="i" style="font-size:12px;padding:2px 0">
+                      <code>{{ e.token }}</code> — {{ e.reason }}
+                    </div>
+                  </el-collapse-item>
+                </el-collapse>
               </div>
             </div>
           </div>
@@ -228,13 +266,16 @@ import { useAppStore } from '../stores/app'
 
 const store = useAppStore()
 const route = useRoute()
+const pushMode = ref('single')
 const authMode = ref('pushkey')
 const sending = ref(false)
+const broadcasting = ref(false)
 const result = ref(null)
 const errorCodes = ref([])
 const loadingCodes = ref(false)
 const pushKeys = ref([])
 const selectedPushKeyId = ref('')
+const deviceCount = ref(null)
 
 const form = ref({
   account_id: '',
@@ -307,6 +348,58 @@ async function sendPush() {
   }
 }
 
+async function sendBroadcast() {
+  if (!form.value.title || !form.value.bundle_id) {
+    return ElMessage.warning('请填写标题和 Bundle ID')
+  }
+
+  const data = {
+    title: form.value.title,
+    body: form.value.body,
+    badge: form.value.badge,
+    sound: form.value.sound,
+    bundle_id: form.value.bundle_id,
+    sandbox: form.value.sandbox,
+  }
+
+  if (authMode.value === 'pushkey') {
+    if (!selectedPushKeyId.value) return ElMessage.warning('请选择推送密钥')
+    data.push_key_id = selectedPushKeyId.value
+  } else if (authMode.value === 'account') {
+    if (!form.value.account_id || !form.value.team_id) {
+      return ElMessage.warning('请选择账号并填写 Team ID')
+    }
+    data.account_id = form.value.account_id
+    data.team_id = form.value.team_id
+  }
+
+  broadcasting.value = true
+  result.value = null
+  try {
+    const res = await pushApi.broadcast(data)
+    result.value = res
+    if (res.success) {
+      ElMessage.success(res.message || '广播完成')
+      fetchDeviceCount()
+    } else {
+      ElMessage.error(res.message || '广播失败')
+    }
+  } catch (err) {
+    result.value = { success: false, message: err.response?.data?.message || err.message }
+  } finally {
+    broadcasting.value = false
+  }
+}
+
+async function fetchDeviceCount() {
+  try {
+    const res = await pushApi.devices()
+    deviceCount.value = res.total || (res.data || []).length
+  } catch {
+    deviceCount.value = null
+  }
+}
+
 async function fetchErrorCodes() {
   loadingCodes.value = true
   try {
@@ -326,6 +419,7 @@ async function fetchPushKeys() {
 
 onMounted(async () => {
   fetchErrorCodes()
+  fetchDeviceCount()
   await fetchPushKeys()
 
   if (route.query.push_key_id) {

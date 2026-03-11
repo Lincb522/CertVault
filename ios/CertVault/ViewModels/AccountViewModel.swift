@@ -25,6 +25,7 @@ final class AccountViewModel: ObservableObject {
             let fresh = try await service.list()
             accounts = fresh
             try? db.saveAccounts(fresh)
+            WidgetHelper.reloadAll()
             AppLogger.data.info("👤 Loaded \(self.accounts.count) accounts")
         } catch is CancellationError {
             return
@@ -74,6 +75,7 @@ final class AccountViewModel: ObservableObject {
         try await service.delete(id: id)
         accounts.removeAll { $0.id == id }
         try? db.deleteAccount(id: id)
+        WidgetHelper.reloadAll()
         AppLogger.data.info("👤 Account deleted")
     }
 

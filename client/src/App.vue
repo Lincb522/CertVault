@@ -54,7 +54,23 @@
         </div>
 
         <div class="nav-group">
+          <div class="nav-group-label">App Store Connect</div>
+          <router-link to="/apps" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="component" /> 应用管理
+          </router-link>
+          <router-link to="/testflight" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="send-1" /> TestFlight
+          </router-link>
+          <router-link to="/appstore" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="document-align-left-1" /> App Store 版本
+          </router-link>
+        </div>
+
+        <div class="nav-group">
           <div class="nav-group-label">工具</div>
+          <router-link to="/cert-check" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="shield-tick" /> 证书检查
+          </router-link>
           <router-link to="/get-udid" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <HIcon name="scan-1" /> 获取 UDID
           </router-link>
@@ -72,11 +88,23 @@
 
         <div class="nav-group">
           <div class="nav-group-label">推送</div>
+          <router-link to="/push-settings" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="setting" /> 推送设置
+          </router-link>
           <router-link to="/push-keys" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <HIcon name="notification-1" /> 推送密钥
           </router-link>
+          <router-link to="/push-devices" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="display-1" /> 设备 Token
+          </router-link>
+          <router-link to="/push-broadcast" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="send-1" /> 群发推送
+          </router-link>
           <router-link to="/push" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <HIcon name="send-1" /> 推送测试
+            <HIcon name="scan-1" /> 推送测试
+          </router-link>
+          <router-link to="/push-history" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="document-align-left-1" /> 推送历史
           </router-link>
         </div>
       </nav>
@@ -92,8 +120,11 @@
             style="margin-left: auto; pointer-events: none"
           />
         </div>
+        <router-link v-if="userInfo.role === 'superadmin'" to="/settings" class="nav-item" active-class="active" @click="sidebarOpen = false">
+          <HIcon name="setting" /> 系统设置
+        </router-link>
         <div class="nav-item" @click="showChangePwd = true">
-          <HIcon name="setting" /> 修改密码
+          <HIcon name="lock-1" /> 修改密码
         </div>
         <div class="nav-item" style="color: var(--nask-red)" @click="handleLogout">
           <HIcon name="logout" /> 退出登录

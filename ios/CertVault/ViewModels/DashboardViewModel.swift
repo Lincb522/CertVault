@@ -57,6 +57,7 @@ final class DashboardViewModel: ObservableObject {
                 stats = data.stats
                 recentCerts = data.recent_certificates ?? []
                 recentDevices = data.recent_devices ?? []
+                WidgetHelper.reloadAll()
                 AppLogger.data.info("📊 Dashboard loaded | accounts=\(data.stats.accounts) devices=\(data.stats.devices) certs=\(data.stats.certificates) profiles=\(data.stats.profiles)")
             }
         } catch is CancellationError {

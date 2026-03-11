@@ -119,7 +119,7 @@
           </el-table-column>
           <el-table-column label="标识" width="200">
             <template #default="{ row }">
-              <el-text size="small" style="font-family:monospace; color:#909399">{{ row.type }}</el-text>
+              <el-text size="small" style="font-family:monospace; color:var(--nask-text-secondary)">{{ row.type }}</el-text>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="100" align="center">

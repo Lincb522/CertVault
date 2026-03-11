@@ -61,6 +61,7 @@ final class DeviceViewModel: ObservableObject {
             let fresh = try await service.list(accountId: selectedAccountId)
             devices = fresh
             try? db.saveDevices(fresh, accountId: selectedAccountId)
+            WidgetHelper.reloadAll()
             AppLogger.data.info("📱 Loaded \(self.devices.count) devices")
         } catch is CancellationError {
             return

@@ -131,7 +131,7 @@ export const capabilityApi = {
 }
 
 export const pushKeyApi = {
-  list: () => api.get('/push-keys'),
+  list: () => api.get('/push/keys'),
   create: (data) => {
     if (data.file) {
       const formData = new FormData()
@@ -140,17 +140,34 @@ export const pushKeyApi = {
       formData.append('key_id', data.key_id)
       formData.append('team_id', data.team_id)
       if (data.bundle_ids) formData.append('bundle_ids', data.bundle_ids)
-      return api.post('/push-keys', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+      return api.post('/push/keys', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
     }
-    return api.post('/push-keys', data)
+    return api.post('/push/keys', data)
   },
-  update: (id, data) => api.put(`/push-keys/${id}`, data),
-  delete: (id) => api.delete(`/push-keys/${id}`),
-  download: (id) => downloadUrl(`/push-keys/${id}/download`),
+  update: (id, data) => api.put(`/push/keys/${id}`, data),
+  delete: (id) => api.delete(`/push/keys/${id}`),
+  download: (id) => downloadUrl(`/push/keys/${id}/download`),
 }
 
 export const pushApi = {
+  settings: () => api.get('/push/settings'),
+  updateSettings: (data) => api.put('/push/settings', data),
+  status: () => api.get('/push/status'),
   send: (data) => api.post('/push/send', data),
+  broadcast: (data) => api.post('/push/broadcast', data),
+  devices: () => api.get('/push/devices'),
+  deviceDetail: (id) => api.get(`/push/devices/${id}`),
+  devicesStats: () => api.get('/push/devices-stats'),
+  addDevice: (data) => api.post('/push/devices/add', data),
+  updateDevice: (id, data) => api.put(`/push/devices/${id}`, data),
+  deleteDevice: (id) => api.delete(`/push/devices/${id}`),
+  batchDeleteDevices: (ids) => api.post('/push/devices/batch-delete', { ids }),
+  cleanupDevices: (data) => api.post('/push/devices/cleanup', data),
+  history: (params) => api.get('/push/history', { params }),
+  historyStats: () => api.get('/push/history/stats'),
+  historyDetail: (id) => api.get(`/push/history/${id}`),
+  historyDelete: (id) => api.delete(`/push/history/${id}`),
+  historyClear: (data) => api.post('/push/history/clear', data),
   errorCodes: () => api.get('/push/error-codes'),
 }
 
@@ -163,6 +180,56 @@ export const udidApi = {
 export const healthApi = {
   local: () => api.get('/healthcheck/local'),
   remote: (accountId) => api.get('/healthcheck/remote', { params: { account_id: accountId } }),
+}
+
+export const certCheckApi = {
+  validate: (files, password, accountId) => {
+    const formData = new FormData()
+    files.forEach(f => formData.append('files', f))
+    if (password) formData.append('password', password)
+    if (accountId) formData.append('account_id', accountId)
+    return api.post('/cert-check/validate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    })
+  },
+}
+
+export const settingsApi = {
+  getSmtp: () => api.get('/auth/smtp-config'),
+  saveSmtp: (data) => api.post('/auth/smtp-config', data),
+  testSmtp: (to) => api.post('/auth/smtp-test', { to }),
+}
+
+export const appsApi = {
+  list: (accountId) => api.get('/apps/list', { params: { account_id: accountId } }),
+  get: (appId, accountId) => api.get(`/apps/${appId}`, { params: { account_id: accountId } }),
+  builds: (appId, accountId) => api.get(`/apps/${appId}/builds`, { params: { account_id: accountId } }),
+  versions: (appId, accountId) => api.get(`/apps/${appId}/versions`, { params: { account_id: accountId } }),
+}
+
+export const testflightApi = {
+  groups: (accountId, appId) => api.get('/testflight/groups', { params: { account_id: accountId, app_id: appId } }),
+  createGroup: (data) => api.post('/testflight/groups', data),
+  deleteGroup: (id, accountId) => api.delete(`/testflight/groups/${id}`, { params: { account_id: accountId } }),
+  groupTesters: (groupId, accountId) => api.get(`/testflight/groups/${groupId}/testers`, { params: { account_id: accountId } }),
+  addTestersToGroup: (groupId, data) => api.post(`/testflight/groups/${groupId}/testers`, data),
+  removeTestersFromGroup: (groupId, data) => api.delete(`/testflight/groups/${groupId}/testers`, { data }),
+  addBuildsToGroup: (groupId, data) => api.post(`/testflight/groups/${groupId}/builds`, data),
+  testers: (accountId) => api.get('/testflight/testers', { params: { account_id: accountId } }),
+  createTester: (data) => api.post('/testflight/testers', data),
+  deleteTester: (id, accountId) => api.delete(`/testflight/testers/${id}`, { params: { account_id: accountId } }),
+  builds: (accountId, appId) => api.get('/testflight/builds', { params: { account_id: accountId, app_id: appId } }),
+}
+
+export const appstoreApi = {
+  versions: (accountId, appId) => api.get('/appstore/versions', { params: { account_id: accountId, app_id: appId } }),
+  versionDetail: (id, accountId) => api.get(`/appstore/versions/${id}`, { params: { account_id: accountId } }),
+  createVersion: (data) => api.post('/appstore/versions', data),
+  updateVersion: (id, data) => api.patch(`/appstore/versions/${id}`, data),
+  submitForReview: (id, accountId) => api.post(`/appstore/versions/${id}/submit`, { account_id: accountId }),
+  localizations: (versionId, accountId) => api.get(`/appstore/versions/${versionId}/localizations`, { params: { account_id: accountId } }),
+  updateLocalization: (id, data) => api.patch(`/appstore/localizations/${id}`, data),
 }
 
 export default api

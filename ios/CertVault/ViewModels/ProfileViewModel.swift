@@ -68,6 +68,7 @@ final class ProfileViewModel: ObservableObject {
             bundleIds = freshBundles
             try? db.saveProfiles(freshProfiles, accountId: selectedAccountId)
             try? db.saveBundleIds(freshBundles, accountId: selectedAccountId)
+            WidgetHelper.reloadAll()
             AppLogger.data.info("📄 Loaded \(self.profiles.count) profiles, \(self.bundleIds.count) bundleIDs")
         } catch is CancellationError {
             return

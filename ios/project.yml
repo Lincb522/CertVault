@@ -42,6 +42,10 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
         ServerURL: $(SERVER_URL)
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - certvault
+            CFBundleURLName: com.certmanager.app
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
@@ -52,9 +56,11 @@ targets:
     dependencies:
       - package: HiconIcons
       - package: GRDB
-        product: GRDB
+      - target: CertVaultWidget
+        embed: true
     settings:
       base:
+        CODE_SIGN_ENTITLEMENTS: CertVault/CertVault.entitlements
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -63,5 +69,48 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "CertVault"
         PRODUCT_BUNDLE_IDENTIFIER: com.certmanager.app
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: T63A78YFJY
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  CertVaultWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - CertVaultWidget
+      - path: CertVault/Models/Account.swift
+        type: file
+      - path: CertVault/Models/Certificate.swift
+        type: file
+      - path: CertVault/Models/Profile.swift
+        type: file
+      - path: CertVault/Models/Device.swift
+        type: file
+      - path: CertVault/Models/DashboardStats.swift
+        type: file
+      - path: CertVault/Models/BundleID.swift
+        type: file
+      - path: CertVault/Models/PushKey.swift
+        type: file
+      - path: CertVault/Models/Model+GRDB.swift
+        type: file
+      - path: CertVault/Utils/Constants.swift
+        type: file
+    info:
+      path: CertVaultWidget/Info.plist
+      properties:
+        CFBundleDisplayName: CertVault Widget
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    dependencies:
+      - package: GRDB
+      - sdk: SwiftUI.framework
+      - sdk: WidgetKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.certmanager.app.widget
+        CODE_SIGN_ENTITLEMENTS: CertVaultWidget/CertVaultWidget.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: T63A78YFJY
+        SWIFT_VERSION: "5.9"
+        SKIP_INSTALL: YES

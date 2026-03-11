@@ -79,9 +79,29 @@ final class NotificationManager: NSObject, ObservableObject {
     // MARK: - Token Upload
 
     private func uploadToken(_ token: String) async {
+        let device = UIDevice.current
+        let deviceName = device.name
+        let model = device.model
+        let systemVersion = device.systemVersion
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+
+        let label = "\(deviceName) · \(model) · iOS \(systemVersion) · v\(appVersion)(\(buildNumber))"
+
+        #if DEBUG
+        let isSandbox = true
+        #else
+        let isSandbox = false
+        #endif
+
         do {
-            try await pushService.registerDevice(token: token, platform: "ios")
-            AppLogger.data.info("🔔 Token uploaded to server")
+            try await pushService.registerDevice(
+                token: token,
+                platform: "ios",
+                sandbox: isSandbox,
+                label: label
+            )
+            AppLogger.data.info("🔔 Token uploaded to server (label: \(label), sandbox: \(isSandbox))")
         } catch {
             AppLogger.data.error("🔔 Token upload failed: \(error.localizedDescription)")
         }

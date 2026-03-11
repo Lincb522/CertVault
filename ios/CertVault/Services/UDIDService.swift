@@ -10,7 +10,13 @@ struct UDIDService {
     }
 
     func enrollURL(requestId: String) -> String {
-        let base = api.baseURL.trimmingCharacters(in: .init(charactersIn: "/"))
+        var base = api.baseURL.trimmingCharacters(in: .init(charactersIn: "/"))
+        if base.hasPrefix("http://") {
+            base = base.replacingOccurrences(of: "http://", with: "https://")
+            if let portRange = base.range(of: #":\d+$"#, options: .regularExpression) {
+                base.removeSubrange(portRange)
+            }
+        }
         return "\(base)/api/udid/enroll/\(requestId)?host=\(base)"
     }
 

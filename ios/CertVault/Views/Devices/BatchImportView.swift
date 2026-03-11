@@ -1,5 +1,4 @@
 import SwiftUI
-import HiconIcons
 
 struct BatchImportView: View {
     @ObservedObject var vm: DeviceViewModel
@@ -11,67 +10,42 @@ struct BatchImportView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: DS.spacingLG) {
-                    if vm.accounts.count > 1 {
-                        DSGroupedCard {
-                            VStack(alignment: .leading, spacing: DS.spacingMD) {
-                                DSSectionHeader(L10n.account)
-                                Picker(L10n.select, selection: $vm.selectedAccountId) {
-                                    ForEach(vm.accounts) { acc in
-                                        Text(acc.displayName).tag(acc.id)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .tint(Color.dsBrand)
+            Form {
+                if vm.accounts.count > 1 {
+                    Section(L10n.account) {
+                        Picker(L10n.select, selection: $vm.selectedAccountId) {
+                            ForEach(vm.accounts) { acc in
+                                Text(acc.displayName).tag(acc.id)
                             }
-                            .padding(DS.spacingLG)
                         }
-                    }
-
-                    DSGroupedCard {
-                        VStack(alignment: .leading, spacing: DS.spacingMD) {
-                            DSSectionHeader(L10n.BatchImport.section)
-                            TextEditor(text: $text)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(Color.dsText)
-                                .scrollContentBackground(.hidden)
-                                .frame(minHeight: 200)
-                                .padding(DS.spacingMD)
-                                .background(Color.dsSurfaceElevated.opacity(0.6), in: RoundedRectangle(cornerRadius: DS.radiusMD))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DS.radiusMD)
-                                        .stroke(Color.dsBorder.opacity(0.5), lineWidth: 0.5)
-                                )
-                            Text(L10n.BatchImport.hint)
-                                .font(.caption)
-                                .foregroundStyle(Color.dsTextSecondary)
-                        }
-                        .padding(DS.spacingLG)
-                    }
-
-                    if let err = errorMsg {
-                        Text(err)
-                            .foregroundStyle(Color.dsDanger)
-                            .font(.caption)
-                    }
-
-                    DSPrimaryButton(
-                        title: L10n.import,
-                        isLoading: isLoading,
-                        isDisabled: text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    ) {
-                        doImport()
                     }
                 }
-                .padding(DS.spacingLG)
+
+                Section {
+                    TextEditor(text: $text)
+                        .font(.system(.caption, design: .monospaced))
+                        .frame(minHeight: 200)
+                } header: {
+                    Text(L10n.BatchImport.section)
+                } footer: {
+                    Text(L10n.BatchImport.hint)
+                }
+
+                if let err = errorMsg {
+                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                }
             }
+            .scrollContentBackground(.hidden)
             .pageBackground()
             .navigationTitle(L10n.BatchImport.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.import) { doImport() }
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
                 }
             }
             .alert(L10n.BatchImport.successTitle, isPresented: $success) {
@@ -80,6 +54,7 @@ struct BatchImportView: View {
                 Text(L10n.BatchImport.successMessage)
             }
         }
+        .sheetStyle()
     }
 
     private func doImport() {

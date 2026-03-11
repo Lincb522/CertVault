@@ -104,7 +104,7 @@
               <el-button size="small" text type="danger" @click.stop="clearFile">移除</el-button>
             </div>
             <div v-else class="p8-placeholder">
-              <el-icon size="32" color="#c0c4cc"><UploadFilled /></el-icon>
+              <el-icon size="32" color="var(--nask-text-muted)"><UploadFilled /></el-icon>
               <p>拖拽 .p8 文件到此处，或点击选择</p>
             </div>
           </div>

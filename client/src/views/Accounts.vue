@@ -89,9 +89,9 @@
               <el-button size="small" text type="danger" @click.stop="clearP8File">移除</el-button>
             </div>
             <div v-else class="p8-placeholder">
-              <el-icon size="32" color="#c0c4cc"><UploadFilled /></el-icon>
+              <el-icon size="32" color="var(--nask-text-muted)"><UploadFilled /></el-icon>
               <p>拖拽 .p8 文件到此处，或点击选择文件</p>
-              <p style="font-size: 12px; color: #909399">支持 .p8 / .pem / .key 格式</p>
+              <p style="font-size: 12px; color: var(--nask-text-secondary)">支持 .p8 / .pem / .key 格式</p>
             </div>
             <input
               type="file"
@@ -155,9 +155,9 @@
             </div>
           </div>
           <div v-else class="p8-placeholder">
-            <el-icon size="48" color="#c0c4cc"><UploadFilled /></el-icon>
+            <el-icon size="48" color="var(--nask-text-muted)"><UploadFilled /></el-icon>
             <p style="font-size: 16px; margin-top: 12px">点击或拖拽 .p8 文件到此处</p>
-            <p style="font-size: 13px; color: #909399; margin-top: 4px">
+            <p style="font-size: 13px; color: var(--nask-text-secondary); margin-top: 4px">
               Apple API 密钥文件 (AuthKey_XXXXXXXXXX.p8)
             </p>
           </div>
@@ -196,7 +196,7 @@
       <div v-if="importStep === 2" style="text-align: center; padding: 20px 0">
         <el-icon size="64" color="#67c23a"><CircleCheckFilled /></el-icon>
         <h3 style="margin-top: 16px">导入成功</h3>
-        <p style="color: #606266; margin-top: 8px">账号「{{ importForm.name }}」已添加</p>
+        <p style="color: var(--nask-text-secondary); margin-top: 8px">账号「{{ importForm.name }}」已添加</p>
       </div>
 
       <template #footer>
@@ -212,95 +212,69 @@
     </el-dialog>
 
     <!-- 账号详情 -->
-    <el-dialog v-model="showDetailDialog" title="账号详细信息" width="750px" destroy-on-close>
+    <el-dialog v-model="showDetailDialog" :title="detailData?.name || '账号详情'" width="700px" destroy-on-close>
       <div v-if="detailData" v-loading="detailLoading">
-        <el-alert
-          v-if="detailData.remote_synced"
-          type="success"
-          :closable="false"
-          style="margin-bottom: 12px"
-        >
-          已从 Apple API 同步最新数据
-        </el-alert>
-        <el-alert
-          v-else-if="detailData.remote_synced === false"
-          type="warning"
-          :closable="false"
-          style="margin-bottom: 12px"
-        >
-          Apple API 同步失败，仅显示本地缓存数据
-        </el-alert>
-        <el-descriptions :column="2" border size="small" style="margin-bottom: 20px">
-          <el-descriptions-item label="账号名称">{{ detailData.name }}</el-descriptions-item>
+        <!-- 顶部标签行 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+          <el-tag effect="plain" size="default">Key: {{ detailData.key_id }}</el-tag>
+          <el-tag v-if="detailData.remote_synced" size="small" type="success">已同步</el-tag>
+          <el-tag v-else-if="detailData.remote_synced === false" size="small" type="warning">同步失败</el-tag>
+          <span style="font-size:12px;color:var(--nask-text-secondary);margin-left:auto">创建于 {{ formatDate(detailData.created_at) }}</span>
+        </div>
+
+        <!-- 统计指标行 -->
+        <div class="acct-stats">
+          <div class="acct-stat">
+            <span class="acct-stat-num">{{ detailData.stats.certificates }}</span>
+            <span class="acct-stat-lbl">证书</span>
+            <span v-if="detailData.stats.expired_certificates" class="acct-stat-warn">{{ detailData.stats.expired_certificates }} 过期</span>
+          </div>
+          <div class="acct-stat">
+            <span class="acct-stat-num">{{ detailData.stats.devices }}</span>
+            <span class="acct-stat-lbl">设备</span>
+            <span class="acct-stat-ok">{{ detailData.stats.active_devices }} 活跃</span>
+          </div>
+          <div class="acct-stat">
+            <span class="acct-stat-num">{{ detailData.stats.bundle_ids }}</span>
+            <span class="acct-stat-lbl">Bundle ID</span>
+          </div>
+          <div class="acct-stat">
+            <span class="acct-stat-num">{{ detailData.stats.profiles }}</span>
+            <span class="acct-stat-lbl">描述文件</span>
+            <span v-if="detailData.stats.expired_profiles" class="acct-stat-warn">{{ detailData.stats.expired_profiles }} 过期</span>
+          </div>
+        </div>
+
+        <!-- 基本信息 -->
+        <el-descriptions :column="1" border size="small" style="margin-bottom:16px">
+          <el-descriptions-item label="Issuer ID">
+            <code style="font-size:12px;word-break:break-all">{{ detailData.issuer_id }}</code>
+          </el-descriptions-item>
+          <el-descriptions-item label="Key ID">{{ detailData.key_id }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ formatDate(detailData.created_at) }}</el-descriptions-item>
-          <el-descriptions-item label="Issuer ID" :span="2">
-            <code style="font-size: 12px">{{ detailData.issuer_id }}</code>
-          </el-descriptions-item>
-          <el-descriptions-item label="Key ID">
-            <el-tag size="small">{{ detailData.key_id }}</el-tag>
-          </el-descriptions-item>
         </el-descriptions>
 
-        <!-- 统计卡片 -->
-        <el-row :gutter="12" style="margin-bottom: 20px">
-          <el-col :xs="12" :sm="6">
-            <div class="detail-stat">
-              <div class="detail-stat-num">{{ detailData.stats.certificates }}</div>
-              <div class="detail-stat-label">证书
-                <span v-if="detailData.stats.expired_certificates" class="stat-warn">
-                  ({{ detailData.stats.expired_certificates }} 已过期)
-                </span>
-              </div>
-            </div>
-          </el-col>
-          <el-col :xs="12" :sm="6">
-            <div class="detail-stat">
-              <div class="detail-stat-num">{{ detailData.stats.devices }}</div>
-              <div class="detail-stat-label">设备
-                <span class="stat-ok">({{ detailData.stats.active_devices }} 活跃)</span>
-              </div>
-            </div>
-          </el-col>
-          <el-col :xs="12" :sm="6">
-            <div class="detail-stat">
-              <div class="detail-stat-num">{{ detailData.stats.bundle_ids }}</div>
-              <div class="detail-stat-label">Bundle ID</div>
-            </div>
-          </el-col>
-          <el-col :xs="12" :sm="6">
-            <div class="detail-stat">
-              <div class="detail-stat-num">{{ detailData.stats.profiles }}</div>
-              <div class="detail-stat-label">描述文件
-                <span v-if="detailData.stats.expired_profiles" class="stat-warn">
-                  ({{ detailData.stats.expired_profiles }} 已过期)
-                </span>
-              </div>
-            </div>
-          </el-col>
-        </el-row>
-
-        <!-- 证书列表 -->
-        <el-collapse v-model="detailExpanded">
+        <!-- 关联资源 -->
+        <el-collapse v-model="detailExpanded" style="border:none">
           <el-collapse-item title="证书" name="certs">
             <template #title>
-              <span>证书 ({{ detailData.certificates.length }})</span>
+              <span style="font-weight:600">证书 ({{ detailData.certificates.length }})</span>
             </template>
             <el-table :data="detailData.certificates" stripe size="small" empty-text="暂无" max-height="200">
               <el-table-column prop="name" label="名称" min-width="150" />
               <el-table-column prop="type" label="类型" width="140" />
               <el-table-column label="过期时间" width="110">
                 <template #default="{ row }">
-                  <span :style="{ color: isExpired(row.expires_at) ? '#f56c6c' : '' }">
+                  <span :style="{ color: isExpired(row.expires_at) ? 'var(--nask-red)' : '' }">
                     {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString() : '-' }}
                   </span>
                 </template>
               </el-table-column>
             </el-table>
           </el-collapse-item>
-
           <el-collapse-item title="设备" name="devices">
             <template #title>
-              <span>设备 ({{ detailData.devices.length }})</span>
+              <span style="font-weight:600">设备 ({{ detailData.devices.length }})</span>
             </template>
             <el-table :data="detailData.devices" stripe size="small" empty-text="暂无" max-height="200">
               <el-table-column prop="name" label="名称" min-width="120" />
@@ -317,10 +291,9 @@
               </el-table-column>
             </el-table>
           </el-collapse-item>
-
           <el-collapse-item title="Bundle ID" name="bundles">
             <template #title>
-              <span>Bundle ID ({{ detailData.bundle_ids.length }})</span>
+              <span style="font-weight:600">Bundle ID ({{ detailData.bundle_ids.length }})</span>
             </template>
             <el-table :data="detailData.bundle_ids" stripe size="small" empty-text="暂无" max-height="200">
               <el-table-column prop="name" label="名称" width="120" />
@@ -332,17 +305,16 @@
               <el-table-column prop="platform" label="平台" width="70" />
             </el-table>
           </el-collapse-item>
-
           <el-collapse-item title="描述文件" name="profiles">
             <template #title>
-              <span>描述文件 ({{ detailData.profiles.length }})</span>
+              <span style="font-weight:600">描述文件 ({{ detailData.profiles.length }})</span>
             </template>
             <el-table :data="detailData.profiles" stripe size="small" empty-text="暂无" max-height="200">
               <el-table-column prop="name" label="名称" min-width="200" />
               <el-table-column prop="type" label="类型" width="160" />
               <el-table-column label="过期时间" width="110">
                 <template #default="{ row }">
-                  <span :style="{ color: isExpired(row.expires_at) ? '#f56c6c' : '' }">
+                  <span :style="{ color: isExpired(row.expires_at) ? 'var(--nask-red)' : '' }">
                     {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString() : '-' }}
                   </span>
                 </template>
@@ -352,7 +324,7 @@
         </el-collapse>
       </div>
       <template #footer>
-        <el-button @click="showDetailDialog = false">关闭</el-button>
+        <el-button @click="showDetailDialog = false" round>关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -656,7 +628,7 @@ async function testConnection(id) {
       `<div style="line-height:1.8">
         <p style="color:#f56c6c;font-weight:600;margin-bottom:8px">${msg}</p>
         <p style="font-weight:600;margin-bottom:4px">排查建议：</p>
-        <ol style="padding-left:18px;color:#606266;font-size:13px">
+        <ol style="padding-left:18px;color:var(--nask-text-secondary);font-size:13px">
           ${tips.map(t => `<li>${t}</li>`).join('')}
         </ol>
       </div>`,
@@ -741,27 +713,51 @@ onMounted(fetchAccounts)
   justify-content: center;
 }
 
-.detail-stat {
+/* ===== 账号详情弹窗 ===== */
+.acct-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.acct-stat {
   text-align: center;
-  padding: 16px 8px;
+  padding: 12px 8px 10px;
   background: var(--nask-surface-hover);
-  border-radius: var(--nask-radius-sm);
+  border-radius: 10px;
   border: 1px solid var(--nask-border);
 }
 
-.detail-stat-num {
-  font-size: 28px;
+.acct-stat-num {
+  display: block;
+  font-size: 24px;
   font-weight: 750;
   color: var(--nask-text);
   line-height: 1;
 }
 
-.detail-stat-label {
-  font-size: 12px;
+.acct-stat-lbl {
+  display: block;
+  font-size: 11px;
   color: var(--nask-text-secondary);
-  margin-top: 6px;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
 
-.stat-warn { color: var(--nask-red); }
-.stat-ok { color: var(--nask-green); }
+.acct-stat-warn {
+  display: block;
+  font-size: 10px;
+  color: var(--nask-red);
+  margin-top: 2px;
+}
+
+.acct-stat-ok {
+  display: block;
+  font-size: 10px;
+  color: var(--nask-green);
+  margin-top: 2px;
+}
 </style>

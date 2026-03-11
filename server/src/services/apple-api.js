@@ -232,6 +232,252 @@ class AppleApiService {
   async listProfilesWithRelations() {
     return this.request('GET', '/profiles?include=bundleId,certificates,devices');
   }
+
+  // ---- Apps ----
+  async listApps(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request('GET', `/apps${query ? '?' + query : ''}`);
+  }
+
+  async getApp(appId, include = '') {
+    const q = include ? `?include=${include}` : '';
+    return this.request('GET', `/apps/${appId}${q}`);
+  }
+
+  async listAppBuilds(appId, params = {}) {
+    const safeParams = { ...params };
+    delete safeParams.sort; // Apple /apps/{id}/builds does not support sort
+    const query = new URLSearchParams(safeParams).toString();
+    return this.request('GET', `/apps/${appId}/builds${query ? '?' + query : ''}`);
+  }
+
+  async listAppVersions(appId, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request('GET', `/apps/${appId}/appStoreVersions${query ? '?' + query : ''}`);
+  }
+
+  // ---- Builds ----
+  async listBuilds(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request('GET', `/builds${query ? '?' + query : ''}`);
+  }
+
+  async getBuild(buildId, include = '') {
+    const q = include ? `?include=${include}` : '';
+    return this.request('GET', `/builds/${buildId}${q}`);
+  }
+
+  // ---- TestFlight: Beta Testers ----
+  async listBetaTesters(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request('GET', `/betaTesters${query ? '?' + query : ''}`);
+  }
+
+  async createBetaTester(email, firstName, lastName, betaGroupIds = []) {
+    const data = {
+      data: {
+        type: 'betaTesters',
+        attributes: { email, firstName, lastName },
+      }
+    };
+    if (betaGroupIds.length) {
+      data.data.relationships = {
+        betaGroups: { data: betaGroupIds.map(id => ({ type: 'betaGroups', id })) }
+      };
+    }
+    return this.request('POST', '/betaTesters', data);
+  }
+
+  async deleteBetaTester(testerId) {
+    return this.request('DELETE', `/betaTesters/${testerId}`);
+  }
+
+  // ---- TestFlight: Beta Groups ----
+  async listBetaGroups(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request('GET', `/betaGroups${query ? '?' + query : ''}`);
+  }
+
+  async createBetaGroup(appId, name, isInternalGroup = false) {
+    return this.request('POST', '/betaGroups', {
+      data: {
+        type: 'betaGroups',
+        attributes: { name, isInternalGroup },
+        relationships: {
+          app: { data: { type: 'apps', id: appId } }
+        }
+      }
+    });
+  }
+
+  async deleteBetaGroup(groupId) {
+    return this.request('DELETE', `/betaGroups/${groupId}`);
+  }
+
+  async addTesterToGroup(groupId, testerIds) {
+    return this.request('POST', `/betaGroups/${groupId}/relationships/betaTesters`, {
+      data: testerIds.map(id => ({ type: 'betaTesters', id }))
+    });
+  }
+
+  async removeTesterFromGroup(groupId, testerIds) {
+    return this.request('DELETE', `/betaGroups/${groupId}/relationships/betaTesters`, {
+      data: testerIds.map(id => ({ type: 'betaTesters', id }))
+    });
+  }
+
+  async addBuildToGroup(groupId, buildIds) {
+    return this.request('POST', `/betaGroups/${groupId}/relationships/builds`, {
+      data: buildIds.map(id => ({ type: 'builds', id }))
+    });
+  }
+
+  async listGroupTesters(groupId) {
+    return this.request('GET', `/betaGroups/${groupId}/betaTesters`);
+  }
+
+  async listGroupBuilds(groupId) {
+    return this.request('GET', `/betaGroups/${groupId}/builds`);
+  }
+
+  // ---- TestFlight: Beta Build Localizations ----
+  async listBetaBuildLocalizations(buildId) {
+    return this.request('GET', `/builds/${buildId}/betaBuildLocalizations`);
+  }
+
+  async createBetaBuildLocalization(buildId, locale, whatsNew) {
+    return this.request('POST', '/betaBuildLocalizations', {
+      data: {
+        type: 'betaBuildLocalizations',
+        attributes: { locale, whatsNew },
+        relationships: {
+          build: { data: { type: 'builds', id: buildId } }
+        }
+      }
+    });
+  }
+
+  async updateBetaBuildLocalization(localizationId, whatsNew) {
+    return this.request('PATCH', `/betaBuildLocalizations/${localizationId}`, {
+      data: {
+        type: 'betaBuildLocalizations',
+        id: localizationId,
+        attributes: { whatsNew }
+      }
+    });
+  }
+
+  // ---- TestFlight: Build Beta Details ----
+  async getBuildBetaDetail(buildId) {
+    return this.request('GET', `/builds/${buildId}/buildBetaDetail`);
+  }
+
+  // ---- App Store Versions ----
+  async listAppStoreVersions(appId, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request('GET', `/apps/${appId}/appStoreVersions${query ? '?' + query : ''}`);
+  }
+
+  async createAppStoreVersion(appId, platform, versionString) {
+    return this.request('POST', '/appStoreVersions', {
+      data: {
+        type: 'appStoreVersions',
+        attributes: { platform, versionString },
+        relationships: {
+          app: { data: { type: 'apps', id: appId } }
+        }
+      }
+    });
+  }
+
+  async getAppStoreVersion(versionId, include = '') {
+    const q = include ? `?include=${include}` : '';
+    return this.request('GET', `/appStoreVersions/${versionId}${q}`);
+  }
+
+  async updateAppStoreVersion(versionId, attributes = {}) {
+    return this.request('PATCH', `/appStoreVersions/${versionId}`, {
+      data: {
+        type: 'appStoreVersions',
+        id: versionId,
+        attributes,
+      }
+    });
+  }
+
+  // ---- App Store Version Submissions ----
+  async submitForReview(versionId) {
+    return this.request('POST', '/appStoreVersionSubmissions', {
+      data: {
+        type: 'appStoreVersionSubmissions',
+        relationships: {
+          appStoreVersion: { data: { type: 'appStoreVersions', id: versionId } }
+        }
+      }
+    });
+  }
+
+  // ---- App Store Version Localizations ----
+  async listVersionLocalizations(versionId) {
+    return this.request('GET', `/appStoreVersions/${versionId}/appStoreVersionLocalizations`);
+  }
+
+  async updateVersionLocalization(localizationId, attributes = {}) {
+    return this.request('PATCH', `/appStoreVersionLocalizations/${localizationId}`, {
+      data: {
+        type: 'appStoreVersionLocalizations',
+        id: localizationId,
+        attributes,
+      }
+    });
+  }
+
+  // ---- App Store Version: Build Relationship ----
+  async getVersionBuild(versionId) {
+    return this.request('GET', `/appStoreVersions/${versionId}/build`);
+  }
+
+  async setVersionBuild(versionId, buildId) {
+    return this.request('PATCH', `/appStoreVersions/${versionId}/relationships/build`, {
+      data: buildId ? { type: 'builds', id: buildId } : null
+    });
+  }
+
+  // ---- App Store Version: Phased Release ----
+  async getVersionPhasedRelease(versionId) {
+    return this.request('GET', `/appStoreVersions/${versionId}/appStoreVersionPhasedRelease`);
+  }
+
+  async createVersionPhasedRelease(versionId) {
+    return this.request('POST', '/appStoreVersionPhasedReleases', {
+      data: {
+        type: 'appStoreVersionPhasedReleases',
+        attributes: { phasedReleaseState: 'ACTIVE' },
+        relationships: {
+          appStoreVersion: { data: { type: 'appStoreVersions', id: versionId } }
+        }
+      }
+    });
+  }
+
+  async deleteVersionPhasedRelease(phasedReleaseId) {
+    return this.request('DELETE', `/appStoreVersionPhasedReleases/${phasedReleaseId}`);
+  }
+
+  async updateVersionPhasedRelease(phasedReleaseId, state) {
+    return this.request('PATCH', `/appStoreVersionPhasedReleases/${phasedReleaseId}`, {
+      data: {
+        type: 'appStoreVersionPhasedReleases',
+        id: phasedReleaseId,
+        attributes: { phasedReleaseState: state }
+      }
+    });
+  }
+
+  // ---- App Infos ----
+  async listAppInfos(appId) {
+    return this.request('GET', `/apps/${appId}/appInfos`);
+  }
 }
 
 module.exports = AppleApiService;

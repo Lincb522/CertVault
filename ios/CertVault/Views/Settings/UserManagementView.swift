@@ -11,26 +11,32 @@ struct UserManagementView: View {
     var body: some View {
         Group {
             if vm.users.isEmpty && !vm.isLoading {
-                DSEmptyState(
+                EmptyStateView(
                     icon: AppIcon.group,
                     title: L10n.UserMgmt.emptyTitle,
                     message: L10n.UserMgmt.emptyMessage
                 )
             } else {
                 ScrollView {
-                    DSGroupedCard {
+                    LazyVStack(spacing: 0) {
                         ForEach(Array(vm.users.enumerated()), id: \.element.id) { index, user in
                             userRow(user)
                                 .contextMenu { contextMenuItems(for: user) }
 
                             if index < vm.users.count - 1 {
-                                DSDivider()
+                                Divider().padding(.leading, 68)
                             }
                         }
                     }
-                    .padding(.horizontal, DS.spacingLG)
-                    .padding(.top, DS.spacingSM)
-                    .padding(.bottom, DS.spacingXL)
+                    .padding(.vertical, 4)
+                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.dsBorder, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                 }
                 .pageBackground()
                 .refreshable { await vm.load() }
@@ -49,7 +55,9 @@ struct UserManagementView: View {
         )) {
             Button(L10n.delete, role: .destructive) {
                 if let user = userToDelete {
-                    Task { try? await vm.deleteUser(id: user.id) }
+                    Task {
+                        try? await vm.deleteUser(id: user.id)
+                    }
                 }
             }
             Button(L10n.cancel, role: .cancel) {}
@@ -80,39 +88,39 @@ struct UserManagementView: View {
     }
 
     private func userRow(_ user: ManagedUser) -> some View {
-        HStack(spacing: DS.spacingMD) {
+        HStack(spacing: 14) {
             ZStack {
                 Circle()
                     .fill(user.role == "superadmin"
-                          ? Color.dsGradientPurple
-                          : Color.dsGradientBlue)
+                          ? LinearGradient(colors: [.dsAccentPurple, .dsAccentPink], startPoint: .topLeading, endPoint: .bottomTrailing)
+                          : LinearGradient(colors: [.dsAccentBlue, .dsAccentCyan], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 40, height: 40)
                 Text(String(user.username.prefix(1)).uppercased())
                     .font(.headline.bold())
                     .foregroundStyle(.white)
             }
 
-            VStack(alignment: .leading, spacing: DS.spacingXS) {
-                HStack(spacing: DS.spacingSM) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
                     Text(user.username)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.dsText)
-                    DSBadge(
-                        text: user.role == "superadmin" ? L10n.UserMgmt.roleSuper : L10n.UserMgmt.roleUser,
-                        color: user.role == "superadmin" ? .dsPurple : .dsBlue
+                    StatusBadge(
+                        user.role == "superadmin" ? L10n.UserMgmt.roleSuper : L10n.UserMgmt.roleUser,
+                        color: user.role == "superadmin" ? .dsAccentPurple : .dsAccentBlue
                     )
                 }
                 if let email = user.email, !email.isEmpty {
                     Text(email)
                         .font(.caption)
-                        .foregroundStyle(Color.dsTextSecondary)
+                        .foregroundStyle(Color.dsMuted)
                 }
             }
 
             Spacer()
         }
-        .padding(.vertical, DS.spacingMD)
-        .padding(.horizontal, DS.spacingLG)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .contentShape(Rectangle())
     }
 
@@ -149,36 +157,21 @@ struct UserManagementView: View {
 
     private var resetPasswordSheet: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: DS.spacingLG) {
-                    if let user = userToResetPwd {
-                        DSGroupedCard {
-                            HStack {
-                                Text(NSLocalizedString("user.field.user", comment: ""))
-                                    .foregroundStyle(Color.dsTextSecondary)
-                                Spacer()
-                                Text(user.username).foregroundStyle(Color.dsText)
-                            }
-                            .padding(DS.spacingLG)
+            Form {
+                if let user = userToResetPwd {
+                    Section {
+                        HStack {
+                            Text(NSLocalizedString("user.field.user", comment: "")).foregroundStyle(Color.dsMuted)
+                            Spacer()
+                            Text(user.username).foregroundStyle(Color.dsText)
                         }
-                    }
-
-                    DSGroupedCard {
-                        VStack(alignment: .leading, spacing: DS.spacingSM) {
-                            Text(NSLocalizedString("user.newPassword", comment: ""))
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Color.dsTextSecondary)
-                            SecureField(NSLocalizedString("user.newPassword.hint", comment: ""), text: $newPassword)
-                                .padding(DS.spacingMD)
-                                .background(Color.dsSurfaceElevated, in: RoundedRectangle(cornerRadius: DS.radiusSM))
-                        }
-                        .padding(DS.spacingLG)
                     }
                 }
-                .padding(.horizontal, DS.spacingLG)
-                .padding(.top, DS.spacingSM)
+                Section(NSLocalizedString("user.newPassword", comment: "")) {
+                    SecureField(NSLocalizedString("user.newPassword.hint", comment: ""), text: $newPassword)
+                }
             }
-            .pageBackground()
+            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.UserMgmt.resetPasswordTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -198,6 +191,7 @@ struct UserManagementView: View {
                 }
             }
         }
+        .sheetStyle()
         .presentationDetents([.medium])
     }
 }

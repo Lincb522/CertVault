@@ -11,4 +11,5 @@ enum AppConstants {
     static let keychainServiceName = "com.certmanager.app"
     static let tokenKey = "auth_token"
     static let usernameKey = "last_username"
+    static let appGroupID = "group.com.certvault.app"
 }

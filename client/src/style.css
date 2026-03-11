@@ -14,8 +14,8 @@
 
   /* --- Text --- */
   --nask-text: #2C3659;
-  --nask-text-secondary: #A7AEC1;
-  --nask-text-muted: #C4C9D6;
+  --nask-text-secondary: #5F6680;
+  --nask-text-muted: #7C8499;
 
   /* --- Brand --- */
   --nask-blue: #066DE6;
@@ -27,7 +27,7 @@
 
   /* --- Sidebar (light) --- */
   --nask-sidebar-bg: #FFFFFF;
-  --nask-sidebar-text: #A7AEC1;
+  --nask-sidebar-text: #5F6680;
   --nask-sidebar-active-bg: #066DE6;
   --nask-sidebar-active-text: #FFFFFF;
   --nask-sidebar-hover: #F5F5F5;
@@ -53,6 +53,15 @@
 
   /* --- Transition --- */
   --nask-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* --- Override Element Plus gray defaults --- */
+  --el-text-color-secondary: var(--nask-text-secondary);
+  --el-text-color-placeholder: var(--nask-text-muted);
+  --el-text-color-regular: var(--nask-text);
+  --el-text-color-disabled: var(--nask-text-muted);
+  --el-color-info: var(--nask-text-secondary);
+  --el-fill-color-light: var(--nask-surface-hover);
+  --el-border-color-lighter: var(--nask-border);
 }
 
 /* ============= DARK MODE ============= */
@@ -64,11 +73,11 @@ html.dark {
   --nask-border: #292E32;
 
   --nask-text: #FFFFFF;
-  --nask-text-secondary: #A7AEC1;
-  --nask-text-muted: #6B7280;
+  --nask-text-secondary: #B8BFCF;
+  --nask-text-muted: #919BB0;
 
   --nask-sidebar-bg: #202427;
-  --nask-sidebar-text: #A7AEC1;
+  --nask-sidebar-text: #B8BFCF;
   --nask-sidebar-active-bg: #066DE6;
   --nask-sidebar-active-text: #FFFFFF;
   --nask-sidebar-hover: rgba(255,255,255,0.06);
@@ -76,6 +85,14 @@ html.dark {
 
   --nask-navbar-bg: #202427;
   --nask-navbar-border: #292E32;
+
+  --el-text-color-secondary: var(--nask-text-secondary);
+  --el-text-color-placeholder: var(--nask-text-muted);
+  --el-text-color-regular: var(--nask-text);
+  --el-text-color-disabled: var(--nask-text-muted);
+  --el-color-info: var(--nask-text-secondary);
+  --el-fill-color-light: var(--nask-surface-hover);
+  --el-border-color-lighter: var(--nask-border);
 
   --nask-shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
   --nask-shadow-md: 0 4px 12px rgba(0,0,0,0.15);
@@ -641,30 +658,119 @@ body {
 
 .el-dialog {
   --el-dialog-bg-color: var(--nask-surface);
-  border-radius: var(--nask-radius-xl) !important;
-  box-shadow: var(--nask-shadow-lg);
+  border-radius: 20px !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
   border: 1px solid var(--nask-border);
+  overflow: hidden;
+}
+
+html.dark .el-dialog {
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
 }
 
 .el-dialog__header {
   border-bottom: 1px solid var(--nask-border);
-  padding: 20px 24px !important;
+  padding: 18px 24px !important;
+  margin: 0;
+  background: var(--nask-surface);
 }
 
 .el-dialog__title {
   color: var(--nask-text) !important;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
+  letter-spacing: -0.2px;
+}
+
+.el-dialog__headerbtn {
+  width: 32px;
+  height: 32px;
+  top: 14px;
+  right: 16px;
+  border-radius: 8px;
+  background: var(--nask-surface-hover);
+  transition: all var(--nask-transition);
+}
+
+.el-dialog__headerbtn:hover {
+  background: var(--nask-border);
+}
+
+.el-dialog__headerbtn .el-dialog__close {
+  font-size: 13px;
 }
 
 .el-dialog__body {
-  padding: 24px !important;
+  padding: 20px 24px !important;
   color: var(--nask-text);
+  background: var(--nask-bg);
 }
 
 .el-dialog__footer {
   border-top: 1px solid var(--nask-border);
-  padding: 16px 24px !important;
+  padding: 14px 24px !important;
+  background: var(--nask-surface);
+}
+
+.el-dialog__footer .el-button {
+  min-width: 80px;
+}
+
+.el-dialog__footer .el-button--primary {
+  border-radius: var(--nask-radius-pill) !important;
+}
+
+/* --- Dialog Body 内部框架 --- */
+.el-dialog__body .el-table {
+  border: 1px solid var(--nask-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.el-dialog__body .el-descriptions {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--nask-border);
+}
+
+.el-dialog__body .el-descriptions .el-descriptions__label {
+  background: var(--nask-surface) !important;
+  font-weight: 600;
+  color: var(--nask-text-secondary);
+  width: 110px;
+}
+
+.el-dialog__body .el-descriptions .el-descriptions__content {
+  background: var(--nask-surface) !important;
+  color: var(--nask-text);
+}
+
+.el-dialog__body .el-collapse {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--nask-border);
+}
+
+.el-dialog__body .el-collapse-item__header {
+  padding: 0 16px;
+  background: var(--nask-surface);
+  border-bottom-color: var(--nask-border);
+}
+
+.el-dialog__body .el-collapse-item__content {
+  padding: 12px 16px;
+  background: var(--nask-surface);
+}
+
+.el-dialog__body .el-form {
+  background: var(--nask-surface);
+  border: 1px solid var(--nask-border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.el-dialog__body .el-alert {
+  border-radius: 10px;
 }
 
 /* --- Tag --- */
@@ -745,8 +851,28 @@ body {
   --el-messagebox-title-color: var(--nask-text);
   --el-messagebox-content-color: var(--nask-text-secondary);
   background-color: var(--nask-surface) !important;
-  border: 1px solid var(--nask-border) !important;
-  border-radius: var(--nask-radius-xl) !important;
+  border: none !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04);
+  padding: 24px !important;
+}
+
+html.dark .el-message-box {
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.el-message-box__title {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.el-message-box__btns .el-button {
+  border-radius: var(--nask-radius-pill) !important;
+  min-width: 80px;
+}
+
+.el-message-box__btns .el-button--primary {
+  border-radius: var(--nask-radius-pill) !important;
 }
 
 /* --- Alert --- */
@@ -775,8 +901,34 @@ body {
 
 /* --- Descriptions --- */
 
-.el-descriptions__label { color: var(--nask-text-secondary) !important; background-color: var(--nask-surface-hover) !important; }
-.el-descriptions__content { color: var(--nask-text) !important; background-color: var(--nask-surface) !important; }
+.el-descriptions {
+  --el-descriptions-table-border: var(--nask-border);
+}
+
+.el-descriptions__label {
+  color: var(--nask-text-secondary) !important;
+  background-color: var(--nask-surface-hover) !important;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 10px 14px !important;
+}
+
+.el-descriptions__content {
+  color: var(--nask-text) !important;
+  background-color: var(--nask-surface) !important;
+  padding: 10px 14px !important;
+  font-size: 13px;
+}
+
+.el-descriptions.is-bordered .el-descriptions__table {
+  border-radius: var(--nask-radius-sm);
+  overflow: hidden;
+  border-color: var(--nask-border);
+}
+
+.el-descriptions.is-bordered .el-descriptions__cell {
+  border-color: var(--nask-border) !important;
+}
 
 /* --- Tabs --- */
 
@@ -807,8 +959,14 @@ body {
 
 .el-loading-mask { background-color: rgba(246,247,250,0.85) !important; }
 html.dark .el-loading-mask { background-color: rgba(17,19,21,0.85) !important; }
-.el-overlay { background-color: rgba(44,54,89,0.4) !important; }
-html.dark .el-overlay { background-color: rgba(0,0,0,0.5) !important; }
+.el-overlay {
+  background-color: rgba(44,54,89,0.35) !important;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+html.dark .el-overlay {
+  background-color: rgba(0,0,0,0.45) !important;
+}
 
 /* --- Timeline --- */
 

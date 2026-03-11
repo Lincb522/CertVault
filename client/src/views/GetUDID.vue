@@ -19,7 +19,7 @@
           <div v-if="!requestId" class="empty-state">
             <HIcon name="display-1" :size="48" />
             <p style="margin-top: 12px">点击「生成新链接」创建 UDID 获取链接</p>
-            <p style="color: #909399; font-size: 13px">生成后用 iPhone Safari 扫码或打开链接即可</p>
+            <p style="color: var(--nask-text-secondary); font-size: 13px">生成后用 iPhone Safari 扫码或打开链接即可</p>
           </div>
 
           <!-- 已生成 -->
@@ -35,7 +35,7 @@
               <div class="qr-code" ref="qrContainer"></div>
               <div class="qr-info">
                 <p><strong>用 iPhone Safari 扫描二维码</strong></p>
-                <p style="color: #909399; font-size: 13px; margin-top: 4px">或复制链接在 Safari 中打开（不支持微信/Chrome 内打开）</p>
+                <p style="color: var(--nask-text-secondary); font-size: 13px; margin-top: 4px">或复制链接在 Safari 中打开（不支持微信/Chrome 内打开）</p>
 
                 <div class="link-box">
                   <el-input :model-value="enrollUrl" readonly size="small">

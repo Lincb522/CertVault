@@ -123,7 +123,7 @@
                   <div class="rel-name">{{ profile.bundle.name || '-' }}</div>
                   <code class="rel-id">{{ profile.bundle.identifier || profile.bundle.id }}</code>
                 </div>
-                <span v-else style="color:#909399">-</span>
+                <span v-else style="color:var(--nask-text-secondary)">-</span>
               </el-col>
 
               <el-col :xs="24" :sm="8">
@@ -141,20 +141,20 @@
 
               <el-col :xs="24" :sm="8">
                 <h4 class="rel-section-title">关联设备 ({{ profile.device_count }})</h4>
-                <div v-if="profile.devices.length === 0" style="color:#909399;font-size:13px">
+                <div v-if="profile.devices.length === 0" style="color:var(--nask-text-secondary);font-size:13px">
                   无设备（App Store / Enterprise 类型）
                 </div>
                 <div v-for="dev in profile.devices.slice(0, 20)" :key="dev.id" class="rel-item">
                   <div class="rel-name">{{ dev.name || '-' }}</div>
                   <code class="rel-id">{{ dev.udid || dev.id }}</code>
                 </div>
-                <div v-if="profile.devices.length > 20" style="color:#909399;font-size:12px;margin-top:4px">
+                <div v-if="profile.devices.length > 20" style="color:var(--nask-text-secondary);font-size:12px;margin-top:4px">
                   还有 {{ profile.devices.length - 20 }} 台设备...
                 </div>
               </el-col>
             </el-row>
 
-            <div style="margin-top:8px;color:#909399;font-size:12px">
+            <div style="margin-top:8px;color:var(--nask-text-secondary);font-size:12px">
               过期时间: {{ profile.expires ? new Date(profile.expires).toLocaleDateString() : '-' }}
             </div>
           </el-collapse-item>
@@ -429,80 +429,60 @@
     </el-tabs>
 
     <!-- 证书详情 -->
-    <el-dialog v-model="showDetailDialog" title="证书详情" width="560px" destroy-on-close>
+    <el-dialog v-model="showDetailDialog" :title="certDetail?.name || '证书详情'" width="580px" destroy-on-close>
       <div v-if="certDetail" v-loading="detailLoading">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="证书名称" :span="2">{{ certDetail.name }}</el-descriptions-item>
-          <el-descriptions-item label="证书类型">
-            <el-tag size="small" :type="certDetail.is_self_signed ? 'warning' : 'primary'">
-              {{ certDetail.is_self_signed ? '自签证书' : certTypeLabel(certDetail.type) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="Apple ID">
-            <code v-if="certDetail.apple_id">{{ certDetail.apple_id }}</code>
-            <span v-else style="color:#909399">-</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="本地 P12">
-            <el-tag size="small" :type="certDetail.has_p12 ? 'success' : 'danger'">
-              {{ certDetail.has_p12 ? '有' : '无' }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="私钥">
-            <el-tag size="small" :type="certDetail.has_private_key ? 'success' : 'danger'">
-              {{ certDetail.has_private_key ? '有' : '无' }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="P12 密码" v-if="certDetail.password">
-            <div style="display:flex;align-items:center;gap:6px">
-              <code style="font-weight:600">{{ certDetail.password }}</code>
-              <el-button size="small" text type="primary" @click="copyText(certDetail.password)">
-                <el-icon><CopyDocument /></el-icon>
-              </el-button>
-            </div>
-          </el-descriptions-item>
-          <el-descriptions-item label="过期时间">
-            <span :style="{ color: getExpiryColor(certDetail.expires_at) }">
-              {{ certDetail.expires_at ? new Date(certDetail.expires_at).toLocaleString('zh-CN') : '-' }}
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item label="创建时间">
-            {{ certDetail.created_at ? new Date(certDetail.created_at).toLocaleString('zh-CN') : '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="所属账号" v-if="certDetail.account" :span="2">
-            {{ certDetail.account.name }} (Key: {{ certDetail.account.key_id }})
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <div v-if="certDetail.cert_info" style="margin-top: 16px">
-          <h4 style="font-size:14px;margin:0 0 8px">证书主体信息</h4>
-          <el-descriptions :column="2" border size="small">
-            <el-descriptions-item v-for="(val, key) in certDetail.cert_info.subject" :key="key" :label="key">
-              {{ val }}
-            </el-descriptions-item>
-          </el-descriptions>
-          <h4 style="font-size:14px;margin:12px 0 8px">签发者信息</h4>
-          <el-descriptions :column="2" border size="small">
-            <el-descriptions-item v-for="(val, key) in certDetail.cert_info.issuer" :key="key" :label="key">
-              {{ val }}
-            </el-descriptions-item>
-          </el-descriptions>
-          <el-descriptions :column="2" border size="small" style="margin-top:8px">
-            <el-descriptions-item label="序列号">{{ certDetail.cert_info.serialNumber }}</el-descriptions-item>
-            <el-descriptions-item label="有效期">
-              {{ new Date(certDetail.cert_info.notBefore).toLocaleDateString() }}
-              ~
-              {{ new Date(certDetail.cert_info.notAfter).toLocaleDateString() }}
-            </el-descriptions-item>
-          </el-descriptions>
+        <!-- 标签行 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <el-tag size="default" :type="certDetail.is_self_signed ? 'warning' : 'primary'" effect="dark">
+            {{ certDetail.is_self_signed ? '自签证书' : certTypeLabel(certDetail.type) }}
+          </el-tag>
+          <el-tag v-if="certDetail.apple_id" size="small" effect="plain">{{ certDetail.apple_id }}</el-tag>
+          <span v-if="certDetail.account" style="font-size:12px;color:var(--nask-text-secondary);margin-left:auto">{{ certDetail.account.name }}</span>
         </div>
 
-        <el-alert v-if="!certDetail.has_p12" type="warning" :closable="false" style="margin-top: 16px">
+        <!-- 关键指标 -->
+        <div class="cert-compact-grid">
+          <div class="cert-kv"><span class="cert-kv-k">本地 P12</span><el-tag size="small" :type="certDetail.has_p12 ? 'success' : 'danger'" round>{{ certDetail.has_p12 ? '✓ 有' : '✕ 无' }}</el-tag></div>
+          <div class="cert-kv"><span class="cert-kv-k">私钥</span><el-tag size="small" :type="certDetail.has_private_key ? 'success' : 'danger'" round>{{ certDetail.has_private_key ? '✓ 有' : '✕ 无' }}</el-tag></div>
+          <div class="cert-kv"><span class="cert-kv-k">过期时间</span><span class="cert-kv-v" :style="{ color: getExpiryColor(certDetail.expires_at) }">{{ certDetail.expires_at ? new Date(certDetail.expires_at).toLocaleDateString('zh-CN') : '-' }}</span></div>
+          <div class="cert-kv" v-if="certDetail.password"><span class="cert-kv-k">P12 密码</span><div style="display:flex;align-items:center;gap:4px"><code class="cert-password">{{ certDetail.password }}</code><el-button size="small" text type="primary" @click="copyText(certDetail.password)" style="padding:2px"><el-icon :size="12"><CopyDocument /></el-icon></el-button></div></div>
+          <div class="cert-kv"><span class="cert-kv-k">创建时间</span><span class="cert-kv-v">{{ formatDate(certDetail.created_at) }}</span></div>
+        </div>
+
+        <!-- 证书主体/签发者 -->
+        <div v-if="certDetail.cert_info" style="margin-top:4px">
+          <div class="cert-section-title">证书主体 / 签发者</div>
+          <div class="cert-two-col">
+            <div class="cert-col">
+              <div class="cert-info-row" v-for="(val, key) in certDetail.cert_info.subject" :key="'s-'+key">
+                <span class="cert-info-label">{{ key }}</span>
+                <span class="cert-info-value">{{ val || '-' }}</span>
+              </div>
+            </div>
+            <div class="cert-col">
+              <div class="cert-info-row" v-for="(val, key) in certDetail.cert_info.issuer" :key="'i-'+key">
+                <span class="cert-info-label">{{ key }}</span>
+                <span class="cert-info-value">{{ val || '-' }}</span>
+              </div>
+              <div class="cert-info-row">
+                <span class="cert-info-label">序列号</span>
+                <span class="cert-info-value" style="font-family:monospace;font-size:11px">{{ certDetail.cert_info.serialNumber }}</span>
+              </div>
+              <div class="cert-info-row">
+                <span class="cert-info-label">有效期</span>
+                <span class="cert-info-value">{{ new Date(certDetail.cert_info.notBefore).toLocaleDateString() }} ~ {{ new Date(certDetail.cert_info.notAfter).toLocaleDateString() }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <el-alert v-if="!certDetail.has_p12" type="warning" :closable="false" style="margin-top:12px;border-radius:10px">
           该证书从 Apple 同步而来，本地没有 P12 文件。如需 P12 请通过「创建证书」或「一键绑定」重新生成。
         </el-alert>
       </div>
       <template #footer>
-        <el-button @click="showDetailDialog = false">关闭</el-button>
-        <el-button type="primary" @click="downloadCert(certDetail)">
+        <el-button @click="showDetailDialog = false" round>关闭</el-button>
+        <el-button type="primary" @click="downloadCert(certDetail)" round>
           <el-icon><Download /></el-icon> 下载 P12
         </el-button>
       </template>
@@ -524,7 +504,7 @@
             >
               <div style="display:flex; justify-content:space-between; align-items:center">
                 <span>{{ t.label }}</span>
-                <span style="color:#909399; font-size:12px; margin-left:12px">{{ t.desc }}</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; margin-left:12px">{{ t.desc }}</span>
               </div>
             </el-option>
           </el-select>
@@ -903,5 +883,88 @@ onMounted(() => { fetchCerts(); fetchTypes(); fetchPushGuide() })
   color: var(--nask-text-muted);
   font-size: 11px;
   margin-left: 6px;
+}
+
+/* ===== 证书详情弹窗 ===== */
+.cert-compact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--nask-border);
+}
+
+.cert-kv {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.cert-kv-k {
+  font-size: 12px;
+  color: var(--nask-text-secondary);
+  font-weight: 600;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+
+.cert-kv-v {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nask-text);
+}
+
+.cert-password {
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--nask-surface-hover);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.cert-section {
+  padding: 12px 0;
+}
+
+.cert-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--nask-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+
+.cert-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+.cert-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.cert-info-row {
+  display: flex;
+  align-items: baseline;
+  padding: 3px 0;
+  gap: 8px;
+}
+
+.cert-info-label {
+  min-width: 48px;
+  font-size: 12px;
+  color: var(--nask-text-secondary);
+  flex-shrink: 0;
+}
+
+.cert-info-value {
+  font-size: 12px;
+  color: var(--nask-text);
+  word-break: break-all;
 }
 </style>

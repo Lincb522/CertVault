@@ -1,11 +1,10 @@
 import SwiftUI
-import HiconIcons
 
 struct SelfSignView: View {
     @ObservedObject var vm: CertificateViewModel
     @Environment(\.dismiss) private var dismiss
 
-    @State private var mode = 0
+    @State private var mode = 0 // 0: self-sign, 1: generate CA
     @State private var name = ""
     @State private var password = "123456"
     @State private var commonName = ""
@@ -18,38 +17,27 @@ struct SelfSignView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: DS.spacingLG) {
-                    Picker("", selection: $mode) {
-                        Text(L10n.Cert.selfSign).tag(0)
-                        Text(L10n.Cert.generateCA).tag(1)
-                    }
-                    .pickerStyle(.segmented)
-
-                    if mode == 0 {
-                        selfSignForm
-                    } else {
-                        caForm
-                    }
-
-                    if let err = errorMsg {
-                        Text(err)
-                            .foregroundStyle(Color.dsDanger)
-                            .font(.caption)
-                    }
-
-                    DSPrimaryButton(
-                        title: mode == 0
-                            ? NSLocalizedString("cert.selfSign.generate", comment: "")
-                            : NSLocalizedString("cert.ca.create", comment: ""),
-                        isLoading: isLoading,
-                        isDisabled: !isValid
-                    ) {
-                        submit()
-                    }
+            Form {
+                Picker("", selection: $mode) {
+                    Text(L10n.Cert.selfSign).tag(0)
+                    Text(L10n.Cert.generateCA).tag(1)
                 }
-                .padding(DS.spacingLG)
+                .pickerStyle(.segmented)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+                .padding(.vertical, 4)
+
+                if mode == 0 {
+                    selfSignForm
+                } else {
+                    caForm
+                }
+
+                if let err = errorMsg {
+                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                }
             }
+            .scrollContentBackground(.hidden)
             .pageBackground()
             .navigationTitle(mode == 0 ? L10n.Cert.selfSign : L10n.Cert.generateCA)
             .navigationBarTitleDisplayMode(.inline)
@@ -57,47 +45,39 @@ struct SelfSignView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
                 }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(mode == 0 ? NSLocalizedString("cert.selfSign.generate", comment: "") : NSLocalizedString("cert.ca.create", comment: "")) { submit() }
+                        .disabled(isLoading || !isValid)
+                }
             }
             .alert(L10n.success, isPresented: $success) {
                 Button(L10n.ok) { dismiss() }
             }
         }
+        .sheetStyle()
     }
 
     private var selfSignForm: some View {
         Group {
-            DSGroupedCard {
-                VStack(alignment: .leading, spacing: DS.spacingMD) {
-                    DSSectionHeader(NSLocalizedString("cert.form.section", comment: ""))
-                    DSInputField(icon: AppIcon.certificate, placeholder: NSLocalizedString("cert.form.certName", comment: ""), text: $name)
-                    DSInputField(icon: AppIcon.lock, placeholder: L10n.Cert.password, text: $password)
-                }
-                .padding(DS.spacingLG)
+            Section(NSLocalizedString("cert.form.section", comment: "")) {
+                TextField(NSLocalizedString("cert.form.certName", comment: ""), text: $name)
+                TextField(L10n.Cert.password, text: $password)
             }
-
-            DSGroupedCard {
-                VStack(alignment: .leading, spacing: DS.spacingMD) {
-                    DSSectionHeader(NSLocalizedString("cert.selfSign.subject", comment: ""))
-                    DSInputField(icon: AppIcon.user, placeholder: NSLocalizedString("cert.selfSign.cn", comment: ""), text: $commonName)
-                    DSInputField(icon: AppIcon.email, placeholder: NSLocalizedString("cert.selfSign.email", comment: ""), text: $email)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                }
-                .padding(DS.spacingLG)
+            Section(NSLocalizedString("cert.selfSign.subject", comment: "")) {
+                TextField(NSLocalizedString("cert.selfSign.cn", comment: ""), text: $commonName)
+                TextField(NSLocalizedString("cert.selfSign.email", comment: ""), text: $email)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
             }
         }
     }
 
     private var caForm: some View {
-        DSGroupedCard {
-            VStack(alignment: .leading, spacing: DS.spacingMD) {
-                DSSectionHeader(NSLocalizedString("cert.ca.section", comment: ""))
-                DSInputField(icon: AppIcon.user, placeholder: NSLocalizedString("cert.selfSign.cn", comment: ""), text: $commonName)
-                DSInputField(icon: AppIcon.work, placeholder: NSLocalizedString("cert.ca.org", comment: ""), text: $organization)
-                DSInputField(icon: AppIcon.category, placeholder: NSLocalizedString("cert.ca.country", comment: ""), text: $country)
-                    .textInputAutocapitalization(.characters)
-            }
-            .padding(DS.spacingLG)
+        Section(NSLocalizedString("cert.ca.section", comment: "")) {
+            TextField(NSLocalizedString("cert.selfSign.cn", comment: ""), text: $commonName)
+            TextField(NSLocalizedString("cert.ca.org", comment: ""), text: $organization)
+            TextField(NSLocalizedString("cert.ca.country", comment: ""), text: $country)
+                .textInputAutocapitalization(.characters)
         }
     }
 

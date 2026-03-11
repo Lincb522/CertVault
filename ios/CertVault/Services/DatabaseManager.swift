@@ -9,13 +9,42 @@ final class DatabaseManager {
     private init() {
         do {
             let fileManager = FileManager.default
-            let appSupport = try fileManager.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )
-            let dbURL = appSupport.appendingPathComponent("certvault.sqlite")
+            let dbURL: URL
+
+            if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID) {
+                let groupDB = groupURL.appendingPathComponent("certvault.sqlite")
+                let oldAppSupport = try fileManager.url(
+                    for: .applicationSupportDirectory,
+                    in: .userDomainMask,
+                    appropriateFor: nil,
+                    create: true
+                )
+                let oldDB = oldAppSupport.appendingPathComponent("certvault.sqlite")
+                if fileManager.fileExists(atPath: oldDB.path) && !fileManager.fileExists(atPath: groupDB.path) {
+                    try fileManager.copyItem(at: oldDB, to: groupDB)
+                    for suffix in ["-wal", "-shm"] {
+                        let src = oldDB.appendingPathExtension(suffix.trimmingCharacters(in: ["-"]))
+                        let srcAlt = URL(fileURLWithPath: oldDB.path + suffix)
+                        let dst = URL(fileURLWithPath: groupDB.path + suffix)
+                        if fileManager.fileExists(atPath: srcAlt.path) {
+                            try? fileManager.copyItem(at: srcAlt, to: dst)
+                        } else if fileManager.fileExists(atPath: src.path) {
+                            try? fileManager.copyItem(at: src, to: dst)
+                        }
+                    }
+                    AppLogger.data.info("Database migrated to App Group container")
+                }
+                dbURL = groupDB
+            } else {
+                let appSupport = try fileManager.url(
+                    for: .applicationSupportDirectory,
+                    in: .userDomainMask,
+                    appropriateFor: nil,
+                    create: true
+                )
+                dbURL = appSupport.appendingPathComponent("certvault.sqlite")
+            }
+
             dbQueue = try DatabaseQueue(path: dbURL.path)
             try migrate()
         } catch {
@@ -99,6 +128,21 @@ final class DatabaseManager {
                 t.column("team_id", .text)
                 t.column("bundle_ids", .text)
                 t.column("created_at", .text)
+            }
+        }
+
+        migrator.registerMigration("v2_submitTemplates") { db in
+            try db.create(table: "submit_templates", ifNotExists: true) { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("type", .text).notNull()
+                t.column("locale", .text)
+                t.column("whats_new", .text)
+                t.column("description", .text)
+                t.column("keywords", .text)
+                t.column("promotional_text", .text)
+                t.column("created_at", .text).notNull()
+                t.column("updated_at", .text).notNull()
             }
         }
 
@@ -293,29 +337,49 @@ final class DatabaseManager {
         }
     }
 
+    // MARK: - Submit Templates
+
+    func saveTemplate(_ template: SubmitTemplate) throws {
+        try dbQueue.write { db in
+            try template.save(db, onConflict: .replace)
+        }
+    }
+
+    func fetchTemplates(type: TemplateType) throws -> [SubmitTemplate] {
+        try dbQueue.read { db in
+            try SubmitTemplate
+                .filter(SubmitTemplate.CodingKeys.type == type)
+                .order(SubmitTemplate.CodingKeys.updatedAt.desc)
+                .fetchAll(db)
+        }
+    }
+
+    func deleteTemplate(id: String) throws {
+        _ = try dbQueue.write { db in
+            try SubmitTemplate.filter(Column("id") == id).deleteAll(db)
+        }
+    }
+
     // MARK: - Cache Info
 
     func cacheSize() -> Int64 {
-        do {
-            let appSupport = try FileManager.default.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: false
-            )
-            let dbPath = appSupport.appendingPathComponent("certvault.sqlite").path
-            var total: Int64 = 0
-            for suffix in ["", "-wal", "-shm"] {
-                let path = dbPath + suffix
-                if let attrs = try? FileManager.default.attributesOfItem(atPath: path),
-                   let size = attrs[.size] as? Int64 {
-                    total += size
-                }
-            }
-            return total
-        } catch {
-            return 0
+        let fm = FileManager.default
+        let dbPath: String
+        if let groupURL = fm.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID) {
+            dbPath = groupURL.appendingPathComponent("certvault.sqlite").path
+        } else {
+            guard let appSupport = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return 0 }
+            dbPath = appSupport.appendingPathComponent("certvault.sqlite").path
         }
+        var total: Int64 = 0
+        for suffix in ["", "-wal", "-shm"] {
+            let path = dbPath + suffix
+            if let attrs = try? fm.attributesOfItem(atPath: path),
+               let size = attrs[.size] as? Int64 {
+                total += size
+            }
+        }
+        return total
     }
 
     func cacheRecordCount() throws -> (accounts: Int, devices: Int, certificates: Int, profiles: Int, bundleIds: Int, pushKeys: Int) {

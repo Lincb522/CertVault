@@ -213,6 +213,126 @@ router.delete('/unregister-device', async (req, res, next) => {
   }
 });
 
+router.get('/devices', async (req, res, next) => {
+  try {
+    const db = getDb();
+    const devices = await db.prepare(
+      `SELECT pd.id, pd.device_token, pd.platform, pd.created_at, u.username
+       FROM push_devices pd
+       LEFT JOIN users u ON pd.user_id = u.id
+       ORDER BY pd.created_at DESC`
+    ).all();
+    res.json({ success: true, data: devices, total: devices.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/broadcast', async (req, res, next) => {
+  try {
+    const {
+      title,
+      body: messageBody,
+      badge,
+      sound = 'default',
+      bundle_id,
+      sandbox = true,
+      custom_data = {},
+    } = req.body;
+
+    if (!title || !bundle_id) {
+      return res.status(400).json({ success: false, message: '请填写标题和 Bundle ID' });
+    }
+
+    let keyId, teamId, privateKey;
+    const db = getDb();
+
+    if (req.body.push_key_id) {
+      const pk = await db.prepare('SELECT * FROM push_keys WHERE id = ?').get(req.body.push_key_id);
+      if (!pk) return res.status(404).json({ success: false, message: '推送密钥不存在' });
+      keyId = pk.key_id;
+      teamId = pk.team_id;
+      privateKey = decrypt(pk.private_key);
+    } else if (req.body.account_id) {
+      const allowed = await checkAccountOwnership(req.body.account_id, req.user);
+      if (!allowed) return res.status(403).json({ success: false, message: '无权操作此账号' });
+      let account;
+      try { account = await getDecryptedAccount(req.body.account_id); } catch (e) { if (e.status === 404) return res.status(404).json({ success: false, message: '账号不存在' }); throw e; }
+      keyId = account.key_id;
+      privateKey = account.private_key;
+      teamId = req.body.team_id;
+      if (!teamId) return res.status(400).json({ success: false, message: '请提供 Team ID' });
+    } else {
+      return res.status(400).json({ success: false, message: '请提供推送密钥或账号' });
+    }
+
+    const devices = await db.prepare('SELECT device_token FROM push_devices').all();
+    if (!devices.length) {
+      return res.json({ success: false, message: '没有已注册的设备，无法广播' });
+    }
+
+    let token;
+    try {
+      token = generateAPNsToken(keyId, teamId, privateKey);
+    } catch (signErr) {
+      return res.status(400).json({ success: false, message: `JWT 签名失败: ${signErr.message}` });
+    }
+
+    const host = sandbox
+      ? 'https://api.sandbox.push.apple.com'
+      : 'https://api.push.apple.com';
+
+    const payload = {
+      aps: { alert: { title, body: messageBody || '' }, sound },
+      ...custom_data,
+    };
+    if (badge !== undefined && badge !== null) payload.aps.badge = Number(badge);
+
+    const CONCURRENCY = 10;
+    const results = { success: 0, failed: 0, unregistered: 0, errors: [] };
+
+    for (let i = 0; i < devices.length; i += CONCURRENCY) {
+      const batch = devices.slice(i, i + CONCURRENCY);
+      const promises = batch.map(async (device) => {
+        try {
+          const r = await sendViaHTTP2(
+            host,
+            `/3/device/${device.device_token}`,
+            {
+              'authorization': `bearer ${token}`,
+              'apns-topic': bundle_id,
+              'apns-push-type': 'alert',
+              'apns-priority': '10',
+              'apns-expiration': '0',
+            },
+            payload
+          );
+          if (r.status === 200) {
+            results.success++;
+          } else if (r.status === 410) {
+            results.unregistered++;
+            await db.prepare('DELETE FROM push_devices WHERE device_token = ?').run(device.device_token);
+          } else {
+            results.failed++;
+            results.errors.push({ token: device.device_token.substring(0, 8) + '...', reason: r.body?.reason });
+          }
+        } catch (e) {
+          results.failed++;
+          results.errors.push({ token: device.device_token.substring(0, 8) + '...', reason: e.message });
+        }
+      });
+      await Promise.all(promises);
+    }
+
+    const msg = `广播完成：${results.success} 成功，${results.failed} 失败` +
+      (results.unregistered > 0 ? `，${results.unregistered} 已注销(自动清理)` : '');
+
+    res.json({ success: true, message: msg, data: { total: devices.length, ...results } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/error-codes', (req, res) => {
   res.json({
     success: true, data: [

@@ -14,6 +14,10 @@ const capabilityRoutes = require('./routes/capability');
 const healthcheckRoutes = require('./routes/healthcheck');
 const pushRoutes = require('./routes/push');
 const pushKeysRoutes = require('./routes/push-keys');
+const certCheckRoutes = require('./routes/cert-check');
+const appsRoutes = require('./routes/apps');
+const testflightRoutes = require('./routes/testflight');
+const appstoreRoutes = require('./routes/appstore');
 
 const app = express();
 const PORT = process.env.PORT || 3006;
@@ -292,6 +296,10 @@ app.use('/api/capabilities', capabilityRoutes);
 app.use('/api/healthcheck', healthcheckRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/push-keys', pushKeysRoutes);
+app.use('/api/cert-check', certCheckRoutes);
+app.use('/api/apps', appsRoutes);
+app.use('/api/testflight', testflightRoutes);
+app.use('/api/appstore', appstoreRoutes);
 
 const fs = require('fs');
 

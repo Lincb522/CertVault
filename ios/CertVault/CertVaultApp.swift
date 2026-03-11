@@ -88,6 +88,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
+extension Notification.Name {
+    static let switchTab = Notification.Name("CertVault.switchTab")
+}
+
 // MARK: - App
 
 @main
@@ -108,9 +112,28 @@ struct CertVaultApp: App {
                 .environmentObject(appearance)
                 .environmentObject(notificationManager)
                 .preferredColorScheme(appearance.mode.colorScheme)
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
                 .task {
                     await notificationManager.refreshStatus()
                 }
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "certvault" else { return }
+        switch url.host {
+        case "dashboard":
+            NotificationCenter.default.post(name: .switchTab, object: 0)
+        case "accounts":
+            NotificationCenter.default.post(name: .switchTab, object: 1)
+        case "devices":
+            NotificationCenter.default.post(name: .switchTab, object: 2)
+        case "certificates":
+            NotificationCenter.default.post(name: .switchTab, object: 3)
+        default:
+            break
         }
     }
 }

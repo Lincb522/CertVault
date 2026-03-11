@@ -7,7 +7,7 @@ struct CapabilityView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: DS.spacingXL) {
+            VStack(spacing: 20) {
                 pickerSection
 
                 if !vm.selectedBundleId.isEmpty {
@@ -16,8 +16,8 @@ struct CapabilityView: View {
                     capabilitiesSection
                 }
             }
-            .padding(.horizontal, DS.spacingLG)
-            .padding(.bottom, DS.spacingXL)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
         }
         .pageBackground()
         .navigationTitle(L10n.Capability.title)
@@ -49,83 +49,83 @@ struct CapabilityView: View {
     }
 
     private var pickerSection: some View {
-        DSGroupedCard {
-            VStack(spacing: 0) {
-                if vm.accounts.count > 1 {
-                    HStack {
-                        Text(L10n.account)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.dsText)
-                        Spacer()
-                        Picker(L10n.account, selection: $vm.selectedAccountId) {
-                            ForEach(vm.accounts) { acc in
-                                Text(acc.displayName).tag(acc.id)
-                            }
-                        }
-                        .labelsHidden()
-                        .tint(Color.dsBrand)
-                    }
-                    .padding(.vertical, DS.spacingMD)
-                    .padding(.horizontal, DS.spacingLG)
-                    .onChange(of: vm.selectedAccountId) { _ in
-                        Task { await vm.loadBundleIds() }
-                    }
-                    DSDivider()
-                }
-
+        VStack(spacing: 0) {
+            if vm.accounts.count > 1 {
                 HStack {
-                    Text(L10n.Profile.bundleId)
+                    Text(L10n.account)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.dsText)
                     Spacer()
-                    Picker(L10n.Profile.bundleId, selection: $vm.selectedBundleId) {
-                        Text(L10n.select).tag("")
-                        ForEach(vm.bundleIds) { bid in
-                            Text(bid.identifier ?? bid.displayName).tag(bid.id)
+                    Picker(L10n.account, selection: $vm.selectedAccountId) {
+                        ForEach(vm.accounts) { acc in
+                            Text(acc.displayName).tag(acc.id)
                         }
                     }
                     .labelsHidden()
-                    .tint(Color.dsBrand)
+                    .tint(Color.dsAccentBlue)
                 }
-                .padding(.vertical, DS.spacingMD)
-                .padding(.horizontal, DS.spacingLG)
-                .onChange(of: vm.selectedBundleId) { _ in
-                    Task { await vm.loadEnabled() }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .onChange(of: vm.selectedAccountId) { _ in
+                    Task { await vm.loadBundleIds() }
                 }
+                Divider().padding(.horizontal, 16)
             }
-        }
-    }
 
-    private var enabledCountSection: some View {
-        DSGroupedCard {
             HStack {
-                Text(L10n.Capability.enabled)
+                Text(L10n.Profile.bundleId)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.dsText)
                 Spacer()
-                let count = vm.enabledCapabilities.filter(\.isEnabled).count
-                let total = vm.availableCapabilities.count
-                Text("\(count) / \(total)")
-                    .font(.subheadline.monospacedDigit().weight(.medium))
-                    .foregroundStyle(count > 0 ? Color.dsGreen : Color.dsTextSecondary)
+                Picker(L10n.Profile.bundleId, selection: $vm.selectedBundleId) {
+                    Text(L10n.select).tag("")
+                    ForEach(vm.bundleIds) { bid in
+                        Text(bid.identifier ?? bid.displayName).tag(bid.id)
+                    }
+                }
+                .labelsHidden()
+                .tint(Color.dsAccentBlue)
             }
-            .padding(.vertical, DS.spacingMD)
-            .padding(.horizontal, DS.spacingLG)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .onChange(of: vm.selectedBundleId) { _ in
+                Task { await vm.loadEnabled() }
+            }
         }
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
+    }
+
+    private var enabledCountSection: some View {
+        HStack {
+            Text(L10n.Capability.enabled)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.dsText)
+            Spacer()
+            let count = vm.enabledCapabilities.filter(\.isEnabled).count
+            let total = vm.availableCapabilities.count
+            Text("\(count) / \(total)")
+                .font(.subheadline.monospacedDigit().weight(.medium))
+                .foregroundStyle(count > 0 ? Color.dsAccent : Color.dsMuted)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
     }
 
     private var presetsSection: some View {
-        VStack(alignment: .leading, spacing: DS.spacingSM) {
-            DSSectionHeader(NSLocalizedString("capability.presets", comment: ""))
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(NSLocalizedString("capability.presets", comment: ""))
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.spacingSM) {
+                HStack(spacing: 8) {
                     ForEach(Array(vm.presets.keys.sorted()), id: \.self) { name in
                         Button {
                             if let types = vm.presets[name] {
                                 Task { await vm.applyPreset(types) }
                             }
                         } label: {
-                            VStack(spacing: DS.spacingXS) {
+                            VStack(spacing: 4) {
                                 HIcon(iconForPreset(name))
                                     .font(.title3)
                                     .foregroundStyle(.white)
@@ -134,16 +134,16 @@ struct CapabilityView: View {
                                     .foregroundStyle(.white)
                             }
                             .frame(width: 70, height: 60)
-                            .background(gradientForPreset(name), in: RoundedRectangle(cornerRadius: DS.radiusSM))
+                            .background(gradientForPreset(name), in: RoundedRectangle(cornerRadius: 10))
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                         }
-                        .buttonStyle(.dsPressed)
+                        .buttonStyle(.plain)
                     }
 
                     Button {
                         showDisableAllConfirm = true
                     } label: {
-                        VStack(spacing: DS.spacingXS) {
+                        VStack(spacing: 4) {
                             HIcon(AppIcon.close)
                                 .font(.title3)
                                 .foregroundStyle(.white)
@@ -152,10 +152,14 @@ struct CapabilityView: View {
                                 .foregroundStyle(.white)
                         }
                         .frame(width: 70, height: 60)
-                        .background(Color.dsGradientPink, in: RoundedRectangle(cornerRadius: DS.radiusSM))
+                        .background(
+                            LinearGradient(colors: [Color.dsAccentPink, Color.dsAccentPink.opacity(0.7)],
+                                           startPoint: .topLeading, endPoint: .bottomTrailing),
+                            in: RoundedRectangle(cornerRadius: 10)
+                        )
                         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                     }
-                    .buttonStyle(.dsPressed)
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 1)
             }
@@ -164,9 +168,9 @@ struct CapabilityView: View {
 
     private var capabilitiesSection: some View {
         ForEach(groupedCategories, id: \.0) { category, capabilities in
-            VStack(alignment: .leading, spacing: DS.spacingSM) {
-                DSSectionHeader(category)
-                DSGroupedCard {
+            VStack(alignment: .leading, spacing: 8) {
+                sectionHeader(category)
+                VStack(spacing: 0) {
                     ForEach(Array(capabilities.enumerated()), id: \.element.id) { index, cap in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
@@ -176,7 +180,7 @@ struct CapabilityView: View {
                                 if let desc = cap.description, !desc.isEmpty {
                                     Text(desc)
                                         .font(.caption2)
-                                        .foregroundStyle(Color.dsTextSecondary)
+                                        .foregroundStyle(Color.dsMuted)
                                         .lineLimit(2)
                                 }
                             }
@@ -189,17 +193,19 @@ struct CapabilityView: View {
                                     set: { _ in Task { await vm.toggle(cap.type) } }
                                 ))
                                 .labelsHidden()
-                                .tint(Color.dsBrand)
+                                .tint(Color.dsAccentBlue)
                             }
                         }
-                        .padding(.vertical, DS.spacingMD)
-                        .padding(.horizontal, DS.spacingLG)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
 
                         if index < capabilities.count - 1 {
-                            DSDivider()
+                            Divider().padding(.horizontal, 16)
                         }
                     }
                 }
+                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
             }
         }
     }
@@ -255,11 +261,16 @@ struct CapabilityView: View {
 
     private func gradientForPreset(_ name: String) -> LinearGradient {
         switch name.lowercased() {
-        case "basic": return Color.dsGradientBlue
-        case "social": return Color.dsGradientPurple
-        case "game": return Color.dsGradientOrange
-        case "enterprise": return Color.dsGradientGreen
-        default: return Color.dsGradientCyan
+        case "basic":
+            return LinearGradient(colors: [.dsAccentBlue, .dsAccentBlue.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        case "social":
+            return LinearGradient(colors: [.dsAccentPurple, .dsAccentPurple.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        case "game":
+            return LinearGradient(colors: [.dsAccentOrange, .dsAccentOrange.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        case "enterprise":
+            return LinearGradient(colors: [.dsAccent, .dsAccent.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        default:
+            return LinearGradient(colors: [.dsAccentCyan, .dsAccentCyan.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
         }
     }
 }

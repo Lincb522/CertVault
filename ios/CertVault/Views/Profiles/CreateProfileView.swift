@@ -18,167 +18,111 @@ struct CreateProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: DS.spacingLG) {
-                    DSGroupedCard {
-                        VStack(alignment: .leading, spacing: DS.spacingMD) {
-                            DSSectionHeader(L10n.Account.formSectionBasic)
-                            DSInputField(icon: AppIcon.edit, placeholder: NSLocalizedString("profile.title", comment: ""), text: $name)
-                            HStack {
-                                Text(L10n.Cert.typeLabel)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.dsTextSecondary)
-                                Spacer()
-                                Picker(L10n.Cert.typeLabel, selection: $selectedType) {
-                                    ForEach(vm.profileTypes) { type in
-                                        Text(type.label).tag(type.value)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .tint(Color.dsBrand)
-                            }
-                            .padding(.horizontal, DS.spacingXS)
+            Form {
+                Section(L10n.Account.formSectionBasic) {
+                    TextField(NSLocalizedString("profile.title", comment: ""), text: $name)
+                    Picker(L10n.Cert.typeLabel, selection: $selectedType) {
+                        ForEach(vm.profileTypes) { type in
+                            Text(type.label).tag(type.value)
                         }
-                        .padding(DS.spacingLG)
-                    }
-
-                    DSGroupedCard {
-                        VStack(alignment: .leading, spacing: DS.spacingMD) {
-                            DSSectionHeader(L10n.Profile.bundleId)
-                            if vm.bundleIds.isEmpty {
-                                Text(L10n.Profile.noBundleId)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.dsTextSecondary)
-                                    .padding(.horizontal, DS.spacingXS)
-                            } else {
-                                Picker(L10n.Profile.bundleId, selection: $selectedBundleId) {
-                                    Text(L10n.select).tag("")
-                                    ForEach(vm.bundleIds) { bid in
-                                        Text("\(bid.displayName) (\(bid.identifier ?? ""))").tag(bid.id)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .tint(Color.dsBrand)
-                            }
-                        }
-                        .padding(DS.spacingLG)
-                    }
-
-                    DSGroupedCard {
-                        VStack(alignment: .leading, spacing: DS.spacingSM) {
-                            DSSectionHeader(L10n.Tab.certificates)
-                                .padding(.bottom, DS.spacingXS)
-
-                            if vm.certificates.isEmpty {
-                                Text(L10n.loading)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.dsTextSecondary)
-                            } else {
-                                ForEach(vm.certificates) { cert in
-                                    HStack {
-                                        Text(cert.displayName)
-                                            .font(.subheadline)
-                                            .foregroundStyle(Color.dsText)
-                                        Spacer()
-                                        if selectedCertIds.contains(cert.id) {
-                                            HIcon(AppIcon.check)
-                                                .foregroundStyle(Color.dsBrand)
-                                        }
-                                    }
-                                    .padding(.vertical, DS.spacingSM)
-                                    .padding(.horizontal, DS.spacingXS)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        if selectedCertIds.contains(cert.id) {
-                                            selectedCertIds.remove(cert.id)
-                                        } else {
-                                            selectedCertIds.insert(cert.id)
-                                        }
-                                    }
-
-                                    if cert.id != vm.certificates.last?.id {
-                                        DSDivider(leadingPadding: 0)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(DS.spacingLG)
-                    }
-
-                    if needsDevices {
-                        DSGroupedCard {
-                            VStack(alignment: .leading, spacing: DS.spacingSM) {
-                                HStack {
-                                    DSSectionHeader(L10n.Tab.devices)
-                                    Spacer()
-                                    Button(L10n.selectAll) {
-                                        selectedDeviceIds = Set(vm.devices.map(\.id))
-                                    }
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(Color.dsBrand)
-                                }
-                                .padding(.bottom, DS.spacingXS)
-
-                                if vm.devices.isEmpty {
-                                    Text(L10n.loading)
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.dsTextSecondary)
-                                } else {
-                                    ForEach(vm.devices) { device in
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(device.displayName)
-                                                    .font(.subheadline)
-                                                    .foregroundStyle(Color.dsText)
-                                                Text(device.udid ?? "")
-                                                    .font(.caption2.monospaced())
-                                                    .foregroundStyle(Color.dsTextSecondary)
-                                            }
-                                            Spacer()
-                                            if selectedDeviceIds.contains(device.id) {
-                                                HIcon(AppIcon.check)
-                                                    .foregroundStyle(Color.dsSuccess)
-                                            }
-                                        }
-                                        .padding(.vertical, DS.spacingSM)
-                                        .padding(.horizontal, DS.spacingXS)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            if selectedDeviceIds.contains(device.id) {
-                                                selectedDeviceIds.remove(device.id)
-                                            } else {
-                                                selectedDeviceIds.insert(device.id)
-                                            }
-                                        }
-
-                                        if device.id != vm.devices.last?.id {
-                                            DSDivider(leadingPadding: 0)
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(DS.spacingLG)
-                        }
-                    }
-
-                    if let err = errorMsg {
-                        Text(err)
-                            .foregroundStyle(Color.dsDanger)
-                            .font(.caption)
-                    }
-
-                    DSPrimaryButton(title: L10n.create, isLoading: isLoading, isDisabled: !isValid) {
-                        create()
                     }
                 }
-                .padding(DS.spacingLG)
+
+                Section(L10n.Profile.bundleId) {
+                    if vm.bundleIds.isEmpty {
+                        Text(L10n.Profile.noBundleId)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker(L10n.Profile.bundleId, selection: $selectedBundleId) {
+                            Text(L10n.select).tag("")
+                            ForEach(vm.bundleIds) { bid in
+                                Text("\(bid.displayName) (\(bid.identifier ?? ""))").tag(bid.id)
+                            }
+                        }
+                    }
+                }
+
+                Section(L10n.Tab.certificates) {
+                    if vm.certificates.isEmpty {
+                        Text(L10n.loading)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(vm.certificates) { cert in
+                            HStack {
+                                Text(cert.displayName)
+                                    .font(.subheadline)
+                                Spacer()
+                                if selectedCertIds.contains(cert.id) {
+                                    HIcon(AppIcon.check)
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if selectedCertIds.contains(cert.id) {
+                                    selectedCertIds.remove(cert.id)
+                                } else {
+                                    selectedCertIds.insert(cert.id)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if needsDevices {
+                    Section(L10n.Tab.devices) {
+                        if vm.devices.isEmpty {
+                            Text(L10n.loading)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Button(L10n.selectAll) {
+                                selectedDeviceIds = Set(vm.devices.map(\.id))
+                            }
+                            .font(.caption)
+
+                            ForEach(vm.devices) { device in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(device.displayName)
+                                            .font(.subheadline)
+                                        Text(device.udid ?? "")
+                                            .font(.caption2.monospaced())
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if selectedDeviceIds.contains(device.id) {
+                                        HIcon(AppIcon.check)
+                                            .foregroundStyle(.green)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    if selectedDeviceIds.contains(device.id) {
+                                        selectedDeviceIds.remove(device.id)
+                                    } else {
+                                        selectedDeviceIds.insert(device.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let err = errorMsg {
+                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                }
             }
+            .scrollContentBackground(.hidden)
             .pageBackground()
             .navigationTitle(L10n.Profile.create)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.create) { create() }
+                        .disabled(!isValid || isLoading)
                 }
             }
             .task {
@@ -191,6 +135,7 @@ struct CreateProfileView: View {
                 await vm.loadProfileDeps()
             }
         }
+        .sheetStyle()
     }
 
     private var isValid: Bool {

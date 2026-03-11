@@ -6,25 +6,25 @@ struct ErrorView: View {
     var retryAction: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: DS.spacingXL) {
+        VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color.dsWarning.opacity(0.12))
+                    .fill(Color.dsAccentOrange.opacity(0.12))
                     .frame(width: 72, height: 72)
                 HIcon(AppIcon.warning)
                     .font(.system(size: 30))
-                    .foregroundStyle(Color.dsWarning)
+                    .foregroundStyle(Color.dsAccentOrange)
             }
 
-            VStack(spacing: DS.spacingSM) {
+            VStack(spacing: 8) {
                 Text(L10n.error)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
                 Text(message)
                     .font(.subheadline)
-                    .foregroundStyle(Color.dsTextSecondary)
+                    .foregroundStyle(Color.dsMuted)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, DS.spacing2XL)
+                    .padding(.horizontal, 24)
             }
 
             if let retry = retryAction {
@@ -34,10 +34,10 @@ struct ErrorView: View {
                         Text(L10n.retry)
                             .font(.subheadline.weight(.semibold))
                     }
-                    .padding(.horizontal, DS.spacing2XL)
-                    .padding(.vertical, DS.spacingMD)
-                    .foregroundStyle(.white)
-                    .background(Color.dsBrandGradient, in: Capsule())
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .foregroundStyle(Color.dsAccentBlue)
+                    .background(Color.dsAccentBlue.opacity(0.12), in: Capsule())
                 }
             }
         }

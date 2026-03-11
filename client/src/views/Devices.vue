@@ -34,14 +34,14 @@
                 <el-tag size="small" :type="p.state === 'ACTIVE' ? 'success' : 'danger'">{{ p.state === 'ACTIVE' ? '有效' : p.state }}</el-tag>
                 <strong>{{ p.name }}</strong>
                 <el-tag size="small" effect="plain" type="info">{{ p.type }}</el-tag>
-                <span v-if="p.bundle" style="color:#909399;font-size:12px;margin-left:4px">{{ p.bundle.identifier }}</span>
-                <span style="color:#909399;font-size:12px;margin-left:auto">
+                <span v-if="p.bundle" style="color:var(--nask-text-secondary);font-size:12px;margin-left:4px">{{ p.bundle.identifier }}</span>
+                <span style="color:var(--nask-text-secondary);font-size:12px;margin-left:auto">
                   证书: {{ p.certificates.map(c => c.name || c.type).join(', ') || '-' }}
                 </span>
               </div>
             </div>
-            <div v-else-if="row._loadingProfiles" style="padding:12px 20px;color:#909399">加载中...</div>
-            <div v-else style="padding:12px 20px;color:#909399">该设备未关联任何描述文件</div>
+            <div v-else-if="row._loadingProfiles" style="padding:12px 20px;color:var(--nask-text-secondary)">加载中...</div>
+            <div v-else style="padding:12px 20px;color:var(--nask-text-secondary)">该设备未关联任何描述文件</div>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="设备名称" min-width="130" />
@@ -64,7 +64,7 @@
           <template #default="{ row }">
             <el-tag v-if="row._profileCount > 0" size="small" type="success">{{ row._profileCount }} 个</el-tag>
             <el-tag v-else-if="row._profileCount === 0" size="small" type="info">0</el-tag>
-            <span v-else style="color:#c0c4cc">-</span>
+            <span v-else style="color:var(--nask-text-muted)">-</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
@@ -157,11 +157,11 @@
             <el-select v-model="autoBindForm.cert_type" style="width: 100%">
               <el-option value="IOS_DEVELOPMENT">
                 <span>iOS 开发证书</span>
-                <span style="color:#909399; font-size:12px; float:right">真机调试</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; float:right">真机调试</span>
               </el-option>
               <el-option value="IOS_DISTRIBUTION">
                 <span>iOS 发布证书</span>
-                <span style="color:#909399; font-size:12px; float:right">App Store / Ad Hoc</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; float:right">App Store / Ad Hoc</span>
               </el-option>
             </el-select>
           </el-form-item>
@@ -169,19 +169,19 @@
             <el-select v-model="autoBindForm.profile_type" style="width: 100%">
               <el-option value="IOS_APP_DEVELOPMENT">
                 <span>iOS 开发描述文件</span>
-                <span style="color:#909399; font-size:12px; float:right">真机调试，需选设备</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; float:right">真机调试，需选设备</span>
               </el-option>
               <el-option value="IOS_APP_ADHOC">
                 <span>iOS Ad Hoc 描述文件</span>
-                <span style="color:#909399; font-size:12px; float:right">测试分发，最多100台</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; float:right">测试分发，最多100台</span>
               </el-option>
               <el-option value="IOS_APP_STORE">
                 <span>iOS App Store 描述文件</span>
-                <span style="color:#909399; font-size:12px; float:right">提交审核发布</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; float:right">提交审核发布</span>
               </el-option>
               <el-option value="IOS_APP_INHOUSE">
                 <span>iOS 企业内部描述文件</span>
-                <span style="color:#909399; font-size:12px; float:right">企业账号，无限设备</span>
+                <span style="color:var(--nask-text-secondary); font-size:12px; float:right">企业账号，无限设备</span>
               </el-option>
             </el-select>
           </el-form-item>
@@ -257,79 +257,92 @@
     </el-dialog>
 
     <!-- 设备关联资源 -->
-    <el-dialog v-model="showResourceDialog" title="设备关联资源" width="680px" destroy-on-close>
+    <el-dialog v-model="showResourceDialog" :title="resourceData?.device?.name || '设备详情'" width="680px" destroy-on-close>
       <div v-if="resourceData" v-loading="resourceLoading">
-        <el-descriptions :column="2" border size="small" style="margin-bottom: 16px">
-          <el-descriptions-item label="设备名称">{{ resourceData.device.name }}</el-descriptions-item>
+        <!-- 标签行 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <el-tag size="default" effect="plain">{{ resourceData.device.platform || 'iOS' }}</el-tag>
+          <el-tag v-if="resourceData.has_bindlinks" size="small" type="success">已绑定</el-tag>
+          <el-tag v-else size="small" type="warning">未绑定</el-tag>
+          <el-tag size="small" effect="plain">{{ resourceData.certificates.length }} 证书</el-tag>
+          <el-tag size="small" effect="plain">{{ resourceData.profiles.length }} 描述文件</el-tag>
+        </div>
+
+        <!-- 基本信息 -->
+        <el-descriptions :column="1" border size="small" style="margin-bottom:14px">
           <el-descriptions-item label="UDID">
-            <code style="font-size:12px">{{ resourceData.device.udid }}</code>
+            <code style="font-size:12px;word-break:break-all">{{ resourceData.device.udid }}</code>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="resourceData.bundle_ids?.length" label="Bundle IDs">
+            {{ resourceData.bundle_ids.join(', ') }}
           </el-descriptions-item>
         </el-descriptions>
+
         <el-alert
           v-if="resourceData.has_bindlinks"
           type="success"
           :closable="false"
-          style="margin-bottom: 12px"
+          style="margin: 12px 0; border-radius: 10px"
         >
           以下为该设备通过「一键绑定」生成的关联证书和描述文件
-          <span v-if="resourceData.bundle_ids?.length"> ({{ resourceData.bundle_ids.join(', ') }})</span>
         </el-alert>
-        <el-alert
-          v-else
-          type="info"
-          :closable="false"
-          style="margin-bottom: 12px"
-        >
+        <el-alert v-else type="info" :closable="false" style="margin: 12px 0; border-radius: 10px">
           该设备暂无绑定记录，显示账号下所有证书和描述文件
         </el-alert>
 
-        <h4 style="margin: 16px 0 8px">证书 ({{ resourceData.certificates.length }})</h4>
-        <el-table :data="resourceData.certificates" stripe size="small" empty-text="暂无证书">
-          <el-table-column prop="name" label="名称" min-width="150" />
-          <el-table-column prop="type" label="类型" width="140" />
-          <el-table-column label="密码" width="120">
-            <template #default="{ row }">
-              <code class="password-text">{{ row.password || '123456' }}</code>
-              <el-button size="small" text type="primary" @click="copyText(row.password || '123456')">
-                <el-icon><CopyDocument /></el-icon>
-              </el-button>
-            </template>
-          </el-table-column>
-          <el-table-column label="过期" width="100">
-            <template #default="{ row }">
-              {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString() : '-' }}
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80">
-            <template #default="{ row }">
-              <el-button v-if="row.has_p12" size="small" type="primary" link @click="downloadCert(row.id)">
-                <el-icon><Download /></el-icon> P12
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+        <!-- 证书列表 -->
+        <div class="res-section">
+          <div class="res-section-title">证书 ({{ resourceData.certificates.length }})</div>
+          <el-table :data="resourceData.certificates" stripe size="small" empty-text="暂无证书">
+            <el-table-column prop="name" label="名称" min-width="150" />
+            <el-table-column prop="type" label="类型" width="140" />
+            <el-table-column label="密码" width="120">
+              <template #default="{ row }">
+                <code class="password-text">{{ row.password || '123456' }}</code>
+                <el-button size="small" text type="primary" @click="copyText(row.password || '123456')">
+                  <el-icon><CopyDocument /></el-icon>
+                </el-button>
+              </template>
+            </el-table-column>
+            <el-table-column label="过期" width="100">
+              <template #default="{ row }">
+                {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString() : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80">
+              <template #default="{ row }">
+                <el-button v-if="row.has_p12" size="small" type="primary" link @click="downloadCert(row.id)">
+                  <el-icon><Download /></el-icon> P12
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
 
-        <h4 style="margin: 16px 0 8px">描述文件 ({{ resourceData.profiles.length }})</h4>
-        <el-table :data="resourceData.profiles" stripe size="small" empty-text="暂无描述文件">
-          <el-table-column prop="name" label="名称" min-width="200" />
-          <el-table-column prop="type" label="类型" width="160" />
-          <el-table-column label="过期" width="100">
-            <template #default="{ row }">
-              {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString() : '-' }}
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80">
-            <template #default="{ row }">
-              <el-button v-if="row.has_file" size="small" type="success" link @click="downloadProfile(row.id)">
-                <el-icon><Download /></el-icon>
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+        <!-- 描述文件列表 -->
+        <div class="res-section">
+          <div class="res-section-title">描述文件 ({{ resourceData.profiles.length }})</div>
+          <el-table :data="resourceData.profiles" stripe size="small" empty-text="暂无描述文件">
+            <el-table-column prop="name" label="名称" min-width="200" />
+            <el-table-column prop="type" label="类型" width="160" />
+            <el-table-column label="过期" width="100">
+              <template #default="{ row }">
+                {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString() : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80">
+              <template #default="{ row }">
+                <el-button v-if="row.has_file" size="small" type="success" link @click="downloadProfile(row.id)">
+                  <el-icon><Download /></el-icon>
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="showResourceDialog = false">关闭</el-button>
-        <el-button type="warning" @click="downloadAll(currentResourceDevice)">
+        <el-button @click="showResourceDialog = false" round>关闭</el-button>
+        <el-button type="warning" @click="downloadAll(currentResourceDevice)" round>
           <el-icon><FolderOpened /></el-icon> 打包下载全部
         </el-button>
       </template>
@@ -639,5 +652,22 @@ onMounted(fetchDevices)
 
 .device-profile-item:last-child {
   border-bottom: none;
+}
+
+/* ===== 设备关联资源弹窗 ===== */
+.res-section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--nask-border);
+}
+
+.res-section:last-of-type { border-bottom: none; }
+
+.res-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--nask-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
 }
 </style>
