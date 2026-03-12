@@ -29,9 +29,9 @@ struct CertificateDetailView: View {
             }
         }
         .navigationTitle(L10n.Cert.detail)
-        .navigationBarTitleDisplayMode(.inline)
+        .sheetNavStyle()
         .task { await vm.loadDetail(id: certId) }
-        .sheet(isPresented: $downloadService.showShareSheet) {
+        .glassSheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }

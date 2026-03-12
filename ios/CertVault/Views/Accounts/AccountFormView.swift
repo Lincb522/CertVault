@@ -46,10 +46,8 @@ struct AccountFormView: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .pageBackground()
             .navigationTitle(isEdit ? L10n.Account.edit : L10n.Account.add)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }

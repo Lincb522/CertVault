@@ -74,13 +74,13 @@ struct CreateCertView: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section {
+                        Text(err).foregroundStyle(.red).font(.caption)
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .pageBackground()
             .navigationTitle(L10n.Cert.create)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }

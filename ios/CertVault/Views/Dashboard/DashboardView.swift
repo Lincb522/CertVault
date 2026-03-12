@@ -3,11 +3,6 @@ import HiconIcons
 
 struct DashboardView: View {
     @StateObject private var vm = DashboardViewModel()
-    @StateObject private var certVM = CertificateViewModel()
-    @StateObject private var deviceVM = DeviceViewModel()
-    @State private var showCreateCert = false
-    @State private var showRegisterDevice = false
-    @State private var showCreateProfile = false
     @State private var animateCards = false
 
     var body: some View {
@@ -20,11 +15,6 @@ struct DashboardView: View {
 
                     statsStrip(stats)
                         .padding(.top, 20)
-                        .opacity(animateCards ? 1 : 0)
-                        .offset(y: animateCards ? 0 : 12)
-
-                    quickActionsSection
-                        .padding(.top, 24)
                         .opacity(animateCards ? 1 : 0)
                         .offset(y: animateCards ? 0 : 12)
 
@@ -70,16 +60,10 @@ struct DashboardView: View {
                 Task { await loadAllData() }
             }
         }
-        .sheet(isPresented: $showCreateCert) { CreateCertView(vm: certVM) }
-        .sheet(isPresented: $showRegisterDevice) { RegisterDeviceSheet(vm: deviceVM) }
-        .sheet(isPresented: $showCreateProfile) { CreateProfileSheetWrapper() }
     }
 
     private func loadAllData() async {
-        async let dashboard: () = vm.load()
-        async let certs: () = certVM.loadAccounts()
-        async let devices: () = deviceVM.loadAccounts()
-        _ = await (dashboard, certs, devices)
+        await vm.load()
         if !animateCards {
             withAnimation(.easeOut(duration: 0.4)) { animateCards = true }
         }
@@ -126,26 +110,6 @@ struct DashboardView: View {
             MiniStatCard(title: L10n.Dashboard.statDevices, value: stats.devices, total: 100, icon: AppIcon.device, color: .dsAccent)
             MiniStatCard(title: L10n.Dashboard.statCerts, value: stats.certificates, icon: AppIcon.certificate, color: .dsAccentPurple)
             MiniStatCard(title: L10n.Dashboard.statProfiles, value: stats.profiles, icon: AppIcon.profile, color: .dsAccentOrange)
-        }
-    }
-
-    // MARK: - Quick Actions
-
-    private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle(L10n.Dashboard.quickActions)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ActionChip(icon: AppIcon.addCircle, title: L10n.Dashboard.actionCreateCert, color: .dsAccentBlue) { showCreateCert = true }
-                    ActionChip(icon: AppIcon.addSquare, title: L10n.Dashboard.actionAddDevice, color: .dsAccent) { showRegisterDevice = true }
-                    ActionChip(icon: AppIcon.docAdd, title: L10n.Dashboard.actionProfiles, color: .dsAccentOrange) { showCreateProfile = true }
-                    NavigationLink { AccountListView() } label: {
-                        ActionChipLabel(icon: AppIcon.account, title: L10n.Dashboard.actionAccounts, color: .dsAccentPurple)
-                    }
-                }
-                .padding(.horizontal, 1)
-            }
         }
     }
 
@@ -322,7 +286,7 @@ private struct MiniStatCard: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
+        .glassCard(cornerRadius: 14)
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(color.opacity(0.15), lineWidth: 1)
@@ -330,58 +294,3 @@ private struct MiniStatCard: View {
     }
 }
 
-// MARK: - Action Chip
-
-private struct ActionChip: View {
-    let icon: UIImage
-    let title: String
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ActionChipLabel(icon: icon, title: title, color: color)
-        }
-    }
-}
-
-private struct ActionChipLabel: View {
-    let icon: UIImage
-    let title: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 8) {
-            HIcon(icon)
-                .font(.callout)
-                .foregroundStyle(.white)
-                .padding(7)
-                .background(
-                    LinearGradient(colors: [color, color.opacity(0.7)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.dsText)
-        }
-        .padding(.trailing, 14)
-        .padding(.leading, 4)
-        .padding(.vertical, 4)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Wrapper
-
-private struct CreateProfileSheetWrapper: View {
-    @StateObject private var vm = ProfileViewModel()
-
-    var body: some View {
-        CreateProfileView(vm: vm)
-    }
-}

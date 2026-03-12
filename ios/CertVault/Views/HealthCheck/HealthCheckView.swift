@@ -79,11 +79,7 @@ struct HealthCheckView: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .glassCard(cornerRadius: 12)
             } else {
                 HStack {
                     Text(L10n.account)
@@ -98,11 +94,7 @@ struct HealthCheckView: View {
                     .tint(Color.dsAccentBlue)
                 }
                 .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .glassCard(cornerRadius: 12)
             }
         }
     }
@@ -190,11 +182,7 @@ struct HealthCheckView: View {
                             }
                         }
                     }
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
+                    .glassCard(cornerRadius: 12)
                 }
             }
         }
@@ -235,11 +223,7 @@ struct HealthCheckView: View {
                             }
                         }
                     }
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
+                    .glassCard(cornerRadius: 12)
                 }
             }
         }
@@ -288,11 +272,7 @@ struct HealthCheckView: View {
                             }
                         }
                     }
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
+                    .glassCard(cornerRadius: 12)
                 }
             }
         }

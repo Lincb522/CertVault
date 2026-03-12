@@ -358,6 +358,15 @@ struct AppStoreConnectService {
         if !resp.success { throw APIError.serverError(resp.message ?? "更新构建设置失败") }
     }
 
+    func expireBuild(buildId: String, accountId: String) async throws {
+        struct Body: Encodable { let account_id: String }
+        let resp = try await api.requestRaw(
+            "/testflight/builds/\(buildId)/expire", method: "POST",
+            body: Body(account_id: accountId)
+        )
+        if !resp.success { throw APIError.serverError(resp.message ?? "设置构建过期失败") }
+    }
+
     // MARK: - App Store Versions
 
     func listAppStoreVersions(accountId: String, appId: String) async throws -> [AppStoreVersion] {

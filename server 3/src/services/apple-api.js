@@ -457,6 +457,17 @@ class AppleApiService {
     });
   }
 
+  // ---- Build: Expire ----
+  async expireBuild(buildId) {
+    return this.request('PATCH', `/builds/${buildId}`, {
+      data: {
+        type: 'builds',
+        id: buildId,
+        attributes: { expired: true },
+      }
+    });
+  }
+
   // ---- Build: Export Compliance ----
   async setBuildExportCompliance(buildId, usesNonExemptEncryption = false) {
     const betaDetailResult = await this.request('GET', `/builds/${buildId}/buildBetaDetail`);

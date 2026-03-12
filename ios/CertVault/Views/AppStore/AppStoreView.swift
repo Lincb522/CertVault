@@ -37,10 +37,10 @@ struct AppStoreView: View {
                 }
             }
         }
-        .sheet(isPresented: $showCreateVersion) {
+        .glassSheet(isPresented: $showCreateVersion) {
             CreateVersionSheet(vm: vm)
         }
-        .sheet(isPresented: $showVersionDetail) {
+        .glassSheet(isPresented: $showVersionDetail) {
             if let ver = selectedVersion {
                 VersionDetailSheet(vm: vm, version: ver)
             }
@@ -102,7 +102,7 @@ struct AppStoreView: View {
                     ForEach(vm.accounts) { acc in Text(acc.displayName).tag(acc.id) }
                 }
                 .tint(Color.dsAccentBlue)
-                .onChange(of: vm.selectedAccountId) { _ in
+                .onChange(of: vm.selectedAccountId) {
                     Task {
                         await vm.loadApps()
                         await vm.loadVersions()
@@ -127,7 +127,7 @@ struct AppStoreView: View {
                     ForEach(vm.apps) { app in Text(app.displayName).tag(app.id) }
                 }
                 .tint(Color.dsAccentBlue)
-                .onChange(of: vm.selectedAppId) { _ in
+                .onChange(of: vm.selectedAppId) {
                     Task { await vm.loadVersions() }
                 }
             }
@@ -293,9 +293,8 @@ private struct CreateVersionSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("新建版本")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -362,9 +361,8 @@ private struct VersionDetailSheet: View {
                     }
                 }
             }
-            .pageBackground()
             .navigationTitle("版本详情")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("关闭") { dismiss() } }
                 ToolbarItem(placement: .primaryAction) {
@@ -373,12 +371,12 @@ private struct VersionDetailSheet: View {
                     }
                 }
             }
-            .sheet(item: $editingLocalization) { loc in
+            .glassSheet(item: $editingLocalization) { loc in
                 EditLocalizationSheet(vm: vm, localization: loc) {
                     Task { await loadDetail() }
                 }
             }
-            .sheet(isPresented: $showBuildPicker) {
+            .glassSheet(isPresented: $showBuildPicker) {
                 BuildPickerSheet(builds: builds, currentBuildId: versionBuild?.id) { selectedBuild in
                     Task {
                         do {
@@ -870,9 +868,8 @@ private struct BuildPickerSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("选择构建版本")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("关闭") { dismiss() } }
             }
@@ -945,9 +942,8 @@ private struct EditLocalizationSheet: View {
                     TextField("关键词（逗号分隔）", text: $keywords)
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("编辑本地化 - \(localization.locale ?? "")")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -967,7 +963,7 @@ private struct EditLocalizationSheet: View {
                     .disabled(isSaving)
                 }
             }
-            .sheet(isPresented: $showTemplateList) {
+            .glassSheet(isPresented: $showTemplateList) {
                 TemplatePickerSheet(type: .appStore) { template in
                     whatsNew = template.whatsNew ?? ""
                     desc = template.desc ?? ""

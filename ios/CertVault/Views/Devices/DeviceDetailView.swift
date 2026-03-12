@@ -37,17 +37,17 @@ struct DeviceDetailView: View {
             }
         }
         .navigationTitle(L10n.Device.detail)
-        .navigationBarTitleDisplayMode(.inline)
+        .sheetNavStyle()
         .task {
             vm.selectedAccountId = accountId
             await vm.loadDetail(deviceId: deviceId)
         }
-        .sheet(isPresented: $downloadService.showShareSheet) {
+        .glassSheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }
         }
-        .sheet(isPresented: $showRebind) {
+        .glassSheet(isPresented: $showRebind) {
             if let device = vm.selectedDevice {
                 AutoBindView(
                     vm: vm,

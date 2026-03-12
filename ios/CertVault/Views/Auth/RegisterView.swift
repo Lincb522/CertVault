@@ -122,11 +122,7 @@ struct RegisterView: View {
             loginLink
         }
         .padding(24)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 20)
     }
 
     // MARK: - Code Field with Send Button
@@ -143,7 +139,7 @@ struct RegisterView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color.dsSurfaceLight.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.dsBorder, lineWidth: 1)
@@ -177,7 +173,7 @@ struct RegisterView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(Color.dsSurfaceLight.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.dsBorder, lineWidth: 1)

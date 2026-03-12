@@ -24,9 +24,9 @@ struct ProfileDetailView: View {
             }
         }
         .navigationTitle(L10n.Profile.detail)
-        .navigationBarTitleDisplayMode(.inline)
+        .sheetNavStyle()
         .task { await loadDetail() }
-        .sheet(isPresented: $downloadService.showShareSheet) {
+        .glassSheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }
@@ -111,8 +111,7 @@ struct ProfileDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(20)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
+        .glassCard(cornerRadius: 14)
     }
 
     // MARK: - Info
@@ -133,8 +132,7 @@ struct ProfileDetailView: View {
             Divider().padding(.leading, 16)
             infoRow(label: L10n.Cert.createdAt, value: formatDate(d.created_at))
         }
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
+        .glassCard(cornerRadius: 14)
     }
 
     // MARK: - Bundle Info

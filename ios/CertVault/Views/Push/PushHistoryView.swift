@@ -55,12 +55,14 @@ struct PushHistoryView: View {
                     Divider().frame(height: 40)
                     statCell("失败", value: stats.total_failed?.value ?? 0, color: .dsAccentPink)
                 }
+                    .listRowBackground(Color.clear)
 
                 HStack(spacing: 0) {
                     statCell("单推", value: stats.singles?.value ?? 0, color: .dsAccentCyan)
                     Divider().frame(height: 40)
                     statCell("广播", value: stats.broadcasts?.value ?? 0, color: .dsAccentOrange)
                 }
+                .listRowBackground(Color.clear)
             }
         }
     }
@@ -109,15 +111,17 @@ struct PushHistoryView: View {
                     .font(.caption)
                     .foregroundStyle(Color.dsMuted)
             }
+            .listRowBackground(Color.clear)
         }
-        .onChange(of: filterType) { _ in Task { await reload() } }
-        .onChange(of: filterStatus) { _ in Task { await reload() } }
+        .onChange(of: filterType) { Task { await reload() } }
+        .onChange(of: filterStatus) { Task { await reload() } }
     }
 
     private var historyListSection: some View {
         Section {
             if vm.isLoading && vm.historyItems.isEmpty {
                 ProgressView().frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
             } else if vm.historyItems.isEmpty {
                 VStack(spacing: 12) {
                     HIcon(AppIcon.bellSlash)
@@ -132,9 +136,11 @@ struct PushHistoryView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 32)
+                .listRowBackground(Color.clear)
             } else {
                 ForEach(vm.historyItems, id: \.stableId) { item in
                     historyRow(item)
+                        .listRowBackground(Color.clear)
                 }
                 .onDelete { offsets in
                     Task {
@@ -152,6 +158,7 @@ struct PushHistoryView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .foregroundStyle(Color.dsAccentBlue)
+                    .listRowBackground(Color.clear)
                 }
             }
         }

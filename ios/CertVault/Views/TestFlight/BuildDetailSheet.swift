@@ -13,6 +13,9 @@ struct BuildDetailSheet: View {
     @State private var betaReviewStatus: BetaReviewStatus?
     @State private var isSubmittingReview = false
     @State private var reviewMessage: String?
+    @State private var showExpireConfirm = false
+    @State private var isExpiring = false
+    @State private var expireMessage: String?
 
     private let service = AppStoreConnectService()
 
@@ -30,6 +33,9 @@ struct BuildDetailSheet: View {
                             betaReviewCard(detail)
                             localizationsCard(detail)
                             groupsCard
+                            if detail.expired != true {
+                                expireBuildCard
+                            }
                         }
                         .padding(16)
                     }
@@ -39,13 +45,12 @@ struct BuildDetailSheet: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .pageBackground()
             .navigationTitle("构建 \(build.displayVersion)")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("关闭") { dismiss() } }
             }
-            .sheet(isPresented: $editingWhatsNew) {
+            .glassSheet(isPresented: $editingWhatsNew) {
                 editWhatsNewSheet
             }
         }
@@ -378,9 +383,8 @@ struct BuildDetailSheet: View {
                         .frame(minHeight: 120)
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("编辑测试内容")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { editingWhatsNew = false }
@@ -455,5 +459,66 @@ struct BuildDetailSheet: View {
         case "EXPIRED": return "已过期"
         default: return state
         }
+    }
+
+    // MARK: - Expire Build
+
+    private var expireBuildCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("构建管理")
+
+            VStack(spacing: 12) {
+                if let msg = expireMessage {
+                    Text(msg)
+                        .font(.caption)
+                        .foregroundStyle(msg.contains("成功") ? Color.dsAccent : Color.dsAccentPink)
+                }
+
+                Button {
+                    showExpireConfirm = true
+                } label: {
+                    HStack(spacing: 6) {
+                        if isExpiring {
+                            ProgressView().tint(.white).controlSize(.small)
+                        } else {
+                            HIcon(AppIcon.clock)
+                        }
+                        Text("设为过期")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(.white)
+                    .background(Color.dsAccentPink, in: RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(isExpiring)
+
+                Text("过期后测试员将无法安装此构建版本，此操作不可撤销")
+                    .font(.caption2)
+                    .foregroundStyle(Color.dsMuted)
+            }
+            .cardStyle()
+        }
+        .alert("确认设为过期", isPresented: $showExpireConfirm) {
+            Button("取消", role: .cancel) { }
+            Button("确认过期", role: .destructive) {
+                Task { await expireBuild() }
+            }
+        } message: {
+            Text("构建版本 \(build.displayVersion) 过期后，所有测试员将无法再安装此版本。此操作不可撤销。")
+        }
+    }
+
+    private func expireBuild() async {
+        isExpiring = true
+        expireMessage = nil
+        do {
+            try await service.expireBuild(buildId: build.id, accountId: accountId)
+            expireMessage = "构建版本已成功设为过期"
+            await loadData()
+        } catch {
+            expireMessage = "操作失败: \(error.localizedDescription)"
+        }
+        isExpiring = false
     }
 }

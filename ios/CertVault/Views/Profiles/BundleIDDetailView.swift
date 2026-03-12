@@ -32,7 +32,7 @@ struct BundleIDDetailView: View {
         }
         .pageBackground()
         .navigationTitle(L10n.BundleID.detail)
-        .navigationBarTitleDisplayMode(.inline)
+        .sheetNavStyle()
         .task {
             async let caps: () = loadCapabilities()
             async let res: () = loadResources()

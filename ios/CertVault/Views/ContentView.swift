@@ -18,12 +18,12 @@ struct ContentView: View {
             AppLogger.ui.info("🖼️ ContentView task — checking auth")
             await authVM.checkAuth()
         }
-        .onChange(of: authVM.isLoggedIn) { newValue in
-            AppLogger.ui.info("🖼️ isLoggedIn changed → \(newValue)")
+        .onChange(of: authVM.isLoggedIn) {
+            AppLogger.ui.info("🖼️ isLoggedIn changed → \(authVM.isLoggedIn)")
         }
-        .onChange(of: selectedTab) { newValue in
+        .onChange(of: selectedTab) {
             let tabNames = [L10n.Tab.dashboard, L10n.Tab.accounts, L10n.Tab.devices, L10n.Tab.certificates, L10n.Tab.more]
-            let name = newValue < tabNames.count ? tabNames[newValue] : "?\(newValue)"
+            let name = selectedTab < tabNames.count ? tabNames[selectedTab] : "?\(selectedTab)"
             AppLogger.ui.info("🖼️ Tab switched → \(name)")
         }
         .onReceive(NotificationCenter.default.publisher(for: .switchTab)) { notification in

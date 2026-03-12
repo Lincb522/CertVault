@@ -77,8 +77,7 @@ struct CertCheckView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(20)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.dsBorder, lineWidth: 1))
+        .glassCard(cornerRadius: 16)
     }
 
     private var uploadSection: some View {

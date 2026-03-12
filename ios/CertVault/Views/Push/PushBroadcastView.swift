@@ -45,7 +45,7 @@ struct PushBroadcastView: View {
         .scrollContentBackground(.hidden)
         .pageBackground()
         .navigationTitle("群发推送")
-        .sheet(isPresented: $showTemplateSheet) {
+        .glassSheet(isPresented: $showTemplateSheet) {
             BroadcastTemplatePickerSheet(storage: storage) { tpl in
                 applyTemplate(tpl)
                 showTemplateSheet = false
@@ -114,6 +114,7 @@ struct PushBroadcastView: View {
                 }
                 Spacer()
             }
+            .listRowBackground(Color.clear)
 
             if let stats = vm.deviceStats {
                 HStack(spacing: 0) {
@@ -124,6 +125,7 @@ struct PushBroadcastView: View {
                     statBadge("生产", value: stats.production?.value ?? 0, color: .dsAccent)
                 }
                 .padding(.vertical, 4)
+                .listRowBackground(Color.clear)
             } else if let count = vm.deviceCount {
                 HStack(spacing: 4) {
                     HIcon(AppIcon.iphone)
@@ -132,6 +134,7 @@ struct PushBroadcastView: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.dsText)
                 }
+                .listRowBackground(Color.clear)
             }
         }
     }
@@ -144,6 +147,7 @@ struct PushBroadcastView: View {
                 Text("推送密钥").tag(0)
                 Text("开发者账号").tag(1)
             }
+                    .listRowBackground(Color.clear)
             .pickerStyle(.segmented)
 
             switch authMode {
@@ -154,6 +158,7 @@ struct PushBroadcastView: View {
                         Text(key.displayName).tag(key.id)
                     }
                 }
+                .listRowBackground(Color.clear)
                 if vm.pushKeys.isEmpty {
                     HStack(spacing: 4) {
                         HIcon(AppIcon.warning)
@@ -162,6 +167,7 @@ struct PushBroadcastView: View {
                             .font(.caption)
                     }
                     .foregroundStyle(Color.dsAccentOrange)
+                    .listRowBackground(Color.clear)
                 }
             default:
                 Picker("开发者账号", selection: $selectedAccountId) {
@@ -170,8 +176,10 @@ struct PushBroadcastView: View {
                         Text(acc.displayName).tag(acc.id)
                     }
                 }
+                .listRowBackground(Color.clear)
                 TextField("Team ID", text: $manualTeamId)
                     .textInputAutocapitalization(.characters)
+                    .listRowBackground(Color.clear)
             }
         }
     }
@@ -199,6 +207,7 @@ struct PushBroadcastView: View {
                             .foregroundStyle(Color.dsMuted)
                     }
                 }
+                .listRowBackground(Color.clear)
             }
         }
     }
@@ -211,6 +220,7 @@ struct PushBroadcastView: View {
                 TextField("Bundle ID", text: $bundleId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .listRowBackground(Color.clear)
             } else {
                 HStack {
                     TextField("Bundle ID", text: $bundleId)
@@ -231,9 +241,11 @@ struct PushBroadcastView: View {
                             .foregroundStyle(Color.dsAccentBlue)
                     }
                 }
+                .listRowBackground(Color.clear)
             }
 
             Toggle("沙盒环境", isOn: $sandbox)
+                .listRowBackground(Color.clear)
 
             HStack(spacing: 8) {
                 HIcon(AppIcon.info)
@@ -242,6 +254,7 @@ struct PushBroadcastView: View {
                     .font(.caption)
                     .foregroundStyle(Color.dsMuted)
             }
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -250,8 +263,10 @@ struct PushBroadcastView: View {
     private var contentSection: some View {
         Section("推送内容") {
             TextField("标题", text: $title)
+                .listRowBackground(Color.clear)
             TextField("消息正文", text: $messageBody, axis: .vertical)
                 .lineLimit(2...5)
+                .listRowBackground(Color.clear)
             HStack {
                 Text("角标")
                 Spacer()
@@ -260,7 +275,9 @@ struct PushBroadcastView: View {
                     .multilineTextAlignment(.trailing)
                     .frame(width: 80)
             }
+            .listRowBackground(Color.clear)
             TextField("声音（default / 自定义文件名）", text: $sound)
+                .listRowBackground(Color.clear)
 
             Button {
                 showSaveTemplate = true
@@ -274,6 +291,7 @@ struct PushBroadcastView: View {
                 .foregroundStyle(title.isEmpty ? Color.dsMuted : Color.dsAccentBlue)
             }
             .disabled(title.isEmpty)
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -284,25 +302,33 @@ struct PushBroadcastView: View {
             DisclosureGroup("高级选项", isExpanded: $showAdvanced) {
                 TextField("Thread ID（会话分组）", text: $threadId)
                     .textInputAutocapitalization(.never)
+                    .listRowBackground(Color.clear)
                 TextField("Collapse ID（合并标识）", text: $collapseId)
                     .textInputAutocapitalization(.never)
+                    .listRowBackground(Color.clear)
                 Toggle("Mutable Content", isOn: $mutableContent)
+                    .listRowBackground(Color.clear)
                 Picker("中断级别", selection: $interruptionLevel) {
                     Text("被动 (passive)").tag("passive")
                     Text("活跃 (active)").tag("active")
                     Text("时效 (time-sensitive)").tag("time-sensitive")
                     Text("紧急 (critical)").tag("critical")
                 }
+                .listRowBackground(Color.clear)
                 Picker("优先级", selection: $priority) {
                     Text("10 (立即)").tag("10")
                     Text("5 (省电)").tag("5")
                     Text("1 (低)").tag("1")
                 }
+                .listRowBackground(Color.clear)
                 TextField("Relevance Score (0~1)", text: $relevanceScore)
                     .keyboardType(.decimalPad)
+                    .listRowBackground(Color.clear)
                 TextField("过期时间（秒）", text: $expiration)
                     .keyboardType(.numberPad)
+                    .listRowBackground(Color.clear)
             }
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -326,6 +352,7 @@ struct PushBroadcastView: View {
                             .foregroundStyle(Color.dsAccentPink)
                     }
                 }
+                .listRowBackground(Color.clear)
             }
 
             HStack(spacing: 8) {
@@ -345,6 +372,7 @@ struct PushBroadcastView: View {
                 }
                 .disabled(customDataKey.isEmpty)
             }
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -388,6 +416,7 @@ struct PushBroadcastView: View {
                 Text(result)
                     .font(.subheadline)
                     .foregroundStyle(result.contains("完成") ? Color.dsAccent : Color.dsAccentPink)
+                    .listRowBackground(Color.clear)
 
                 if let br = vm.broadcastResult {
                     HStack(spacing: 0) {
@@ -402,6 +431,7 @@ struct PushBroadcastView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                    .listRowBackground(Color.clear)
 
                     if let errs = br.errors, !errs.isEmpty {
                         DisclosureGroup("失败详情 (\(errs.count))") {
@@ -416,6 +446,7 @@ struct PushBroadcastView: View {
                                         .foregroundStyle(Color.dsAccentPink)
                                 }
                             }
+                            .listRowBackground(Color.clear)
                         }
                     }
                 }
@@ -503,9 +534,8 @@ private struct BroadcastTemplatePickerSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("选择模板")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }

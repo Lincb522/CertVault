@@ -96,11 +96,7 @@ struct PushGuideView: View {
                     }
                 }
                 .padding(16)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .glassCard(cornerRadius: 14)
                 .padding(.horizontal, 16)
             }
         } else {
@@ -149,11 +145,7 @@ struct PushGuideView: View {
                     }
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
+            .glassCard(cornerRadius: 14)
             .padding(.horizontal, 16)
         } else {
             emptyPlaceholder(L10n.Push.guideEmptyServices)
@@ -193,11 +185,7 @@ struct PushGuideView: View {
                     }
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
+            .glassCard(cornerRadius: 14)
             .padding(.horizontal, 16)
         } else {
             emptyPlaceholder(L10n.Push.guideEmptyErrors)

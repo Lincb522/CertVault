@@ -42,11 +42,7 @@ struct AccountListView: View {
                         }
                     }
                     .padding(.vertical, 4)
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
+                    .glassCard(cornerRadius: 14)
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                 }
@@ -81,13 +77,13 @@ struct AccountListView: View {
             AppLogger.ui.info("🖼️ AccountListView appeared")
             await vm.loadAccounts()
         }
-        .sheet(isPresented: $showCreateSheet) {
+        .glassSheet(isPresented: $showCreateSheet) {
             AccountFormView(vm: vm, mode: .create)
         }
-        .sheet(isPresented: $showImportSheet) {
+        .glassSheet(isPresented: $showImportSheet) {
             ImportP8Sheet(vm: vm)
         }
-        .sheet(isPresented: $showFileImporter) {
+        .glassSheet(isPresented: $showFileImporter) {
             UploadP8Sheet(vm: vm)
         }
         .alert(L10n.Account.deleteTitle, isPresented: .init(
@@ -182,9 +178,8 @@ private struct ImportP8Sheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.Account.importTitle)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
@@ -260,12 +255,12 @@ private struct UploadP8Sheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section { Text(err).foregroundStyle(.red).font(.caption)
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.Account.uploadTitle)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
@@ -275,7 +270,7 @@ private struct UploadP8Sheet: View {
                         .disabled(!isValid || isLoading)
                 }
             }
-            .sheet(isPresented: $showFilePicker) {
+            .glassSheet(isPresented: $showFilePicker) {
                 DocumentPicker(contentTypes: [.data, .plainText, .item]) { url in
                     guard url.pathExtension.lowercased() == "p8" else {
                         errorMsg = "请选择 .p8 格式的文件"

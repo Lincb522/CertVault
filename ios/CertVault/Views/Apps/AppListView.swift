@@ -38,12 +38,12 @@ struct AppListView: View {
         }
         .pageBackground()
         .navigationTitle("应用管理")
-        .sheet(isPresented: $showBuilds) {
+        .glassSheet(isPresented: $showBuilds) {
             if let app = selectedApp {
                 BuildListSheet(vm: vm, app: app)
             }
         }
-        .sheet(isPresented: $showVersions) {
+        .glassSheet(isPresented: $showVersions) {
             if let app = selectedApp {
                 VersionListSheet(vm: vm, app: app)
             }
@@ -307,9 +307,9 @@ private struct BuildListSheet: View {
                     }
                 }
             }
-            .pageBackground()
+            .scrollContentBackground(.hidden)
             .navigationTitle("构建版本")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭") { dismiss() }
@@ -387,9 +387,9 @@ private struct VersionListSheet: View {
                     }
                 }
             }
-            .pageBackground()
+            .scrollContentBackground(.hidden)
             .navigationTitle("版本历史")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭") { dismiss() }

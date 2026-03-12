@@ -86,7 +86,7 @@ struct LoginView: View {
                         .textInputAutocapitalization(.never)
                 }
                 .padding(14)
-                .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 12))
+                .glassCard(cornerRadius: 12)
 
                 HStack(spacing: 10) {
                     HIcon(AppIcon.lock)
@@ -97,7 +97,7 @@ struct LoginView: View {
                         .textContentType(.password)
                 }
                 .padding(14)
-                .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 12))
+                .glassCard(cornerRadius: 12)
             }
 
             if let error = authVM.errorMessage {
@@ -133,11 +133,7 @@ struct LoginView: View {
             registerLink
         }
         .padding(24)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 24))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.dsBorder, lineWidth: 0.5)
-        )
+        .glassCard(cornerRadius: 24)
         .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 8)
     }
 

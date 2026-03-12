@@ -52,6 +52,7 @@ struct PushTestView: View {
                     }.tag(1)
                 }
                 .pickerStyle(.segmented)
+                .listRowBackground(Color.clear)
             }
 
             if !storage.savedTemplates.isEmpty {
@@ -73,6 +74,7 @@ struct PushTestView: View {
                                 .foregroundStyle(Color.dsMuted)
                         }
                     }
+                    .listRowBackground(Color.clear)
                 }
             }
 
@@ -82,6 +84,7 @@ struct PushTestView: View {
                     Text(L10n.Push.testAccountTab).tag(1)
                     Text(L10n.Push.testManualTab).tag(2)
                 }
+                    .listRowBackground(Color.clear)
                 .pickerStyle(.segmented)
 
                 switch authMode {
@@ -92,6 +95,7 @@ struct PushTestView: View {
                             Text(key.displayName).tag(key.id)
                         }
                     }
+                    .listRowBackground(Color.clear)
                 case 1:
                     Picker(L10n.account, selection: $selectedAccountId) {
                         Text(L10n.select).tag("")
@@ -99,16 +103,22 @@ struct PushTestView: View {
                             Text(acc.displayName).tag(acc.id)
                         }
                     }
+                    .listRowBackground(Color.clear)
                     TextField("Team ID", text: $manualTeamId)
                         .textInputAutocapitalization(.characters)
+                        .listRowBackground(Color.clear)
                 default:
                     TextField("Key ID", text: $manualKeyId)
                         .textInputAutocapitalization(.characters)
+                        .listRowBackground(Color.clear)
                     TextField("Team ID", text: $manualTeamId)
                         .textInputAutocapitalization(.characters)
+                        .listRowBackground(Color.clear)
                     TextEditor(text: $manualPrivateKey)
                         .font(.system(.caption, design: .monospaced))
                         .frame(minHeight: 80)
+                        .scrollContentBackground(.hidden)
+                        .listRowBackground(Color.clear)
                 }
             }
 
@@ -129,11 +139,13 @@ struct PushTestView: View {
                                 .foregroundStyle(Color.dsMuted)
                         }
                     }
+                    .listRowBackground(Color.clear)
 
                     if notificationManager.deviceToken != nil && deviceToken == notificationManager.deviceToken {
                         Text(L10n.Push.testAutoFill)
                             .font(.caption2)
                             .foregroundStyle(Color.dsAccent)
+                            .listRowBackground(Color.clear)
                     } else if deviceToken.isEmpty {
                         HStack(spacing: 12) {
                             if notificationManager.deviceToken != nil {
@@ -161,6 +173,7 @@ struct PushTestView: View {
                                 .foregroundStyle(Color.dsAccentPurple)
                             }
                         }
+                        .listRowBackground(Color.clear)
                     }
                 } else {
                     HStack(spacing: 8) {
@@ -176,12 +189,14 @@ struct PushTestView: View {
                                 .foregroundStyle(Color.dsAccentBlue)
                         }
                     }
+                    .listRowBackground(Color.clear)
                 }
 
                 if savedBundleIds.isEmpty {
                     TextField("Bundle ID", text: $bundleId)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .listRowBackground(Color.clear)
                 } else {
                     HStack {
                         TextField("Bundle ID", text: $bundleId)
@@ -202,17 +217,23 @@ struct PushTestView: View {
                                 .foregroundStyle(Color.dsAccentBlue)
                         }
                     }
+                    .listRowBackground(Color.clear)
                 }
 
                 Toggle(NSLocalizedString("push.test.sandbox", comment: ""), isOn: $sandbox)
+                    .listRowBackground(Color.clear)
             }
 
             Section(NSLocalizedString("push.test.section.content", comment: "")) {
                 TextField(NSLocalizedString("push.test.field.title", comment: ""), text: $title)
+                    .listRowBackground(Color.clear)
                 TextField(NSLocalizedString("push.test.field.body", comment: ""), text: $messageBody)
+                    .listRowBackground(Color.clear)
                 TextField(NSLocalizedString("push.test.field.badge", comment: ""), text: $badge)
                     .keyboardType(.numberPad)
+                    .listRowBackground(Color.clear)
                 TextField(NSLocalizedString("push.test.field.sound", comment: ""), text: $sound)
+                    .listRowBackground(Color.clear)
 
                 Button {
                     showSaveTemplate = true
@@ -226,6 +247,7 @@ struct PushTestView: View {
                     .foregroundStyle(title.isEmpty ? Color.dsMuted : Color.dsAccentBlue)
                 }
                 .disabled(title.isEmpty)
+                .listRowBackground(Color.clear)
             }
 
             Section {
@@ -251,6 +273,7 @@ struct PushTestView: View {
                     TextField("过期时间（秒）", text: $expiration)
                         .keyboardType(.numberPad)
                 }
+                .listRowBackground(Color.clear)
             }
 
             Section {
@@ -290,6 +313,7 @@ struct PushTestView: View {
                     Text(result)
                         .font(.subheadline)
                         .foregroundStyle(result.contains("成功") || result.contains("完成") ? Color.dsAccent : Color.dsAccentPink)
+                        .listRowBackground(Color.clear)
 
                     if let br = vm.broadcastResult {
                         HStack(spacing: 16) {
@@ -301,6 +325,7 @@ struct PushTestView: View {
                             }
                         }
                         .padding(.vertical, 4)
+                        .listRowBackground(Color.clear)
 
                         if let errs = br.errors, !errs.isEmpty {
                             DisclosureGroup("失败详情 (\(errs.count))") {
@@ -316,6 +341,7 @@ struct PushTestView: View {
                                     }
                                 }
                             }
+                            .listRowBackground(Color.clear)
                         }
                     }
                 }
@@ -324,16 +350,16 @@ struct PushTestView: View {
         .scrollContentBackground(.hidden)
         .pageBackground()
         .navigationTitle(L10n.Push.testTitle)
-        .sheet(isPresented: $showTokenGuide) {
+        .glassSheet(isPresented: $showTokenGuide) {
             TokenGuideSheet()
         }
-        .sheet(isPresented: $showTemplateSheet) {
+        .glassSheet(isPresented: $showTemplateSheet) {
             PushTemplatePickerSheet(storage: storage) { tpl in
                 applyTemplate(tpl)
                 showTemplateSheet = false
             }
         }
-        .sheet(isPresented: $showDevicePicker) {
+        .glassSheet(isPresented: $showDevicePicker) {
             DevicePickerSheet(vm: vm) { selected in
                 deviceToken = selected.device_token ?? ""
                 if let isSandbox = selected.sandbox {
@@ -582,10 +608,9 @@ private struct DevicePickerSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .searchable(text: $searchText, prompt: "搜索设备")
             .navigationTitle("选择设备 (\(vm.devices.count))")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
@@ -627,9 +652,8 @@ private struct PushTemplatePickerSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("选择模板")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
@@ -736,9 +760,8 @@ private struct TokenGuideSheet: View {
                 }
                 .padding(16)
             }
-            .pageBackground()
             .navigationTitle(L10n.Push.tokenTitle)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.close) { dismiss() }
@@ -764,11 +787,7 @@ private struct TokenGuideSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(20)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 16)
     }
 
     private func guideSection(number: String, title: String, color: Color, steps: [String]) -> some View {
@@ -800,11 +819,7 @@ private struct TokenGuideSheet: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
+            .glassCard(cornerRadius: 12)
         }
     }
 

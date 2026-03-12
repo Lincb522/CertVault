@@ -48,11 +48,7 @@ struct PushKeyListView: View {
                         }
                     }
                     .padding(.vertical, 4)
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
+                    .glassCard(cornerRadius: 14)
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                 }
@@ -74,13 +70,13 @@ struct PushKeyListView: View {
             }
         }
         .task { await vm.loadKeys() }
-        .sheet(isPresented: $showCreate) {
+        .glassSheet(isPresented: $showCreate) {
             CreatePushKeySheet(vm: vm)
         }
-        .sheet(item: $keyToEdit) { key in
+        .glassSheet(item: $keyToEdit) { key in
             EditPushKeySheet(vm: vm, key: key)
         }
-        .sheet(isPresented: $downloadService.showShareSheet) {
+        .glassSheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }
@@ -201,12 +197,13 @@ private struct CreatePushKeySheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section {
+                        Text(err).foregroundStyle(.red).font(.caption)
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.Push.keysImport)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
@@ -228,7 +225,7 @@ private struct CreatePushKeySheet: View {
                     .disabled(!isValid || isLoading)
                 }
             }
-            .sheet(isPresented: $showFilePicker) {
+            .glassSheet(isPresented: $showFilePicker) {
                 DocumentPicker(contentTypes: [.data, .plainText, .item]) { url in
                     guard url.pathExtension.lowercased() == "p8" else {
                         errorMsg = "请选择 .p8 格式的文件"
@@ -285,12 +282,13 @@ private struct EditPushKeySheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section {
+                        Text(err).foregroundStyle(.red).font(.caption)
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.Push.keysEdit)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }

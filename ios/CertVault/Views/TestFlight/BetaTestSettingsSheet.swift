@@ -56,12 +56,10 @@ struct BetaTestSettingsSheet: View {
                             }
                         }
                     }
-                    .scrollContentBackground(.hidden)
                 }
             }
-            .pageBackground()
             .navigationTitle("测试条件设置")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭") { dismiss() }

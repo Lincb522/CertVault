@@ -12,6 +12,9 @@ struct GroupDetailSheet: View {
     @State private var showDeviceCriteria = false
     @State private var copiedLink = false
     @State private var toastMsg: String?
+    @State private var expireBuildId: String?
+    @State private var showExpireBuildConfirm = false
+    @State private var isExpiringBuild = false
 
     private let service = AppStoreConnectService()
 
@@ -50,25 +53,24 @@ struct GroupDetailSheet: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .pageBackground()
             .navigationTitle("测试组详情")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("关闭") { dismiss() } }
             }
-            .sheet(isPresented: $showSettings) {
+            .glassSheet(isPresented: $showSettings) {
                 if let detail {
                     GroupSettingsSheet(group: group, detail: detail, accountId: accountId, service: service) {
                         Task { await loadData() }
                     }
                 }
             }
-            .sheet(isPresented: $showInviteTester) {
+            .glassSheet(isPresented: $showInviteTester) {
                 InviteTesterSheet(groupId: group.id, accountId: accountId, service: service) {
                     Task { await loadData() }
                 }
             }
-            .sheet(isPresented: $showDeviceCriteria) {
+            .glassSheet(isPresented: $showDeviceCriteria) {
                 DeviceCriteriaSheet(
                     groupId: group.id, accountId: accountId,
                     existing: detail?.recruitment_criteria, service: service
@@ -545,6 +547,16 @@ struct GroupDetailSheet: View {
                             )
                         }
                         .padding(.vertical, 8)
+                        .contextMenu {
+                            if build.expired != true {
+                                Button(role: .destructive) {
+                                    expireBuildId = build.id
+                                    showExpireBuildConfirm = true
+                                } label: {
+                                    Label("设为过期", systemImage: "clock.badge.xmark")
+                                }
+                            }
+                        }
                         if idx < builds.count - 1 {
                             Divider().foregroundStyle(Color.dsBorder)
                         }
@@ -560,6 +572,29 @@ struct GroupDetailSheet: View {
                     .cardStyle()
             }
         }
+        .alert("确认设为过期", isPresented: $showExpireBuildConfirm) {
+            Button("取消", role: .cancel) { expireBuildId = nil }
+            Button("确认过期", role: .destructive) {
+                if let bid = expireBuildId {
+                    Task { await expireBuildAction(bid) }
+                }
+            }
+        } message: {
+            Text("过期后测试员将无法安装此构建版本，此操作不可撤销。")
+        }
+    }
+
+    private func expireBuildAction(_ buildId: String) async {
+        isExpiringBuild = true
+        do {
+            try await service.expireBuild(buildId: buildId, accountId: accountId)
+            toastMsg = "构建版本已设为过期"
+            await loadData()
+        } catch {
+            toastMsg = "操作失败: \(error.localizedDescription)"
+        }
+        isExpiringBuild = false
+        expireBuildId = nil
     }
 
     // MARK: - Helpers
@@ -645,9 +680,8 @@ private struct GroupSettingsSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("编辑设置")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
@@ -817,13 +851,11 @@ private struct InviteTesterSheet: View {
                         .background(canInvite ? Color.dsAccentBlue : Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 12))
                     }
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
                     .disabled(!canInvite || isInviting)
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("邀请测试员")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭") { dismiss() }
@@ -969,7 +1001,6 @@ private struct DeviceCriteriaSheet: View {
                         .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                     }
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
                     .disabled(isSaving)
                 }
 
@@ -987,9 +1018,8 @@ private struct DeviceCriteriaSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("设备条件")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }

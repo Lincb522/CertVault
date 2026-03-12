@@ -109,10 +109,10 @@ enum AppIcon {
     static let share = Hicon.upload
     static let iphone = Hicon.display3
     static let iphoneSlash = Hicon.display4
-    static let arrowUp = Hicon.up1
-    static let arrowDown = Hicon.down1
-    static let arrowRight = Hicon.right1
-    static let arrowLeft = Hicon.left1
+    static let arrowUp = Hicon.up2
+    static let arrowDown = Hicon.down2
+    static let arrowRight = Hicon.right2
+    static let arrowLeft = Hicon.left2
     static let location = Hicon.location
     static let heart = Hicon.heart1
     static let bookmark = Hicon.bookmark1
@@ -127,8 +127,8 @@ enum AppIcon {
     static let zoomOut = Hicon.zoomOut
     static let swap = Hicon.swap1
     static let chart = Hicon.chart
-    static let up = Hicon.up1
-    static let down = Hicon.down1
+    static let up = Hicon.up2
+    static let down = Hicon.down2
     static let moreCircle = Hicon.moreCircle
     static let sparkle = Hicon.star2
     static let bellSlash = Hicon.notification3

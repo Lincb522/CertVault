@@ -587,4 +587,20 @@ router.put('/builds/:id/beta-detail', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Expire a build
+router.post('/builds/:id/expire', async (req, res, next) => {
+  try {
+    const api = await getApi(req);
+    const result = await api.expireBuild(req.params.id);
+    res.json({
+      success: true,
+      message: '构建版本已设为过期',
+      data: {
+        id: result.data?.id,
+        expired: result.data?.attributes?.expired,
+      }
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

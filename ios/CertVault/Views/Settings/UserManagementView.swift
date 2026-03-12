@@ -29,11 +29,7 @@ struct UserManagementView: View {
                         }
                     }
                     .padding(.vertical, 4)
-                    .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.dsBorder, lineWidth: 1)
-                    )
+                    .glassCard(cornerRadius: 14)
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                     .padding(.bottom, 20)
@@ -66,7 +62,7 @@ struct UserManagementView: View {
                 Text(L10n.UserMgmt.deleteMessage(user.username))
             }
         }
-        .sheet(isPresented: $showResetSheet) {
+        .glassSheet(isPresented: $showResetSheet) {
             resetPasswordSheet
         }
         .alert(L10n.UserMgmt.resultTitle, isPresented: .init(
@@ -171,9 +167,8 @@ struct UserManagementView: View {
                     SecureField(NSLocalizedString("user.newPassword.hint", comment: ""), text: $newPassword)
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.UserMgmt.resetPasswordTitle)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { showResetSheet = false }

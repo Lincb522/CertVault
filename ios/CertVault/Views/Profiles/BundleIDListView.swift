@@ -41,11 +41,7 @@ struct BundleIDListView: View {
                                 }
                             }
                             .padding(14)
-                            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.dsBorder, lineWidth: 1)
-                            )
+                            .glassCard(cornerRadius: 12)
                             .padding(.horizontal, 16)
                         }
 
@@ -99,11 +95,7 @@ struct BundleIDListView: View {
                             }
                         }
                         .padding(.vertical, 4)
-                        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.dsBorder, lineWidth: 1)
-                        )
+                        .glassCard(cornerRadius: 14)
                         .padding(.horizontal, 16)
                     }
                     .padding(.top, 8)
@@ -127,7 +119,7 @@ struct BundleIDListView: View {
             }
         }
         .task { await vm.loadAccounts() }
-        .sheet(isPresented: $showCreate) {
+        .glassSheet(isPresented: $showCreate) {
             CreateBundleIDView(vm: vm)
         }
         .alert(L10n.BundleID.deleteTitle, isPresented: .init(

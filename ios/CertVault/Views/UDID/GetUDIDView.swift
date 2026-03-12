@@ -56,29 +56,28 @@ struct GetUDIDView: View {
     private var enrollView: some View {
         VStack(spacing: 20) {
             if let url = vm.enrollURL {
-                Text(L10n.UDID.scanQR)
-                    .font(.headline)
-                Text(L10n.UDID.orVisit)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if let qrImage = generateQRCode(from: url) {
-                    Image(uiImage: qrImage)
-                        .interpolation(.none)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 200, height: 200)
-                        .padding()
-                        .glassCard(cornerRadius: 16)
-                }
-
-                VStack(spacing: 8) {
-                    Text(url)
-                        .font(.caption.monospaced())
+                VStack(spacing: 16) {
+                    Text(L10n.UDID.scanQR)
+                        .font(.headline)
+                    Text(L10n.UDID.orVisit)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    if let qrImage = generateQRCode(from: url) {
+                        Image(uiImage: qrImage)
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 200, height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    Text(url)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(Color.dsMuted)
                         .textSelection(.enabled)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        .lineLimit(3)
 
                     Button {
                         UIPasteboard.general.string = url
@@ -88,29 +87,28 @@ struct GetUDIDView: View {
                         } icon: {
                             HIcon(AppIcon.copy)
                         }
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Color.dsAccentBlue)
                     .controlSize(.small)
-                }
 
-                if vm.isPolling {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text(L10n.UDID.waiting)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    if vm.isPolling {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(L10n.UDID.waiting)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    .padding(.top, 8)
-                }
 
-                Button(L10n.UDID.regenerate) {
-                    vm.reset()
+                    Button(L10n.UDID.regenerate) {
+                        vm.reset()
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 8)
+                .cardStyle()
             }
         }
     }

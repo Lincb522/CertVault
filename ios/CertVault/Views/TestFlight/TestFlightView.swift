@@ -54,25 +54,25 @@ struct TestFlightView: View {
                 }
             }
         }
-        .sheet(isPresented: $showCreateGroup) {
+        .glassSheet(isPresented: $showCreateGroup) {
             CreateGroupSheet(vm: vm)
         }
-        .sheet(isPresented: $showAddTester) {
+        .glassSheet(isPresented: $showAddTester) {
             AddTesterSheet(vm: vm)
         }
-        .sheet(item: $showGroupTesters) { group in
+        .glassSheet(item: $showGroupTesters) { group in
             GroupTestersSheet(vm: vm, group: group)
         }
-        .sheet(item: $showDistributeBuild) { group in
+        .glassSheet(item: $showDistributeBuild) { group in
             DistributeBuildSheet(vm: vm, group: group)
         }
-        .sheet(item: $showBuildDetail) { build in
+        .glassSheet(item: $showBuildDetail) { build in
             BuildDetailSheet(build: build, accountId: vm.selectedAccountId)
         }
-        .sheet(item: $showGroupDetail) { group in
+        .glassSheet(item: $showGroupDetail) { group in
             GroupDetailSheet(group: group, accountId: vm.selectedAccountId)
         }
-        .sheet(isPresented: $showTestSettings) {
+        .glassSheet(isPresented: $showTestSettings) {
             if !vm.selectedAppId.isEmpty {
                 BetaTestSettingsSheet(appId: vm.selectedAppId, accountId: vm.selectedAccountId)
             }
@@ -197,7 +197,7 @@ struct TestFlightView: View {
             tabButton("构建版本", icon: AppIcon.hammer, tag: 2)
         }
         .padding(4)
-        .background(Color.dsSurfaceLight.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
+        .glassCard(cornerRadius: 12)
     }
 
     private func tabButton(_ title: String, icon: UIImage, tag: Int) -> some View {
@@ -297,7 +297,7 @@ struct TestFlightView: View {
                         .font(.body)
                         .foregroundStyle(Color.dsMuted)
                         .frame(width: 32, height: 32)
-                        .background(Color.dsSurfaceLight.opacity(0.5), in: Circle())
+                        .background(.ultraThinMaterial, in: Circle())
                 }
             }
         }
@@ -517,9 +517,8 @@ private struct CreateGroupSheet: View {
                 TextField("分组名称", text: $name)
                 Toggle("内部分组", isOn: $isInternal)
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("新建分组")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -567,9 +566,8 @@ private struct AddTesterSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("添加测试员")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -655,9 +653,8 @@ private struct GroupTestersSheet: View {
                     }
                 }
             }
-            .pageBackground()
             .navigationTitle("\(group.displayName) 测试员")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("关闭") { dismiss() } }
                 ToolbarItem(placement: .primaryAction) {
@@ -666,7 +663,7 @@ private struct GroupTestersSheet: View {
                     }
                 }
             }
-            .sheet(isPresented: $showAddTesterPicker) {
+            .glassSheet(isPresented: $showAddTesterPicker) {
                 AddTesterToGroupSheet(vm: vm, group: group)
             }
         }
@@ -721,12 +718,11 @@ private struct AddTesterToGroupSheet: View {
                                 .foregroundStyle(Color.dsMuted)
                         }
                     }
-                    .scrollContentBackground(.hidden)
                     .environment(\.editMode, .constant(.active))
                 }
             }
             .navigationTitle("添加到 \(group.displayName)")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -790,7 +786,6 @@ private struct DistributeBuildSheet: View {
                                 StatusBadge(build.stateLabel, color: build.processing_state == "VALID" ? .dsAccent : .dsMuted)
                             }
                         }
-                        .scrollContentBackground(.hidden)
                         .environment(\.editMode, .constant(.active))
                         .frame(maxHeight: 200)
 
@@ -836,8 +831,7 @@ private struct DistributeBuildSheet: View {
                             TextEditor(text: $whatsNew)
                                 .frame(minHeight: 80)
                                 .padding(8)
-                                .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.dsBorder, lineWidth: 1))
+                                .glassCard(cornerRadius: 10)
 
                             HStack {
                                 Text("语言")
@@ -855,7 +849,7 @@ private struct DistributeBuildSheet: View {
                 }
             }
             .navigationTitle("分发到 \(group.displayName)")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -879,7 +873,7 @@ private struct DistributeBuildSheet: View {
                     .disabled(selectedBuildIds.isEmpty || isDistributing)
                 }
             }
-            .sheet(isPresented: $showTemplateList) {
+            .glassSheet(isPresented: $showTemplateList) {
                 TemplatePickerSheet(type: .testFlight) { template in
                     whatsNew = template.whatsNew ?? ""
                     if let loc = template.locale { locale = loc }

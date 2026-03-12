@@ -169,7 +169,7 @@ extension View {
     func pageBackground() -> some View {
         self
             .scrollContentBackground(.hidden)
-            .background { AppBackground() }
+            .background { AppBackground().ignoresSafeArea(.all) }
     }
 
     @ViewBuilder
@@ -177,12 +177,59 @@ extension View {
         if #available(iOS 26, *) {
             self
                 .scrollContentBackground(.hidden)
-                .presentationBackground(.clear)
-                .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                .presentationBackground(.regularMaterial)
+                .presentationCornerRadius(24)
+                .presentationDragIndicator(.visible)
         } else {
             self
                 .scrollContentBackground(.hidden)
-                .background { AppBackground() }
+                .presentationBackground(.ultraThinMaterial)
+                .presentationCornerRadius(20)
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    func clearFormBackground() -> some View {
+        self
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+}
+
+extension View {
+    func glassSheet<Content: View>(isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> Content) -> some View {
+        self.sheet(isPresented: isPresented) {
+            if #available(iOS 26, *) {
+                content()
+                    .scrollContentBackground(.hidden)
+                    .presentationBackground(.regularMaterial)
+                    .presentationCornerRadius(24)
+                    .presentationDragIndicator(.visible)
+            } else {
+                content()
+                    .scrollContentBackground(.hidden)
+                    .presentationBackground(.ultraThinMaterial)
+                    .presentationCornerRadius(20)
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+
+    func glassSheet<Item: Identifiable, Content: View>(item: Binding<Item?>, @ViewBuilder content: @escaping (Item) -> Content) -> some View {
+        self.sheet(item: item) { val in
+            if #available(iOS 26, *) {
+                content(val)
+                    .scrollContentBackground(.hidden)
+                    .presentationBackground(.regularMaterial)
+                    .presentationCornerRadius(24)
+                    .presentationDragIndicator(.visible)
+            } else {
+                content(val)
+                    .scrollContentBackground(.hidden)
+                    .presentationBackground(.ultraThinMaterial)
+                    .presentationCornerRadius(20)
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
@@ -195,5 +242,11 @@ extension View {
                 .tracking(0.5)
             Spacer()
         }
+    }
+
+    func sheetNavStyle() -> some View {
+        self
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
     }
 }

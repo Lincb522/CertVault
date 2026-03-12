@@ -144,7 +144,7 @@ struct AutoBindView: View {
                 }
             }
             .navigationTitle(L10n.Device.autoBind)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(vm.bindResult != nil ? L10n.done : L10n.cancel) { dismiss() }
@@ -168,7 +168,6 @@ struct AutoBindView: View {
             }
             .padding(16)
         }
-        .pageBackground()
         .onAppear {
             if !prefillName.isEmpty && deviceName.isEmpty {
                 deviceName = prefillName
@@ -280,7 +279,7 @@ struct AutoBindView: View {
                 Divider()
                 inputRow(L10n.Device.formUdid, text: $udid, placeholder: "00008030-001A29D82280802E", monospaced: true)
             }
-            .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
+            .glassCard(cornerRadius: 10)
         }
         .cardStyle()
     }
@@ -295,7 +294,7 @@ struct AutoBindView: View {
                 Divider()
                 inputRow(NSLocalizedString("autoBind.appName", comment: ""), text: $bundleName, placeholder: "MyApp")
             }
-            .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
+            .glassCard(cornerRadius: 10)
         }
         .cardStyle()
     }
@@ -306,7 +305,7 @@ struct AutoBindView: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader(L10n.Cert.password, icon: AppIcon.lock, color: .dsAccentPink)
             inputRow(NSLocalizedString("autoBind.password", comment: ""), text: $password, placeholder: "123456", monospaced: true)
-                .background(Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 10))
+                .glassCard(cornerRadius: 10)
         }
         .cardStyle()
     }

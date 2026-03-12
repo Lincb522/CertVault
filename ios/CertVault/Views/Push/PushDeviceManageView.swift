@@ -84,10 +84,10 @@ struct PushDeviceManageView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAddSheet) {
+        .glassSheet(isPresented: $showAddSheet) {
             AddDeviceSheet(vm: vm) { showAddSheet = false }
         }
-        .sheet(item: $editingDevice) { device in
+        .glassSheet(item: $editingDevice) { device in
             EditDeviceSheet(vm: vm, device: device) { editingDevice = nil }
         }
         .alert("清理无效设备", isPresented: $showCleanupAlert) {
@@ -123,16 +123,19 @@ struct PushDeviceManageView: View {
                     Divider().frame(height: 40)
                     statCell("iOS", value: stats.ios?.value ?? 0, color: .dsAccentPurple)
                 }
+                    .listRowBackground(Color.clear)
 
                 if let msg = cleanupResult {
                     Text(msg)
                         .font(.caption)
                         .foregroundStyle(msg.contains("完成") ? Color.dsAccent : Color.dsAccentPink)
+                        .listRowBackground(Color.clear)
                 }
                 if let msg = batchActionResult {
                     Text(msg)
                         .font(.caption)
                         .foregroundStyle(msg.contains("成功") ? Color.dsAccent : Color.dsAccentPink)
+                        .listRowBackground(Color.clear)
                 }
             }
         }
@@ -142,6 +145,7 @@ struct PushDeviceManageView: View {
         Section("设备列表 (\(vm.devices.count))") {
             if vm.isLoading && vm.devices.isEmpty {
                 ProgressView().frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
             } else if vm.devices.isEmpty {
                 VStack(spacing: 12) {
                     HIcon(AppIcon.iphoneSlash)
@@ -156,6 +160,7 @@ struct PushDeviceManageView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 32)
+                .listRowBackground(Color.clear)
             } else {
                 ForEach(vm.devices, id: \.stableId) { device in
                     Button {
@@ -164,6 +169,7 @@ struct PushDeviceManageView: View {
                         deviceRow(device)
                     }
                     .tint(Color.dsText)
+                    .listRowBackground(Color.clear)
                 }
                 .onDelete { offsets in
                     Task {
@@ -316,13 +322,11 @@ private struct AddDeviceSheet: View {
                         .background(token.isEmpty ? Color.dsSurfaceLight : Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                     }
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
                     .disabled(token.isEmpty || isAdding)
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("添加设备")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { onDismiss() }
@@ -385,7 +389,6 @@ private struct EditDeviceSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .listRowBackground(Color.clear)
                 }
 
                 Section("Device Token") {
@@ -480,7 +483,6 @@ private struct EditDeviceSheet: View {
                         .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                     }
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
                     .disabled(isSaving)
                 }
 
@@ -496,9 +498,8 @@ private struct EditDeviceSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("设备详情")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭") { onDismiss() }

@@ -42,11 +42,7 @@ struct ProfileListView: View {
                                 }
                             }
                             .padding(14)
-                            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.dsBorder, lineWidth: 1)
-                            )
+                            .glassCard(cornerRadius: 12)
                             .padding(.horizontal, 16)
                         }
 
@@ -81,11 +77,7 @@ struct ProfileListView: View {
                             }
                         }
                         .padding(.vertical, 4)
-                        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.dsBorder, lineWidth: 1)
-                        )
+                        .glassCard(cornerRadius: 14)
                         .padding(.horizontal, 16)
                     }
                     .padding(.top, 8)
@@ -109,10 +101,10 @@ struct ProfileListView: View {
             }
         }
         .task { await vm.loadAccounts() }
-        .sheet(isPresented: $showCreate) {
+        .glassSheet(isPresented: $showCreate) {
             CreateProfileView(vm: vm)
         }
-        .sheet(isPresented: $downloadService.showShareSheet) {
+        .glassSheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }

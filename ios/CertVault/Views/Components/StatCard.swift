@@ -67,7 +67,7 @@ private struct StatCardBackground: ViewModifier {
                 )
         } else {
             content
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 16))
+                .glassCard(cornerRadius: 16)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(color.opacity(0.2), lineWidth: 1)

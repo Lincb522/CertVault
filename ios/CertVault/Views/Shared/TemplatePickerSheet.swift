@@ -130,15 +130,14 @@ struct TemplatePickerSheet: View {
                 }
                 .padding(16)
             }
-            .pageBackground()
             .navigationTitle("选择模版")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("关闭") { dismiss() }
                 }
             }
-            .sheet(item: $editingTemplate) { tpl in
+            .glassSheet(item: $editingTemplate) { tpl in
                 TemplateEditorSheet(template: tpl) {
                     loadSavedTemplates()
                 }
@@ -392,9 +391,8 @@ struct TemplateEditorSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("编辑模版")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

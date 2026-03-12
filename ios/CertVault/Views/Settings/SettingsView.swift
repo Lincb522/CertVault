@@ -59,7 +59,7 @@ struct SettingsView: View {
         } message: {
             Text(L10n.Settings.logoutMessage)
         }
-        .sheet(isPresented: $showChangePassword) {
+        .glassSheet(isPresented: $showChangePassword) {
             ChangePasswordSheet()
         }
         .alert(L10n.Settings.clearCacheTitle, isPresented: $showClearCacheConfirm) {
@@ -128,11 +128,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.dsMuted.opacity(0.4))
                 }
                 .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .glassCard(cornerRadius: 12)
             }
 
             Button { showSMTP = true } label: {
@@ -150,13 +146,9 @@ struct SettingsView: View {
                         .foregroundStyle(Color.dsMuted.opacity(0.4))
                 }
                 .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .glassCard(cornerRadius: 12)
             }
-            .sheet(isPresented: $showSMTP) {
+            .glassSheet(isPresented: $showSMTP) {
                 SMTPConfigSheet()
             }
         }
@@ -192,11 +184,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 14)
                 .padding(.bottom, 14)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
+            .glassCard(cornerRadius: 12)
         }
     }
 
@@ -221,11 +209,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.dsMuted.opacity(0.4))
                 }
                 .padding(14)
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.dsBorder, lineWidth: 1)
-                )
+                .glassCard(cornerRadius: 12)
             }
         }
     }
@@ -273,11 +257,7 @@ struct SettingsView: View {
                     .padding(14)
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
+            .glassCard(cornerRadius: 12)
         }
     }
 
@@ -386,11 +366,7 @@ struct SettingsView: View {
                     .padding(14)
                 }
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
+            .glassCard(cornerRadius: 12)
         }
     }
 
@@ -483,11 +459,7 @@ struct SettingsView: View {
                 }
                 .padding(14)
             }
-            .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.dsBorder, lineWidth: 1)
-            )
+            .glassCard(cornerRadius: 12)
         }
     }
 
@@ -557,9 +529,8 @@ private struct ChangePasswordSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.Settings.changePassword)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }
@@ -655,11 +626,10 @@ private struct SMTPConfigSheet: View {
                             }
                         }
                     }
-                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle(L10n.Settings.emailConfig)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.close) { dismiss() }

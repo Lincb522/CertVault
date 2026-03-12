@@ -43,11 +43,14 @@ struct PushSettingsView: View {
                             .foregroundStyle(status.push_enabled == true ? Color.dsAccent : Color.dsAccentPink)
                     }
                 }
+                .listRowBackground(Color.clear)
                 if let dc = status.device_count {
                     LabeledContent("注册设备", value: "\(dc) 台")
+                        .listRowBackground(Color.clear)
                 }
                 if let kc = status.key_count {
                     LabeledContent("推送密钥", value: "\(kc) 个")
+                        .listRowBackground(Color.clear)
                 }
             }
         }
@@ -57,19 +60,20 @@ struct PushSettingsView: View {
         Group {
             Section("基本设置") {
                 Toggle("启用推送", isOn: $pushEnabled)
-
+                    .listRowBackground(Color.clear)
                 Picker("默认推送密钥", selection: $defaultPushKeyId) {
                     Text("未设置").tag("")
                     ForEach(vm.pushKeys) { key in
                         Text(key.displayName).tag(key.id)
                     }
                 }
-
+                .listRowBackground(Color.clear)
                 TextField("默认 Bundle ID", text: $defaultBundleId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-
+                    .listRowBackground(Color.clear)
                 Toggle("默认沙盒模式", isOn: $defaultSandbox)
+                    .listRowBackground(Color.clear)
             }
 
             Section("高级设置") {
@@ -81,9 +85,9 @@ struct PushSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
                 }
-
+                .listRowBackground(Color.clear)
                 Toggle("自动清理无效设备", isOn: $autoCleanup)
-
+                    .listRowBackground(Color.clear)
                 HStack {
                     Text("历史保留天数")
                     Spacer()
@@ -92,6 +96,7 @@ struct PushSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
                 }
+                .listRowBackground(Color.clear)
             }
         }
     }
@@ -123,6 +128,7 @@ struct PushSettingsView: View {
                 Text(msg)
                     .font(.subheadline)
                     .foregroundStyle(msg.contains("成功") ? Color.dsAccent : Color.dsAccentPink)
+                    .listRowBackground(Color.clear)
             }
         }
     }

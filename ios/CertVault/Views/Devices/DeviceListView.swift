@@ -110,13 +110,13 @@ struct DeviceListView: View {
             AppLogger.ui.info("🖼️ DeviceListView appeared")
             await vm.loadAccounts()
         }
-        .sheet(isPresented: $showRegister) {
+        .glassSheet(isPresented: $showRegister) {
             RegisterDeviceSheet(vm: vm)
         }
-        .sheet(isPresented: $showBatchImport) {
+        .glassSheet(isPresented: $showBatchImport) {
             BatchImportView(vm: vm)
         }
-        .sheet(isPresented: $showAutoBind) {
+        .glassSheet(isPresented: $showAutoBind) {
             AutoBindView(vm: vm)
         }
     }
@@ -205,11 +205,7 @@ struct DeviceListView: View {
             }
         }
         .padding(.vertical, 4)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 14)
         .padding(.horizontal, 16)
     }
 
@@ -230,11 +226,7 @@ struct DeviceListView: View {
             }
         }
         .padding(14)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 12)
     }
 }
 
@@ -328,12 +320,12 @@ struct RegisterDeviceSheet: View {
                 }
 
                 if let err = errorMsg {
-                    Section { Text(err).foregroundStyle(.red).font(.caption) }
+                    Section { Text(err).foregroundStyle(.red).font(.caption)
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle(L10n.Device.register)
-            .navigationBarTitleDisplayMode(.inline)
+            .sheetNavStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancel) { dismiss() }

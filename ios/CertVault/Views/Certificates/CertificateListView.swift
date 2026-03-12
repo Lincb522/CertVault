@@ -94,9 +94,9 @@ struct CertificateListView: View {
             await vm.loadAccounts()
             await vm.loadQuota()
         }
-        .sheet(isPresented: $showCreate) { CreateCertView(vm: vm) }
-        .sheet(isPresented: $showSelfSign) { SelfSignView(vm: vm) }
-        .sheet(isPresented: $downloadService.showShareSheet) {
+        .glassSheet(isPresented: $showCreate) { CreateCertView(vm: vm) }
+        .glassSheet(isPresented: $showSelfSign) { SelfSignView(vm: vm) }
+        .glassSheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }
@@ -138,11 +138,7 @@ struct CertificateListView: View {
             }
         }
         .padding(14)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 12)
     }
 
     private var quotaSection: some View {
@@ -162,11 +158,7 @@ struct CertificateListView: View {
             }
         }
         .padding(14)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 12)
     }
 
     private var filterSection: some View {
@@ -215,11 +207,7 @@ struct CertificateListView: View {
             }
         }
         .padding(.vertical, 4)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 14)
     }
 }
 
@@ -287,12 +275,8 @@ private struct FilterChip: View {
                 .padding(.vertical, 7)
                 .foregroundStyle(isSelected ? .white : Color.dsMuted)
                 .background(
-                    isSelected ? AnyShapeStyle(Color.dsAccentBlue) : AnyShapeStyle(Color.dsSurface),
+                    isSelected ? AnyShapeStyle(Color.dsAccentBlue) : AnyShapeStyle(.ultraThinMaterial),
                     in: Capsule()
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? Color.clear : Color.dsBorder, lineWidth: 1)
                 )
         }
         .animation(.easeInOut(duration: 0.2), value: isSelected)

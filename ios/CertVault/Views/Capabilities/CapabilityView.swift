@@ -92,8 +92,7 @@ struct CapabilityView: View {
                 Task { await vm.loadEnabled() }
             }
         }
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
+        .glassCard(cornerRadius: 14)
     }
 
     private var enabledCountSection: some View {
@@ -110,8 +109,7 @@ struct CapabilityView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
+        .glassCard(cornerRadius: 14)
     }
 
     private var presetsSection: some View {
@@ -204,8 +202,7 @@ struct CapabilityView: View {
                         }
                     }
                 }
-                .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.dsBorder, lineWidth: 1))
+                .glassCard(cornerRadius: 14)
             }
         }
     }

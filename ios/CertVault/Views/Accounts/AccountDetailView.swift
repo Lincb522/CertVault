@@ -30,7 +30,7 @@ struct AccountDetailView: View {
             }
         }
         .navigationTitle(L10n.Account.detail)
-        .navigationBarTitleDisplayMode(.inline)
+        .sheetNavStyle()
         .toolbar {
             if vm.selectedAccount != nil {
                 ToolbarItem(placement: .primaryAction) {
@@ -41,12 +41,12 @@ struct AccountDetailView: View {
             }
         }
         .task { await vm.loadDetail(id: accountId) }
-        .sheet(isPresented: $showEditSheet) {
+        .glassSheet(isPresented: $showEditSheet) {
             if let account = vm.selectedAccount {
                 AccountFormView(vm: vm, mode: .edit(account))
             }
         }
-        .sheet(isPresented: $downloadService.showShareSheet) {
+        .glassSheet(isPresented: $downloadService.showShareSheet) {
             if let url = downloadService.downloadedFileURL {
                 ShareSheet(items: [url])
             }
@@ -203,10 +203,6 @@ private struct MiniStatCard: View {
             Spacer()
         }
         .padding(12)
-        .background(Color.dsSurface, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.dsBorder, lineWidth: 1)
-        )
+        .glassCard(cornerRadius: 10)
     }
 }
