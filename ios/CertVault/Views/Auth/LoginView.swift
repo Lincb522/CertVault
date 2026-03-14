@@ -128,6 +128,7 @@ struct LoginView: View {
                     in: RoundedRectangle(cornerRadius: 12)
                 )
             }
+            .buttonStyle(.plain)
             .disabled(!canSubmit)
 
             registerLink

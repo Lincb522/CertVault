@@ -191,7 +191,7 @@ struct ProfileDetailView: View {
                             HStack(spacing: 6) {
                                 StatusBadge(certTypeLabel(cert.type ?? ""), color: certTypeColor(cert.type ?? ""))
                                 if let exp = cert.expires_at {
-                                    Text(String(exp.prefix(10)))
+                                    Text(exp.toLocalDate(.short))
                                         .font(.caption2.monospaced())
                                         .foregroundStyle(isExpired(exp) ? Color.dsAccentPink : Color.dsMuted)
                                 }
@@ -257,6 +257,7 @@ struct ProfileDetailView: View {
                                 Text(device.displayName)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Color.dsText)
+                                    .lineLimit(1)
                                 if let udid = device.udid {
                                     Text(udid)
                                         .font(.caption2.monospaced())
@@ -272,6 +273,7 @@ struct ProfileDetailView: View {
                                     Text(platform)
                                         .font(.caption2)
                                         .foregroundStyle(Color.dsMuted)
+                                        .lineLimit(1)
                                 }
                                 StatusBadge.forStatus(device.status ?? "UNKNOWN")
                             }
@@ -387,7 +389,7 @@ struct ProfileDetailView: View {
 
     private func formatDate(_ dateStr: String?) -> String {
         guard let dateStr else { return "-" }
-        return dateStr.count >= 10 ? String(dateStr.prefix(10)) : dateStr
+        return dateStr.toLocalDate(.short)
     }
 
     private func isExpired(_ dateStr: String) -> Bool {

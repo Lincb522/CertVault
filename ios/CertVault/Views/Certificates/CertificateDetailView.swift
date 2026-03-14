@@ -78,10 +78,10 @@ struct CertificateDetailView: View {
                     CertDetailRow(label: L10n.Cert.serial, value: serial, mono: true)
                 }
                 if let expires = cert.expires_at {
-                    CertDetailRow(label: L10n.Cert.expiresAt, value: String(expires.prefix(19)))
+                    CertDetailRow(label: L10n.Cert.expiresAt, value: expires.toLocalDate())
                 }
                 if let created = cert.created_at {
-                    CertDetailRow(label: L10n.Cert.createdAt, value: String(created.prefix(19)))
+                    CertDetailRow(label: L10n.Cert.createdAt, value: created.toLocalDate())
                 }
                 if let password = cert.password {
                     CertDetailRow(label: L10n.Cert.password, value: password, mono: true, copiable: true)
@@ -111,6 +111,7 @@ struct CertificateDetailView: View {
                     .foregroundStyle(.white)
                     .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.plain)
                 .disabled(downloadService.isDownloading)
             }
 
@@ -131,6 +132,7 @@ struct CertificateDetailView: View {
                         .stroke(Color.dsAccentOrange.opacity(0.2), lineWidth: 1)
                 )
             }
+            .buttonStyle(.plain)
             .disabled(downloadService.isDownloading)
 
             if let err = downloadService.errorMessage {
@@ -154,12 +156,14 @@ private struct CertDetailRow: View {
                 .font(.subheadline)
                 .foregroundStyle(Color.dsMuted)
                 .frame(width: 80, alignment: .leading)
+                .lineLimit(1)
             Spacer()
             HStack(spacing: 6) {
                 Text(value)
                     .font(mono ? .subheadline.monospaced() : .subheadline)
                     .foregroundStyle(Color.dsText)
                     .textSelection(.enabled)
+                    .lineLimit(1)
                 if copiable {
                     Button {
                         UIPasteboard.general.string = value

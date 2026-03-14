@@ -59,6 +59,7 @@ struct EmptyStateView: View {
                 .background(Color.dsAccent.opacity(0.12), in: Capsule())
                 .overlay(Capsule().stroke(Color.dsAccent.opacity(0.3), lineWidth: 1))
             }
+            .buttonStyle(.plain)
             .padding(.top, 4)
         }
     }

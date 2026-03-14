@@ -159,6 +159,7 @@ struct RegisterView: View {
                         in: RoundedRectangle(cornerRadius: 12)
                     )
             }
+            .buttonStyle(.plain)
             .disabled(email.isEmpty || authVM.codeCooldown > 0 || authVM.isSendingCode)
             .opacity(email.isEmpty || authVM.codeCooldown > 0 ? 0.5 : 1)
         }
@@ -209,6 +210,7 @@ struct RegisterView: View {
                 in: RoundedRectangle(cornerRadius: 12)
             )
         }
+        .buttonStyle(.plain)
         .disabled(!canRegister)
         .opacity(canRegister ? 1 : 0.5)
     }

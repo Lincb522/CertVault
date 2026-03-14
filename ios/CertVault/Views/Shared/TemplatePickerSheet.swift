@@ -279,7 +279,7 @@ struct TemplatePickerSheet: View {
                                     .background(Color.dsAccentPurple.opacity(0.1), in: Capsule())
                                     .foregroundStyle(Color.dsAccentPurple)
                             }
-                            Text(template.updatedAt.prefix(10))
+                            Text(template.updatedAt.toLocalDate(.short))
                                 .font(.caption2)
                                 .foregroundStyle(Color.dsMuted)
                         }

@@ -80,7 +80,7 @@ struct AccountDetailView: View {
                 InfoRow(label: "Issuer ID", value: account.issuer_id ?? "N/A")
                 InfoRow(label: "Key ID", value: account.key_id ?? "N/A")
                 if let date = account.created_at {
-                    InfoRow(label: L10n.Cert.createdAt, value: String(date.prefix(19)))
+                    InfoRow(label: L10n.Cert.createdAt, value: date.toLocalDate())
                 }
             }
         }
@@ -125,6 +125,7 @@ struct AccountDetailView: View {
                 .foregroundStyle(.white)
                 .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
             }
+            .buttonStyle(.plain)
             .disabled(vm.isTesting)
 
             if let result = vm.testResult {
@@ -152,26 +153,7 @@ struct AccountDetailView: View {
                         .stroke(Color.dsAccentBlue.opacity(0.2), lineWidth: 1)
                 )
             }
-        }
-    }
-}
-
-// MARK: - Shared Detail Row
-
-private struct InfoRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(Color.dsMuted)
-            Spacer()
-            Text(value)
-                .font(.subheadline.monospaced())
-                .foregroundStyle(Color.dsText)
-                .textSelection(.enabled)
+            .buttonStyle(.plain)
         }
     }
 }

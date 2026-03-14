@@ -15,6 +15,9 @@
           <el-icon style="margin-right:4px"><Position /></el-icon> 广播推送
           <el-tag v-if="deviceCount !== null" size="small" type="info" effect="plain" round style="margin-left:6px">{{ deviceCount }} 台设备</el-tag>
         </el-radio-button>
+        <el-radio-button value="testgroup">
+          <el-icon style="margin-right:4px"><DataAnalysis /></el-icon> 测试组推送
+        </el-radio-button>
       </el-radio-group>
     </div>
 
@@ -99,6 +102,37 @@
               <div class="form-tip">在 App 中调用 registerForRemoteNotifications 获取</div>
             </el-form-item>
 
+            <template v-if="pushMode === 'testgroup'">
+              <el-form-item v-if="authMode !== 'account'" label="API 账号" required>
+                <el-select v-model="testGroupAccountId" style="width: 100%" placeholder="选择账号以获取测试组" @change="loadTestGroups">
+                  <el-option
+                    v-for="acc in store.accounts"
+                    :key="acc.id"
+                    :label="acc.name"
+                    :value="acc.id"
+                  />
+                </el-select>
+                <div class="form-tip">获取 TestFlight 测试组需要 Apple Developer 账号</div>
+              </el-form-item>
+              <el-form-item label="选择测试组" required>
+                <el-select v-model="selectedTestGroupId" style="width: 100%" placeholder="选择 TestFlight 测试组" @change="onTestGroupSelect" :loading="loadingTestGroups">
+                  <el-option
+                    v-for="group in testGroups"
+                    :key="group.id"
+                    :label="`${group.name}${group.app_name ? ` (${group.app_name})` : ''}`"
+                    :value="group.id"
+                  />
+                </el-select>
+                <div class="form-tip" v-if="!testGroups.length && !loadingTestGroups && testGroupResolvedAccountId">
+                  该账号下暂无测试组，请先到 TestFlight 页面创建
+                </div>
+                <div v-if="selectedTestGroupId && testGroups.find(g => g.id === selectedTestGroupId)?.bundle_id" class="form-tip" style="color: var(--el-color-success)">
+                  已自动获取 App：{{ testGroups.find(g => g.id === selectedTestGroupId)?.app_name }}
+                  ({{ testGroups.find(g => g.id === selectedTestGroupId)?.bundle_id }})
+                </div>
+              </el-form-item>
+            </template>
+
             <el-alert v-if="pushMode === 'broadcast'" type="warning" :closable="false" style="margin-bottom: 16px">
               <template #title>广播将发送到所有已注册设备 ({{ deviceCount || 0 }} 台)</template>
               设备 Token 在用户使用服务时自动收集。已注销的设备(410)会自动清理。
@@ -133,8 +167,11 @@
               <el-button v-if="pushMode === 'single'" type="primary" @click="sendPush" :loading="sending" size="large">
                 <el-icon><Promotion /></el-icon> 发送推送
               </el-button>
-              <el-button v-else type="warning" @click="sendBroadcast" :loading="broadcasting" size="large">
+              <el-button v-else-if="pushMode === 'broadcast'" type="warning" @click="sendBroadcast" :loading="broadcasting" size="large">
                 <el-icon><Position /></el-icon> 发送广播 ({{ deviceCount || 0 }} 台)
+              </el-button>
+              <el-button v-else type="primary" @click="sendTestGroup" :loading="broadcasting" size="large">
+                <el-icon><DataAnalysis /></el-icon> 推送到测试组
               </el-button>
             </el-form-item>
           </el-form>
@@ -258,10 +295,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { pushApi, pushKeyApi } from '../api'
+import { pushApi, pushKeyApi, testflightApi } from '../api'
 import { useAppStore } from '../stores/app'
 
 const store = useAppStore()
@@ -276,6 +313,10 @@ const loadingCodes = ref(false)
 const pushKeys = ref([])
 const selectedPushKeyId = ref('')
 const deviceCount = ref(null)
+const testGroups = ref([])
+const selectedTestGroupId = ref('')
+const loadingTestGroups = ref(false)
+const testGroupAccountId = ref('')
 
 const form = ref({
   account_id: '',
@@ -303,6 +344,40 @@ function onPushKeySelect(id) {
       const first = pk.bundle_ids.split(',')[0].trim()
       if (first && !form.value.bundle_id) form.value.bundle_id = first
     }
+  }
+}
+
+const testGroupResolvedAccountId = computed(() => {
+  if (authMode.value === 'account' && form.value.account_id) return form.value.account_id
+  if (testGroupAccountId.value) return testGroupAccountId.value
+  return store.currentAccountId || ''
+})
+
+async function loadTestGroups() {
+  const accountId = testGroupResolvedAccountId.value
+  if (!accountId) {
+    loadingTestGroups.value = false
+    testGroups.value = []
+    return
+  }
+  loadingTestGroups.value = true
+  selectedTestGroupId.value = ''
+  try {
+    const res = await testflightApi.groups(accountId)
+    testGroups.value = res.data || []
+  } catch {
+    testGroups.value = []
+  } finally {
+    loadingTestGroups.value = false
+  }
+}
+
+function onTestGroupSelect(groupId) {
+  if (!groupId) return
+  const group = testGroups.value.find(g => g.id === groupId)
+  if (group?.bundle_id) {
+    form.value.bundle_id = group.bundle_id
+    ElMessage.success(`已自动填充 Bundle ID：${group.bundle_id}`)
   }
 }
 
@@ -391,6 +466,54 @@ async function sendBroadcast() {
   }
 }
 
+async function sendTestGroup() {
+  if (!selectedTestGroupId.value || !form.value.title) {
+    return ElMessage.warning('请选择测试组并填写标题')
+  }
+  const group = testGroups.value.find(g => g.id === selectedTestGroupId.value)
+  const effectiveBundleId = form.value.bundle_id || group?.bundle_id
+  if (!effectiveBundleId) {
+    return ElMessage.warning('请填写 Bundle ID')
+  }
+
+  const data = {
+    title: form.value.title,
+    body: form.value.body,
+    badge: form.value.badge,
+    sound: form.value.sound,
+    bundle_id: effectiveBundleId,
+    sandbox: form.value.sandbox,
+    test_group_id: selectedTestGroupId.value,
+  }
+
+  if (authMode.value === 'pushkey') {
+    if (!selectedPushKeyId.value) return ElMessage.warning('请选择推送密钥')
+    data.push_key_id = selectedPushKeyId.value
+  } else if (authMode.value === 'account') {
+    if (!form.value.account_id || !form.value.team_id) {
+      return ElMessage.warning('请选择账号并填写 Team ID')
+    }
+    data.account_id = form.value.account_id
+    data.team_id = form.value.team_id
+  }
+
+  broadcasting.value = true
+  result.value = null
+  try {
+    const res = await pushApi.broadcast(data)
+    result.value = res
+    if (res.success) {
+      ElMessage.success(res.message || '测试组推送完成')
+    } else {
+      ElMessage.error(res.message || '推送失败')
+    }
+  } catch (err) {
+    result.value = { success: false, message: err.response?.data?.message || err.message }
+  } finally {
+    broadcasting.value = false
+  }
+}
+
 async function fetchDeviceCount() {
   try {
     const res = await pushApi.devices()
@@ -417,9 +540,27 @@ async function fetchPushKeys() {
   } catch {}
 }
 
+watch(pushMode, (mode) => {
+  if (mode === 'testgroup') {
+    if (!testGroupAccountId.value && store.currentAccountId) {
+      testGroupAccountId.value = store.currentAccountId
+    } else if (!testGroupAccountId.value && store.accounts.length) {
+      testGroupAccountId.value = store.accounts[0].id
+    }
+    loadTestGroups()
+  }
+})
+
+watch(() => form.value.account_id, () => {
+  if (pushMode.value === 'testgroup' && authMode.value === 'account') {
+    loadTestGroups()
+  }
+})
+
 onMounted(async () => {
   fetchErrorCodes()
   fetchDeviceCount()
+  if (!store.accounts.length) store.fetchAccounts()
   await fetchPushKeys()
 
   if (route.query.push_key_id) {

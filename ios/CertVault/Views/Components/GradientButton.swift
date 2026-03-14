@@ -43,6 +43,7 @@ struct GradientButton: View {
                 .foregroundStyle(.white)
                 .background(color, in: RoundedRectangle(cornerRadius: 12))
         }
+        .buttonStyle(.plain)
     }
 
     private var buttonContent: some View {

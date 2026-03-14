@@ -1,7 +1,20 @@
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const tunnel = require('tunnel');
+const url = require('url');
 
 const BASE_URL = 'https://api.appstoreconnect.apple.com/v1';
+
+function getProxyAgent() {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+  if (!proxyUrl) return undefined;
+  const parsed = new url.URL(proxyUrl);
+  const proxyOpts = { host: parsed.hostname, port: parseInt(parsed.port, 10) };
+  if (parsed.username) {
+    proxyOpts.proxyAuth = `${decodeURIComponent(parsed.username)}:${decodeURIComponent(parsed.password || '')}`;
+  }
+  return tunnel.httpsOverHttp({ proxy: proxyOpts });
+}
 
 class AppleApiService {
   constructor(account) {
@@ -59,16 +72,27 @@ class AppleApiService {
     }
   }
 
-  async request(method, endpoint, data = null) {
+  async request(method, endpoint, data = null, params = null) {
     const token = this.generateToken();
+    let fullUrl = `${BASE_URL}${endpoint}`;
+    if (params && typeof params === 'object') {
+      const sep = fullUrl.includes('?') ? '&' : '?';
+      fullUrl += sep + new URLSearchParams(params).toString();
+    }
     const config = {
       method,
-      url: `${BASE_URL}${endpoint}`,
+      url: fullUrl,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 30000,
     };
+    const agent = getProxyAgent();
+    if (agent) {
+      config.httpsAgent = agent;
+      config.proxy = false;
+    }
     if (data) config.data = data;
 
     try {
@@ -373,8 +397,14 @@ class AppleApiService {
     });
   }
 
-  async listGroupTesters(groupId) {
-    return this.request('GET', `/betaGroups/${groupId}/betaTesters`);
+  async listGroupTesters(groupId, params = {}) {
+    const defaults = {
+      'fields[betaTesters]': 'email,firstName,lastName,inviteType,state',
+      limit: 200,
+    };
+    const merged = { ...defaults, ...params };
+    const query = new URLSearchParams(merged).toString();
+    return this.request('GET', `/betaGroups/${groupId}/betaTesters${query ? '?' + query : ''}`);
   }
 
   async listGroupBuilds(groupId) {

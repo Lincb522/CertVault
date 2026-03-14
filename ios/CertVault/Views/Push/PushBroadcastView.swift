@@ -77,7 +77,17 @@ struct PushBroadcastView: View {
             await vm.loadAccounts()
             await vm.loadDeviceCount()
             await vm.loadDeviceStats()
+            await vm.loadSettings()
             savedBundleIds = storage.savedBundleIds
+            if bundleId.isEmpty, let def = vm.pushSettings?.default_bundle_id, !def.isEmpty {
+                bundleId = def
+            }
+            if selectedPushKeyId.isEmpty, let def = vm.pushSettings?.default_push_key_id, !def.isEmpty {
+                selectedPushKeyId = def
+            }
+            if let defSandbox = vm.pushSettings?.default_sandbox {
+                sandbox = defSandbox == "true"
+            }
         }
     }
 
@@ -217,13 +227,13 @@ struct PushBroadcastView: View {
     private var targetSection: some View {
         Section("推送目标") {
             if savedBundleIds.isEmpty {
-                TextField("Bundle ID", text: $bundleId)
+                TextField("Bundle ID（留空使用默认）", text: $bundleId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .listRowBackground(Color.clear)
             } else {
                 HStack {
-                    TextField("Bundle ID", text: $bundleId)
+                    TextField("Bundle ID（留空使用默认）", text: $bundleId)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Menu {
@@ -341,10 +351,12 @@ struct PushBroadcastView: View {
                     Text(key)
                         .font(.subheadline.monospaced())
                         .foregroundStyle(Color.dsAccentPurple)
+                        .lineLimit(1)
                     Spacer()
                     Text(customData[key] ?? "")
                         .font(.subheadline)
                         .foregroundStyle(Color.dsMuted)
+                        .lineLimit(1)
                     Button {
                         customData.removeValue(forKey: key)
                     } label: {
@@ -401,6 +413,7 @@ struct PushBroadcastView: View {
                     in: RoundedRectangle(cornerRadius: 12)
                 )
             }
+            .buttonStyle(.plain)
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
             .disabled(!canSend || vm.isBroadcasting)
@@ -436,14 +449,15 @@ struct PushBroadcastView: View {
                     if let errs = br.errors, !errs.isEmpty {
                         DisclosureGroup("失败详情 (\(errs.count))") {
                             ForEach(errs) { err in
-                                HStack {
+                                VStack(alignment: .leading, spacing: 3) {
                                     Text(err.token?.prefix(16).appending("...") ?? "-")
                                         .font(.caption.monospaced())
                                         .foregroundStyle(Color.dsMuted)
-                                    Spacer()
-                                    Text(err.reason ?? "未知")
+                                        .lineLimit(1)
+                                    Text(err.reason_cn ?? err.reason ?? "未知")
                                         .font(.caption)
                                         .foregroundStyle(Color.dsAccentPink)
+                                        .lineLimit(1)
                                 }
                             }
                             .listRowBackground(Color.clear)
@@ -457,7 +471,7 @@ struct PushBroadcastView: View {
     // MARK: - Helpers
 
     private var canSend: Bool {
-        guard !bundleId.isEmpty, !title.isEmpty else { return false }
+        guard !title.isEmpty else { return false }
         switch authMode {
         case 0: return !selectedPushKeyId.isEmpty
         default: return !selectedAccountId.isEmpty && !manualTeamId.isEmpty
@@ -465,7 +479,7 @@ struct PushBroadcastView: View {
     }
 
     private func sendBroadcast() async {
-        storage.saveBundleId(bundleId)
+        if !bundleId.isEmpty { storage.saveBundleId(bundleId) }
         savedBundleIds = storage.savedBundleIds
 
         var request = BroadcastRequest(
@@ -473,7 +487,7 @@ struct PushBroadcastView: View {
             body: messageBody.isEmpty ? nil : messageBody,
             badge: Int(badge),
             sound: sound.isEmpty ? nil : sound,
-            bundle_id: bundleId,
+            bundle_id: bundleId.isEmpty ? nil : bundleId,
             sandbox: sandbox,
             custom_data: customData.isEmpty ? nil : customData,
             thread_id: threadId.isEmpty ? nil : threadId,

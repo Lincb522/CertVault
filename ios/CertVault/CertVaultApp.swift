@@ -116,6 +116,7 @@ struct CertVaultApp: App {
                     handleDeepLink(url)
                 }
                 .task {
+                    await notificationManager.calibrateTime()
                     await notificationManager.refreshStatus()
                 }
         }

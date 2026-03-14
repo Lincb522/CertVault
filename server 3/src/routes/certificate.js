@@ -11,6 +11,12 @@ const { sendPushToUser } = require('../services/apns-service');
 const CERT_DIR = path.join(__dirname, '../../data/certificates');
 if (!fs.existsSync(CERT_DIR)) fs.mkdirSync(CERT_DIR, { recursive: true });
 
+const PUSH_CERT_TYPE_PREFIXES = ['APPLE_PUSH', 'PASS_TYPE_ID'];
+function isPushOrPassCertType(type) {
+  if (!type) return false;
+  return PUSH_CERT_TYPE_PREFIXES.some(prefix => type.startsWith(prefix));
+}
+
 const CERT_TYPES = [
   { value: 'IOS_DEVELOPMENT',            label: 'iOS 开发证书',             desc: '用于真机调试，安装到测试设备上运行 App', category: 'dev' },
   { value: 'IOS_DISTRIBUTION',           label: 'iOS 发布证书',             desc: '用于提交 App Store 或 Ad Hoc/In-House 分发', category: 'dist' },
@@ -168,10 +174,18 @@ router.get('/relations', async (req, res, next) => {
   }
 });
 
+let _pushCertsCleanedUp = false;
+
 router.get('/', async (req, res, next) => {
   try {
     const { account_id } = req.query;
     const db = getDb();
+
+    if (!_pushCertsCleanedUp) {
+      const deleted = await db.prepare("DELETE FROM certificates WHERE type LIKE 'APPLE_PUSH%' OR type LIKE 'PASS_TYPE_ID%'").run();
+      if (deleted.changes > 0) console.log(`[Cert] Cleaned up ${deleted.changes} push/pass certificates from database`);
+      _pushCertsCleanedUp = true;
+    }
 
     if (account_id) {
       const account = await getDecryptedAccount(account_id);
@@ -181,9 +195,9 @@ router.get('/', async (req, res, next) => {
       let apiFetchOk = false;
       try {
         const result = await api.listCertificates();
-        remoteCerts = result.data || [];
+        remoteCerts = (result.data || []).filter(c => !isPushOrPassCertType(c.attributes?.certificateType));
         apiFetchOk = true;
-        console.log(`[Cert Sync] Apple API returned ${remoteCerts.length} certificates for account ${account_id}`);
+        console.log(`[Cert Sync] Apple API returned ${remoteCerts.length} certificates (excluding push/pass) for account ${account_id}`);
       } catch (e) {
         console.log(`[Cert Sync] Apple API failed for account ${account_id}: ${e.message}`);
       }
@@ -600,3 +614,4 @@ router.delete('/:id', async (req, res, next) => {
 });
 
 module.exports = router;
+module.exports.isPushOrPassCertType = isPushOrPassCertType;

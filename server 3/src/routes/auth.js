@@ -315,11 +315,59 @@ router.post('/smtp-test', requireSuperAdmin, async (req, res) => {
   try {
     const transporter = nodemailer.createTransport(config);
     await transporter.verify();
+    const fromName = process.env.SMTP_FROM_NAME || 'CertManager';
+    const time = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+    const iconCheck = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 4L12 14.01l-3-3" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const iconSvg = (d, color, size = 16) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${d}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const detailRow = (icon, label, value) => value ? `<tr><td style="padding:10px 16px;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:middle"><span style="display:inline-block;vertical-align:middle;margin-right:6px">${icon}</span>${label}</td><td style="padding:10px 16px;color:#0f172a;font-size:13px;font-weight:500;font-family:'SF Mono',Consolas,monospace">${value}</td></tr>` : '';
+
     await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || 'CertManager'}" <${config.auth.user}>`,
+      from: `"${fromName}" <${config.auth.user}>`,
       to,
-      subject: '【CertVault】SMTP 测试邮件',
-      html: '<div style="padding:20px;font-family:sans-serif"><h2>SMTP 配置测试成功</h2><p>如果您收到了这封邮件，说明 SMTP 配置正确。</p></div>',
+      subject: `[CertVault] SMTP 配置测试`,
+      html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+<div style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+
+  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:32px 28px 28px;text-align:center">
+    <div style="display:inline-block;width:56px;height:56px;background:rgba(34,197,94,0.15);border-radius:16px;margin-bottom:16px;padding:14px;box-sizing:border-box">
+      ${iconCheck}
+    </div>
+    <h1 style="margin:0;color:#f8fafc;font-size:20px;font-weight:700;letter-spacing:-0.3px">SMTP 配置测试成功</h1>
+    <p style="margin:8px 0 0;color:#94a3b8;font-size:13px">${time}</p>
+  </div>
+
+  <div style="padding:24px 28px 0">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center">
+      <span style="display:inline-block;width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:8px;vertical-align:middle"></span>
+      <span style="font-size:14px;font-weight:600;color:#166534">邮件服务运行正常</span>
+    </div>
+  </div>
+
+  <div style="padding:20px 28px 0">
+    <table style="width:100%;border-collapse:collapse;border-spacing:0">
+      <tbody>
+        ${detailRow(iconSvg('M4 4h16c1.1 0 2 .9 2 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6', '#3b82f6'), '收件人', to)}
+        ${detailRow(iconSvg('M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9', '#64748b'), 'SMTP 主机', config.host)}
+        ${detailRow(iconSvg('M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0', '#64748b'), '端口', String(config.port))}
+        ${detailRow(iconSvg('M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', '#22c55e'), 'SSL/TLS', config.secure ? 'Enabled' : 'Disabled')}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="padding:20px 28px 28px">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;font-size:12px;color:#64748b;line-height:1.6">
+      如果您收到了这封邮件，说明 SMTP 配置正确，邮件通知功能可正常使用。
+    </div>
+  </div>
+
+</div>
+<div style="text-align:center;padding:0 0 32px;font-size:11px;color:#94a3b8">
+  Sent by CertVault &middot; System Configuration
+</div>
+</body></html>`,
     });
     res.json({ success: true, message: '测试邮件已发送' });
   } catch (err) {

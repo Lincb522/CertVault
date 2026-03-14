@@ -252,18 +252,19 @@ app.get('/api/dashboard', async (req, res) => {
   const isSuperAdmin = req.user.role === 'superadmin';
 
   let accountFilter, certFilter, deviceFilter, profileFilter, bundleFilter, certP12Filter;
+  const excludePushTypes = "AND type NOT LIKE 'APPLE_PUSH%' AND type NOT LIKE 'PASS_TYPE_ID%'";
   if (isSuperAdmin) {
     accountFilter = db.prepare('SELECT COUNT(*) as count FROM accounts');
     deviceFilter = db.prepare("SELECT COUNT(*) as count FROM devices WHERE UPPER(status) IN ('ENABLED','DISABLED')");
-    certFilter = db.prepare('SELECT COUNT(*) as count FROM certificates');
-    certP12Filter = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE p12_path IS NOT NULL AND p12_path != ''");
+    certFilter = db.prepare(`SELECT COUNT(*) as count FROM certificates WHERE 1=1 ${excludePushTypes}`);
+    certP12Filter = db.prepare(`SELECT COUNT(*) as count FROM certificates WHERE p12_path IS NOT NULL AND p12_path != '' ${excludePushTypes}`);
     profileFilter = db.prepare('SELECT COUNT(*) as count FROM profiles');
     bundleFilter = db.prepare('SELECT COUNT(*) as count FROM bundle_ids');
   } else {
     accountFilter = db.prepare('SELECT COUNT(*) as count FROM accounts WHERE user_id = ?');
     deviceFilter = db.prepare("SELECT COUNT(*) as count FROM devices WHERE UPPER(status) IN ('ENABLED','DISABLED') AND account_id IN (SELECT id FROM accounts WHERE user_id = ?)");
-    certFilter = db.prepare('SELECT COUNT(*) as count FROM certificates WHERE user_id = ?');
-    certP12Filter = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE user_id = ? AND p12_path IS NOT NULL AND p12_path != ''");
+    certFilter = db.prepare(`SELECT COUNT(*) as count FROM certificates WHERE user_id = ? ${excludePushTypes}`);
+    certP12Filter = db.prepare(`SELECT COUNT(*) as count FROM certificates WHERE user_id = ? AND p12_path IS NOT NULL AND p12_path != '' ${excludePushTypes}`);
     profileFilter = db.prepare('SELECT COUNT(*) as count FROM profiles WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)');
     bundleFilter = db.prepare('SELECT COUNT(*) as count FROM bundle_ids WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)');
   }
@@ -277,8 +278,8 @@ app.get('/api/dashboard', async (req, res) => {
   const bundleIds = parseInt((await bundleFilter.get(...args)).count, 10) || 0;
 
   const recentCerts = isSuperAdmin
-    ? await db.prepare('SELECT id, name, type, expires_at, created_at FROM certificates ORDER BY created_at DESC LIMIT 5').all()
-    : await db.prepare('SELECT id, name, type, expires_at, created_at FROM certificates WHERE user_id = ? ORDER BY created_at DESC LIMIT 5').all(userId);
+    ? await db.prepare(`SELECT id, name, type, expires_at, created_at FROM certificates WHERE type NOT LIKE 'APPLE_PUSH%' AND type NOT LIKE 'PASS_TYPE_ID%' ORDER BY created_at DESC LIMIT 5`).all()
+    : await db.prepare(`SELECT id, name, type, expires_at, created_at FROM certificates WHERE user_id = ? AND type NOT LIKE 'APPLE_PUSH%' AND type NOT LIKE 'PASS_TYPE_ID%' ORDER BY created_at DESC LIMIT 5`).all(userId);
   const recentDevices = isSuperAdmin
     ? await db.prepare('SELECT id, name, udid, platform, created_at FROM devices ORDER BY created_at DESC LIMIT 5').all()
     : await db.prepare('SELECT id, name, udid, platform, created_at FROM devices WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?) ORDER BY created_at DESC LIMIT 5').all(userId);

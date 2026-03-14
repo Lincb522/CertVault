@@ -267,7 +267,58 @@ async function initDatabase() {
     "ALTER TABLE certificates ADD COLUMN IF NOT EXISTS user_id TEXT",
     "ALTER TABLE push_keys ADD COLUMN IF NOT EXISTS user_id TEXT",
     "ALTER TABLE device_resources ADD COLUMN IF NOT EXISTS udid TEXT",
+    "ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS sandbox BOOLEAN DEFAULT false",
+    "ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS label TEXT",
+    "ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS remark TEXT",
+    "ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS device_name TEXT",
+    "ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS model TEXT",
+    "ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS os_version TEXT",
+    "ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS app_version TEXT",
   ];
+
+  // Device registration history table
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS device_register_history (
+      id SERIAL PRIMARY KEY,
+      device_token TEXT NOT NULL,
+      user_id TEXT,
+      username TEXT,
+      action TEXT DEFAULT 'register',
+      platform TEXT DEFAULT 'ios',
+      sandbox BOOLEAN DEFAULT false,
+      label TEXT,
+      remark TEXT,
+      device_name TEXT,
+      model TEXT,
+      os_version TEXT,
+      app_version TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_drh_token ON device_register_history(device_token);
+    CREATE INDEX IF NOT EXISTS idx_drh_created ON device_register_history(created_at DESC);
+  `);
+
+  // Scheduled pushes table
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS scheduled_pushes (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT,
+      type TEXT NOT NULL DEFAULT 'single',
+      title TEXT NOT NULL,
+      body TEXT,
+      bundle_id TEXT,
+      sandbox BOOLEAN DEFAULT false,
+      device_token TEXT,
+      push_key_id TEXT,
+      custom_data JSONB,
+      scheduled_at TIMESTAMPTZ NOT NULL,
+      status TEXT DEFAULT 'pending',
+      result JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      executed_at TIMESTAMPTZ,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (e) { /* column may already exist */ }
   }
@@ -282,6 +333,9 @@ async function initDatabase() {
     max_concurrency: '10',
     auto_cleanup_enabled: 'false',
     history_retention_days: '30',
+    tf_auto_push_enabled: 'false',
+    tf_auto_push_title: '🎉 新测试版本 {version}',
+    tf_auto_push_body: '新版本已分发到测试组，请前往 TestFlight 更新。\n{whats_new}',
   };
   for (const [key, value] of Object.entries(defaultSettings)) {
     await pool.query(

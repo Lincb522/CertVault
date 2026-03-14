@@ -119,10 +119,12 @@ private struct AccountRow: View {
                 Text(account.displayName)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.dsText)
+                    .lineLimit(1)
                 HStack(spacing: 6) {
                     Text("Key: \(account.key_id ?? "N/A")")
                         .font(.caption.monospaced())
                         .foregroundStyle(Color.dsMuted)
+                        .lineLimit(1)
                     if account.remote_synced == true {
                         StatusBadge(L10n.Account.synced, color: .dsAccent)
                     }

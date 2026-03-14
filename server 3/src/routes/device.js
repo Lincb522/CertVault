@@ -9,6 +9,7 @@ const CryptoService = require('../services/crypto');
 const { getDecryptedAccount, checkAccountOwnership } = require('../services/account-helper');
 const { parseProvisioningProfile, parseProfileFromBase64 } = require('../services/profile-parser');
 const { sendPushToUser } = require('../services/apns-service');
+const { isPushOrPassCertType } = require('./certificate');
 
 const CERT_DIR = path.join(__dirname, '../../data/certificates');
 const PROFILE_DIR = path.join(__dirname, '../../data/profiles');
@@ -53,6 +54,7 @@ async function syncDeviceResources(api, db, account_id) {
 
   for (const [cId, c] of Object.entries(certsMap)) {
     if (deletedCertIds.has(cId)) continue;
+    if (isPushOrPassCertType(c.attributes?.certificateType)) continue;
     const existingByApple = await db.prepare(
       'SELECT id FROM certificates WHERE apple_id = ? AND id != ?'
     ).get(cId, cId);

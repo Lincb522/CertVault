@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const AppleApiService = require('../services/apple-api');
 const { getDecryptedAccount, checkAccountOwnership } = require('../services/account-helper');
+const { getDb } = require('../config/database');
+const { apnsService, APNsService } = require('../services/apns-service');
+const { decrypt } = require('../services/encryption');
 
 async function getApi(req) {
   const accountId = req.query.account_id || req.body.account_id;
@@ -17,22 +20,31 @@ router.get('/groups', async (req, res, next) => {
   try {
     const api = await getApi(req);
     const params = {
-      'fields[betaGroups]': 'name,isInternalGroup,publicLinkEnabled,publicLinkLimit,publicLink,createdDate',
+      'fields[betaGroups]': 'name,isInternalGroup,publicLinkEnabled,publicLinkLimit,publicLink,createdDate,app',
+      include: 'app',
       limit: req.query.limit || 50,
     };
     if (req.query.app_id) {
       params['filter[app]'] = req.query.app_id;
     }
     const result = await api.listBetaGroups(params);
-    const groups = (result.data || []).map(g => ({
-      id: g.id,
-      name: g.attributes?.name,
-      is_internal: g.attributes?.isInternalGroup,
-      public_link_enabled: g.attributes?.publicLinkEnabled,
-      public_link: g.attributes?.publicLink,
-      public_link_limit: g.attributes?.publicLinkLimit,
-      created_date: g.attributes?.createdDate,
-    }));
+    const included = result.included || [];
+    const groups = (result.data || []).map(g => {
+      const appRel = g.relationships?.app?.data;
+      const appData = appRel ? included.find(i => i.type === 'apps' && i.id === appRel.id) : null;
+      return {
+        id: g.id,
+        name: g.attributes?.name,
+        is_internal: g.attributes?.isInternalGroup,
+        public_link_enabled: g.attributes?.publicLinkEnabled,
+        public_link: g.attributes?.publicLink,
+        public_link_limit: g.attributes?.publicLinkLimit,
+        created_date: g.attributes?.createdDate,
+        app_id: appRel?.id,
+        app_name: appData?.attributes?.name,
+        bundle_id: appData?.attributes?.bundleId,
+      };
+    });
     res.json({ success: true, data: groups });
   } catch (err) { next(err); }
 });
@@ -104,6 +116,25 @@ router.get('/groups/:id', async (req, res, next) => {
         testers,
         builds,
         recruitment_criteria,
+      }
+    });
+  } catch (err) { next(err); }
+});
+
+router.get('/groups/:id/app-info', async (req, res, next) => {
+  try {
+    const api = await getApi(req);
+    const result = await api.request('GET', `/betaGroups/${req.params.id}?include=app&fields[apps]=bundleId,name`);
+    const g = result.data;
+    const appData = (result.included || []).find(i => i.type === 'apps');
+    res.json({
+      success: true,
+      data: {
+        group_id: g.id,
+        group_name: g.attributes?.name,
+        app_id: appData?.id || null,
+        app_name: appData?.attributes?.name || null,
+        bundle_id: appData?.attributes?.bundleId || null,
       }
     });
   } catch (err) { next(err); }
@@ -229,6 +260,21 @@ router.post('/groups/:id/builds', async (req, res, next) => {
     }
 
     res.json({ success: true, message: '构建已分发到测试分组并提交 Beta 审核', data: { beta_review: betaReviewResults } });
+
+    // TF 自动推送通知：获取构建版本信息后发送
+    (async () => {
+      try {
+        let version = '', buildNumber = '';
+        try {
+          const buildInfo = await api.getBuild(build_ids[0], 'preReleaseVersion');
+          const attrs = buildInfo.data?.attributes || {};
+          buildNumber = attrs.version || '';
+          const preRelease = (buildInfo.included || []).find(i => i.type === 'preReleaseVersions');
+          version = preRelease?.attributes?.version || '';
+        } catch (e) { console.warn('获取构建版本信息失败:', e.message); }
+        await triggerTfAutoPush(req.user?.id, { version, build: buildNumber, whatsNew: whats_new || '' });
+      } catch (e) { console.warn('TF自动推送失败:', e.message); }
+    })();
   } catch (err) { next(err); }
 });
 
@@ -602,5 +648,82 @@ router.post('/builds/:id/expire', async (req, res, next) => {
     });
   } catch (err) { next(err); }
 });
+
+// ---- TF 自动推送通知 ----
+// buildInfo: { version, build, whatsNew }
+async function triggerTfAutoPush(userId, buildInfo = {}) {
+  const db = getDb();
+  const rows = await db.prepare('SELECT key, value FROM push_settings').all();
+  const settings = {};
+  rows.forEach(r => settings[r.key] = r.value);
+
+  if (settings.tf_auto_push_enabled !== 'true') return;
+  if (!settings.default_push_key_id || !settings.default_bundle_id) return;
+
+  const keyRow = await db.prepare('SELECT * FROM push_keys WHERE id = ?').get(settings.default_push_key_id);
+  if (!keyRow) return;
+
+  const devices = await db.prepare('SELECT device_token, sandbox FROM push_devices').all();
+  if (!devices.length) return;
+
+  const { version, build, whatsNew } = buildInfo;
+
+  // 构造版本描述
+  let versionStr = '';
+  if (version && build) versionStr = `v${version} (${build})`;
+  else if (version) versionStr = `v${version}`;
+  else if (build) versionStr = `Build ${build}`;
+
+  // 替换模板变量
+  let titleTpl = settings.tf_auto_push_title || '🎉 新测试版本已发布';
+  let bodyTpl = settings.tf_auto_push_body || '新的构建版本已分发到测试组，请前往 TestFlight 更新体验。';
+
+  const replacePlaceholders = (str) => str
+    .replace(/\{version\}/g, versionStr || '新版本')
+    .replace(/\{v\}/g, version || '')
+    .replace(/\{build\}/g, build || '')
+    .replace(/\{whats_new\}/g, whatsNew || '');
+
+  let title = replacePlaceholders(titleTpl);
+  let body = replacePlaceholders(bodyTpl);
+
+  // 如果模板中没有使用变量，自动追加版本信息
+  if (!titleTpl.includes('{') && versionStr) {
+    title = `${title} ${versionStr}`;
+  }
+  if (!bodyTpl.includes('{') && whatsNew) {
+    body = `${body}\n\n📝 更新内容：${whatsNew}`;
+  }
+
+  const creds = {
+    keyId: keyRow.key_id,
+    teamId: keyRow.team_id,
+    privateKey: decrypt(keyRow.private_key),
+  };
+
+  const payload = APNsService.buildPayload({ title, body, sound: 'default' });
+  const concurrency = parseInt(settings.max_concurrency || '10', 10);
+
+  const results = await apnsService.sendBatch(devices, payload, {
+    ...creds,
+    bundleId: settings.default_bundle_id,
+    priority: 10,
+  }, concurrency);
+
+  const status = results.failed === 0 && results.success > 0 ? 'success'
+    : results.success > 0 ? 'partial' : 'failed';
+
+  await db.prepare(
+    `INSERT INTO push_history (user_id, type, title, body, bundle_id, target_count, success_count, failed_count, unregistered_count, errors, status, duration_ms)
+     VALUES (?, 'broadcast', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    userId, title, body, settings.default_bundle_id,
+    devices.length, results.success, results.failed, results.unregistered || 0,
+    results.errors?.length ? JSON.stringify(results.errors) : null,
+    status, results.duration || 0
+  );
+
+  console.log(`TF自动推送[${versionStr}]: ${results.success}成功 ${results.failed}失败 (共${devices.length}设备)`);
+}
 
 module.exports = router;

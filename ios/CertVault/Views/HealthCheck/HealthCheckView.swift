@@ -128,6 +128,7 @@ struct HealthCheckView: View {
                 in: RoundedRectangle(cornerRadius: 12)
             )
         }
+        .buttonStyle(.plain)
         .disabled(!canStartCheck)
     }
 
@@ -209,7 +210,7 @@ struct HealthCheckView: View {
                                 }
                                 Spacer()
                                 if let expires = cert.expires_at {
-                                    Text(String(expires.prefix(10)))
+                                    Text(expires.toLocalDate(.short))
                                         .font(.caption2.monospaced())
                                         .foregroundStyle(Color.dsMuted.opacity(0.6))
                                 }

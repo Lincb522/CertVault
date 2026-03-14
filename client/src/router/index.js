@@ -20,6 +20,7 @@ const routes = [
   { path: '/push-devices', name: 'PushDevices', component: () => import('../views/PushDevices.vue'), meta: { title: '设备 Token' } },
   { path: '/push-broadcast', name: 'PushBroadcast', component: () => import('../views/PushBroadcast.vue'), meta: { title: '群发推送' } },
   { path: '/push-history', name: 'PushHistory', component: () => import('../views/PushHistory.vue'), meta: { title: '推送历史' } },
+  { path: '/push-scheduled', name: 'ScheduledPush', component: () => import('../views/ScheduledPush.vue'), meta: { title: '定时推送' } },
   { path: '/ipa', name: 'IpaManage', component: () => import('../views/IpaManage.vue'), meta: { title: 'IPA 管理', requireSuperAdmin: true } },
   { path: '/settings', name: 'Settings', component: () => import('../views/Settings.vue'), meta: { title: '系统设置', requireSuperAdmin: true } },
   { path: '/apps', name: 'Apps', component: () => import('../views/Apps.vue'), meta: { title: '应用管理' } },

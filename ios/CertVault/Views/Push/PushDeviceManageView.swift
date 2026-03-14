@@ -11,6 +11,10 @@ struct PushDeviceManageView: View {
     @State private var cleanupBundleId = ""
     @State private var editingDevice: PushDevice?
     @State private var batchActionResult: String?
+    @State private var showHistory = false
+    @State private var showValidateResult = false
+    @State private var showValidateAllResult = false
+    @State private var validatingDeviceId: Int?
 
     var body: some View {
         List(selection: isEditing ? $selectedIds : nil) {
@@ -27,6 +31,17 @@ struct PushDeviceManageView: View {
                 Menu {
                     Button { showAddSheet = true } label: {
                         Label("添加设备", systemImage: "plus")
+                    }
+                    Button { showHistory = true } label: {
+                        Label("上报历史", systemImage: "clock.arrow.circlepath")
+                    }
+                    Button {
+                        Task {
+                            await vm.validateAllDevices()
+                            showValidateAllResult = true
+                        }
+                    } label: {
+                        Label("检测所有设备", systemImage: "checkmark.shield")
                     }
                     Button { isEditing.toggle() } label: {
                         Label(isEditing ? "完成" : "批量管理", systemImage: "checklist")
@@ -87,6 +102,9 @@ struct PushDeviceManageView: View {
         .glassSheet(isPresented: $showAddSheet) {
             AddDeviceSheet(vm: vm) { showAddSheet = false }
         }
+        .glassSheet(isPresented: $showHistory) {
+            DeviceRegisterHistoryView(vm: vm)
+        }
         .glassSheet(item: $editingDevice) { device in
             EditDeviceSheet(vm: vm, device: device) { editingDevice = nil }
         }
@@ -107,23 +125,32 @@ struct PushDeviceManageView: View {
         } message: {
             Text("将验证所有设备 Token 的有效性，移除已失效的设备。请输入 Bundle ID。")
         }
+        .glassSheet(isPresented: $showValidateResult) {
+            DeviceValidateResultSheet(result: vm.validateResult, isLoading: vm.isValidating) {
+                showValidateResult = false
+            }
+        }
+        .glassSheet(isPresented: $showValidateAllResult) {
+            DeviceValidateAllResultSheet(result: vm.validateAllResult, isLoading: vm.isValidatingAll) {
+                showValidateAllResult = false
+                Task { await reload() }
+            }
+        }
         .task { await reload() }
     }
 
     @ViewBuilder
     private var statsSection: some View {
         if let stats = vm.deviceStats {
-            Section("设备统计") {
-                HStack(spacing: 0) {
-                    statCell("总计", value: stats.total?.value ?? 0, color: .dsAccentBlue)
-                    Divider().frame(height: 40)
-                    statCell("沙盒", value: stats.sandbox?.value ?? 0, color: .dsAccentOrange)
-                    Divider().frame(height: 40)
-                    statCell("生产", value: stats.production?.value ?? 0, color: .dsAccent)
-                    Divider().frame(height: 40)
-                    statCell("iOS", value: stats.ios?.value ?? 0, color: .dsAccentPurple)
-                }
-                    .listRowBackground(Color.clear)
+            Section {
+                InlineStatGrid(items: [
+                    ("总计", stats.total?.value ?? 0, .dsAccentBlue),
+                    ("沙盒", stats.sandbox?.value ?? 0, .dsAccentOrange),
+                    ("生产", stats.production?.value ?? 0, .dsAccent),
+                    ("iOS", stats.ios?.value ?? 0, .dsAccentPurple),
+                ])
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
 
                 if let msg = cleanupResult {
                     Text(msg)
@@ -170,6 +197,20 @@ struct PushDeviceManageView: View {
                     }
                     .tint(Color.dsText)
                     .listRowBackground(Color.clear)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            if let id = device.id {
+                                validatingDeviceId = id
+                                Task {
+                                    await vm.validateDevice(id: id)
+                                    showValidateResult = true
+                                }
+                            }
+                        } label: {
+                            Label("检测", systemImage: "checkmark.shield")
+                        }
+                        .tint(.dsAccentBlue)
+                    }
                 }
                 .onDelete { offsets in
                     Task {
@@ -185,70 +226,83 @@ struct PushDeviceManageView: View {
     }
 
     private func deviceRow(_ device: PushDevice) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(device.displayToken)
-                    .font(.subheadline.monospaced())
-                    .foregroundStyle(Color.dsText)
-                Spacer()
-                Text(device.envLabel)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent, in: RoundedRectangle(cornerRadius: 4))
-            }
+        let title: String = {
+            if let rk = device.remark, !rk.isEmpty { return rk }
+            if let name = device.device_name, !name.isEmpty { return name }
+            return "未知设备"
+        }()
 
-            if let label = device.label, !label.isEmpty {
-                HStack(spacing: 4) {
-                    HIcon(AppIcon.tag)
-                        .font(.system(size: 9))
-                    Text(label)
+        return HStack(spacing: 12) {
+            HIcon(AppIcon.iphone)
+                .font(.system(size: 16))
+                .foregroundStyle(device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent)
+                .frame(width: 36, height: 36)
+                .background((device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent).opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(title)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.dsText)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(device.envLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent, in: RoundedRectangle(cornerRadius: 4))
+                }
+
+                HStack(spacing: 6) {
+                    if let model = device.model, !model.isEmpty {
+                        Text(model)
+                            .foregroundStyle(Color.dsAccentPurple)
+                    }
+                    if let os = device.os_version, !os.isEmpty {
+                        Text(os)
+                            .foregroundStyle(Color.dsAccentBlue)
+                    }
+                    if let ver = device.app_version, !ver.isEmpty {
+                        Text("v\(ver)")
+                            .foregroundStyle(Color.dsAccentOrange)
+                    }
                 }
                 .font(.caption)
-                .foregroundStyle(Color.dsAccentPurple)
-            }
+                .lineLimit(1)
 
-            HStack(spacing: 10) {
-                if let user = device.username, !user.isEmpty {
-                    HStack(spacing: 3) {
-                        HIcon(AppIcon.person)
-                            .font(.system(size: 9))
-                        Text(user)
+                if device.model == nil || device.model?.isEmpty == true,
+                   let label = device.label, !label.isEmpty {
+                    Text(label)
+                        .font(.caption)
+                        .foregroundStyle(Color.dsAccentPurple)
+                        .lineLimit(1)
+                }
+
+                HStack {
+                    Text(device.displayToken)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(Color.dsMuted)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    if let date = device.created_at {
+                        Text(formatShortDate(date))
+                            .font(.caption2)
+                            .foregroundStyle(Color.dsMuted)
                     }
-                    .font(.caption2)
-                    .foregroundStyle(Color.dsAccentBlue)
-                }
-
-                if let platform = device.platform {
-                    Text(platform.uppercased())
-                        .font(.caption2)
-                        .foregroundStyle(Color.dsMuted)
-                }
-
-                Spacer()
-
-                if let date = device.created_at {
-                    Text(String(date.prefix(19)))
-                        .font(.caption2)
-                        .foregroundStyle(Color.dsMuted)
                 }
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 4)
     }
 
-    private func statCell(_ label: String, value: Int, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text("\(value)")
-                .font(.headline.monospacedDigit())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(Color.dsMuted)
-        }
-        .frame(maxWidth: .infinity)
+    private func formatShortDate(_ dateStr: String) -> String {
+        dateStr.toLocalDate()
     }
+
+    // Stats rendered via InlineStatGrid
 
     private func reload() async {
         async let d: () = vm.loadDevices()
@@ -280,6 +334,7 @@ private struct AddDeviceSheet: View {
     @State private var platform = "ios"
     @State private var sandbox = false
     @State private var label = ""
+    @State private var remark = ""
     @State private var isAdding = false
     @State private var errorMsg: String?
 
@@ -297,6 +352,8 @@ private struct AddDeviceSheet: View {
                     }
                     Toggle("沙盒环境", isOn: $sandbox)
                     TextField("标签（可选）", text: $label)
+                    TextField("备注（可选）", text: $remark, axis: .vertical)
+                        .lineLimit(2...4)
                 }
 
                 if let err = errorMsg {
@@ -321,7 +378,9 @@ private struct AddDeviceSheet: View {
                         .foregroundStyle(token.isEmpty ? Color.dsMuted : .white)
                         .background(token.isEmpty ? Color.dsSurfaceLight : Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                     }
+                    .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                     .disabled(token.isEmpty || isAdding)
                 }
             }
@@ -340,7 +399,7 @@ private struct AddDeviceSheet: View {
         isAdding = true
         errorMsg = nil
         do {
-            try await vm.addDevice(token: token, platform: platform, sandbox: sandbox, label: label.isEmpty ? nil : label)
+            try await vm.addDevice(token: token, platform: platform, sandbox: sandbox, label: label.isEmpty ? nil : label, remark: remark.isEmpty ? nil : remark)
             onDismiss()
         } catch {
             errorMsg = error.localizedDescription
@@ -357,11 +416,13 @@ private struct EditDeviceSheet: View {
     let onDismiss: () -> Void
 
     @State private var label: String = ""
+    @State private var remark: String = ""
     @State private var sandbox: Bool = false
     @State private var isSaving = false
     @State private var errorMsg: String?
     @State private var showDeleteAlert = false
     @State private var copiedToken = false
+    @State private var showValidateResult = false
 
     var body: some View {
         NavigationStack {
@@ -374,18 +435,45 @@ private struct EditDeviceSheet: View {
                             .frame(width: 60, height: 60)
                             .background((device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent).opacity(0.12), in: Circle())
 
-                        if let lbl = device.label, !lbl.isEmpty {
-                            Text(lbl)
-                                .font(.headline)
-                                .foregroundStyle(Color.dsText)
+                        Text({
+                            if let rk = device.remark, !rk.isEmpty { return rk }
+                            if let name = device.device_name, !name.isEmpty { return name }
+                            return "未知设备"
+                        }() as String)
+                            .font(.headline)
+                            .foregroundStyle(Color.dsText)
+
+                        if let model = device.model, !model.isEmpty {
+                            Text(model)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.dsAccentPurple)
                         }
 
-                        Text(device.envLabel)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent, in: Capsule())
+                        HStack(spacing: 8) {
+                            Text(device.envLabel)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent, in: Capsule())
+
+                            if let os = device.os_version, !os.isEmpty {
+                                Text(os)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Color.dsAccentBlue)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.dsAccentBlue.opacity(0.12), in: Capsule())
+                            }
+                            if let ver = device.app_version, !ver.isEmpty {
+                                Text("v\(ver)")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Color.dsAccentOrange)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.dsAccentOrange.opacity(0.12), in: Capsule())
+                            }
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -426,6 +514,19 @@ private struct EditDeviceSheet: View {
                             .font(.subheadline.monospaced())
                             .foregroundStyle(Color.dsMuted)
                     }
+                    if let name = device.device_name, !name.isEmpty {
+                        LabeledContent("设备名称") {
+                            Text(name)
+                                .font(.subheadline.weight(.medium))
+                        }
+                    }
+                    if let model = device.model, !model.isEmpty {
+                        LabeledContent("机型") {
+                            Text(model)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.dsAccentPurple)
+                        }
+                    }
                     LabeledContent("平台") {
                         Text((device.platform ?? "ios").uppercased())
                             .font(.subheadline.weight(.medium))
@@ -434,6 +535,20 @@ private struct EditDeviceSheet: View {
                         Text(device.envLabel)
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(device.sandbox == true ? Color.dsAccentOrange : Color.dsAccent)
+                    }
+                    if let os = device.os_version, !os.isEmpty {
+                        LabeledContent("系统版本") {
+                            Text(os)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.dsAccentBlue)
+                        }
+                    }
+                    if let ver = device.app_version, !ver.isEmpty {
+                        LabeledContent("App 版本") {
+                            Text("v\(ver)")
+                                .font(.subheadline.monospaced())
+                                .foregroundStyle(Color.dsAccentOrange)
+                        }
                     }
                     if let user = device.username, !user.isEmpty {
                         LabeledContent("注册用户") {
@@ -448,15 +563,27 @@ private struct EditDeviceSheet: View {
                     }
                     if let date = device.created_at {
                         LabeledContent("注册时间") {
-                            Text(String(date.prefix(19)))
+                            Text(date.toLocalDate())
                                 .font(.subheadline)
                                 .foregroundStyle(Color.dsMuted)
+                        }
+                    }
+                    if let rk = device.remark, !rk.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("备注")
+                                .font(.caption)
+                                .foregroundStyle(Color.dsMuted)
+                            Text(rk)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.dsText)
                         }
                     }
                 }
 
                 Section("编辑") {
                     TextField("标签", text: $label)
+                    TextField("备注", text: $remark, axis: .vertical)
+                        .lineLimit(2...6)
                     Toggle("沙盒环境", isOn: $sandbox)
                 }
 
@@ -482,8 +609,35 @@ private struct EditDeviceSheet: View {
                         .foregroundStyle(.white)
                         .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                     }
+                    .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                     .disabled(isSaving)
+                }
+
+                Section {
+                    Button {
+                        if let id = device.id {
+                            Task {
+                                await vm.validateDevice(id: id)
+                                showValidateResult = true
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            if vm.isValidating {
+                                ProgressView()
+                                    .tint(Color.dsAccentBlue)
+                            } else {
+                                Image(systemName: "checkmark.shield")
+                            }
+                            Text(vm.isValidating ? "检测中..." : "检测 Token 有效性")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(Color.dsAccentBlue)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(vm.isValidating)
                 }
 
                 Section {
@@ -520,7 +674,13 @@ private struct EditDeviceSheet: View {
             }
             .onAppear {
                 label = device.label ?? ""
+                remark = device.remark ?? ""
                 sandbox = device.sandbox ?? false
+            }
+            .glassSheet(isPresented: $showValidateResult) {
+                DeviceValidateResultSheet(result: vm.validateResult, isLoading: vm.isValidating) {
+                    showValidateResult = false
+                }
             }
         }
         .sheetStyle()
@@ -531,11 +691,566 @@ private struct EditDeviceSheet: View {
         isSaving = true
         errorMsg = nil
         do {
-            try await vm.updateDevice(id: id, label: label.isEmpty ? nil : label, sandbox: sandbox)
+            try await vm.updateDevice(id: id, label: label.isEmpty ? nil : label, sandbox: sandbox, remark: remark.isEmpty ? nil : remark)
             onDismiss()
         } catch {
             errorMsg = error.localizedDescription
         }
         isSaving = false
+    }
+}
+
+// MARK: - Device Register History View
+
+struct DeviceRegisterHistoryView: View {
+    @ObservedObject var vm: PushViewModel
+    @State private var filterAction = "all"
+    @State private var selectedItem: DeviceRegisterHistory?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Picker("筛选", selection: $filterAction) {
+                        Text("全部").tag("all")
+                        Text("注册").tag("register")
+                        Text("上报").tag("report")
+                        Text("失效").tag("invalidated")
+                        Text("注销").tag("unregister")
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .onChange(of: filterAction) { _ in
+                        Task { await loadHistory() }
+                    }
+                }
+
+                Section("记录 (\(vm.deviceHistoryTotal))") {
+                    if vm.isLoading && vm.deviceHistory.isEmpty {
+                        ProgressView().frame(maxWidth: .infinity)
+                            .listRowBackground(Color.clear)
+                    } else if vm.deviceHistory.isEmpty {
+                        VStack(spacing: 10) {
+                            HIcon(AppIcon.clock)
+                                .font(.system(size: 32))
+                                .foregroundStyle(Color.dsMuted)
+                            Text("暂无记录")
+                                .font(.headline)
+                                .foregroundStyle(Color.dsText)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
+                        .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(vm.deviceHistory, id: \.stableId) { item in
+                            Button { selectedItem = item } label: {
+                                historyRow(item)
+                            }
+                            .tint(Color.dsText)
+                            .listRowBackground(Color.clear)
+                        }
+
+                        if vm.deviceHistory.count < vm.deviceHistoryTotal {
+                            Button {
+                                Task { await vm.loadMoreDeviceHistory(action: filterAction == "all" ? nil : filterAction) }
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    Text("加载更多")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(Color.dsAccentBlue)
+                                    Spacer()
+                                }
+                            }
+                            .listRowBackground(Color.clear)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("上报历史")
+            .sheetNavStyle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { dismiss() }
+                }
+            }
+            .task { await loadHistory() }
+            .refreshable { await loadHistory() }
+            .overlay {
+                if let msg = vm.errorMessage, vm.deviceHistory.isEmpty, !vm.isLoading {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.title)
+                            .foregroundStyle(Color.dsAccentOrange)
+                        Text("加载失败")
+                            .font(.headline)
+                        Text(msg)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                }
+            }
+            .glassSheet(item: $selectedItem) { item in
+                DeviceHistoryDetailSheet(vm: vm, item: item)
+            }
+        }
+        .sheetStyle()
+    }
+
+    private func loadHistory() async {
+        await vm.loadDeviceHistory(action: filterAction == "all" ? nil : filterAction)
+    }
+
+    private func historyRow(_ item: DeviceRegisterHistory) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(item.displayTitle)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.dsText)
+                    .lineLimit(1)
+                Spacer()
+                Text(item.actionLabel)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(actionColor(item.action), in: RoundedRectangle(cornerRadius: 4))
+            }
+
+            HStack(spacing: 8) {
+                if let model = item.model, !model.isEmpty {
+                    HStack(spacing: 3) {
+                        HIcon(AppIcon.iphone)
+                            .font(.system(size: 9))
+                        Text(model)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color.dsAccentPurple)
+                }
+                if let os = item.os_version, !os.isEmpty {
+                    Text(os)
+                        .font(.caption)
+                        .foregroundStyle(Color.dsAccentBlue)
+                }
+                if let ver = item.app_version, !ver.isEmpty {
+                    Text("v\(ver)")
+                        .font(.caption.monospaced())
+                        .foregroundStyle(Color.dsAccentOrange)
+                }
+            }
+
+            HStack(spacing: 10) {
+                if let user = item.username, !user.isEmpty {
+                    HStack(spacing: 3) {
+                        HIcon(AppIcon.person)
+                            .font(.system(size: 9))
+                        Text(user)
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(Color.dsAccentBlue)
+                }
+
+                Text(item.displayToken)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(Color.dsMuted)
+
+                Spacer()
+
+                if let date = item.created_at {
+                    Text(date.toLocalDate())
+                        .font(.caption2)
+                        .foregroundStyle(Color.dsMuted)
+                }
+            }
+        }
+        .padding(.vertical, 3)
+    }
+
+    private func actionColor(_ action: String?) -> Color {
+        switch action {
+        case "register": return .dsAccent
+        case "report": return .dsAccentBlue
+        case "invalidated": return .dsAccentOrange
+        case "unregister": return .dsAccentPink
+        default: return .dsMuted
+        }
+    }
+}
+
+// MARK: - Device History Detail Sheet
+
+private struct DeviceHistoryDetailSheet: View {
+    @ObservedObject var vm: PushViewModel
+    let item: DeviceRegisterHistory
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack(spacing: 12) {
+                        HIcon(AppIcon.iphone)
+                            .font(.system(size: 32))
+                            .foregroundStyle(actionColor(item.action))
+                            .frame(width: 60, height: 60)
+                            .background(actionColor(item.action).opacity(0.12), in: Circle())
+
+                        Text(item.displayTitle)
+                            .font(.headline)
+                            .foregroundStyle(Color.dsText)
+
+                        if let model = item.model, !model.isEmpty {
+                            Text(model)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.dsAccentPurple)
+                        }
+
+                        HStack(spacing: 8) {
+                            Text(item.actionLabel)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(actionColor(item.action), in: Capsule())
+
+                            if item.sandbox == true {
+                                Text("Sandbox")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.dsAccentOrange)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.dsAccentOrange.opacity(0.12), in: Capsule())
+                            }
+
+                            if let os = item.os_version, !os.isEmpty {
+                                Text(os)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Color.dsAccentBlue)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.dsAccentBlue.opacity(0.12), in: Capsule())
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+
+                Section("详细信息") {
+                    if let name = item.device_name, !name.isEmpty {
+                        LabeledContent("设备名称") {
+                            Text(name).font(.subheadline.weight(.medium))
+                        }
+                    }
+                    if let model = item.model, !model.isEmpty {
+                        LabeledContent("设备机型") {
+                            Text(model).font(.subheadline.weight(.medium)).foregroundStyle(Color.dsAccentPurple)
+                        }
+                    }
+                    if let os = item.os_version, !os.isEmpty {
+                        LabeledContent("系统版本") {
+                            Text(os).font(.subheadline.weight(.medium)).foregroundStyle(Color.dsAccentBlue)
+                        }
+                    }
+                    if let ver = item.app_version, !ver.isEmpty {
+                        LabeledContent("App 版本") {
+                            Text("v\(ver)").font(.subheadline.monospaced()).foregroundStyle(Color.dsAccentOrange)
+                        }
+                    }
+                    LabeledContent("平台") {
+                        Text((item.platform ?? "ios").uppercased()).font(.subheadline.weight(.medium))
+                    }
+                    LabeledContent("环境") {
+                        Text(item.sandbox == true ? "沙盒" : "生产")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(item.sandbox == true ? Color.dsAccentOrange : Color.dsAccent)
+                    }
+                    if let user = item.username, !user.isEmpty {
+                        LabeledContent("操作用户") {
+                            HStack(spacing: 4) {
+                                HIcon(AppIcon.person).font(.caption2)
+                                Text(user)
+                            }
+                            .foregroundStyle(Color.dsAccentBlue)
+                            .font(.subheadline)
+                        }
+                    }
+                    if let rk = item.remark, !rk.isEmpty {
+                        LabeledContent("备注") {
+                            Text(rk).font(.subheadline).foregroundStyle(Color.dsText)
+                        }
+                    }
+                    if let date = item.created_at {
+                        LabeledContent("时间") {
+                            Text(date.toLocalDate()).font(.subheadline).foregroundStyle(Color.dsMuted)
+                        }
+                    }
+                }
+
+                Section("Device Token") {
+                    Text(item.device_token ?? "-")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(Color.dsText)
+                        .textSelection(.enabled)
+                }
+
+                if let label = item.label, !label.isEmpty {
+                    Section("Label") {
+                        Text(label)
+                            .font(.caption)
+                            .foregroundStyle(Color.dsMuted)
+                    }
+                }
+            }
+            .navigationTitle("上报详情")
+            .sheetNavStyle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { dismiss() }
+                }
+            }
+        }
+        .sheetStyle()
+    }
+
+    private func actionColor(_ action: String?) -> Color {
+        switch action {
+        case "register": return .dsAccent
+        case "report": return .dsAccentBlue
+        case "invalidated": return .dsAccentOrange
+        case "unregister": return .dsAccentPink
+        default: return .dsMuted
+        }
+    }
+}
+
+// MARK: - Single Device Validate Result
+
+private struct DeviceValidateResultSheet: View {
+    let result: DeviceValidateResult?
+    let isLoading: Bool
+    let onDismiss: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if isLoading {
+                    HStack {
+                        Spacer()
+                        ProgressView("正在检测...")
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                } else if let r = result {
+                    Section {
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(r.valid ? Color.dsAccent.opacity(0.15) : Color.dsAccentPink.opacity(0.15))
+                                    .frame(width: 64, height: 64)
+                                Image(systemName: r.valid ? "checkmark.shield.fill" : "xmark.shield.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(r.valid ? Color.dsAccent : Color.dsAccentPink)
+                            }
+
+                            Text(r.valid ? "Token 有效" : "Token 无效")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(r.valid ? Color.dsAccent : Color.dsAccentPink)
+
+                            if let cn = r.reason_cn, !cn.isEmpty, !r.valid {
+                                Text(cn)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.dsText)
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .listRowBackground(Color.clear)
+                    }
+
+                    Section("检测详情") {
+                        LabeledContent("状态") {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(r.valid ? Color.dsAccent : Color.dsAccentPink)
+                                    .frame(width: 8, height: 8)
+                                Text(r.valid ? "有效" : "无效")
+                                    .foregroundStyle(r.valid ? Color.dsAccent : Color.dsAccentPink)
+                            }
+                        }
+                        if let status = r.status {
+                            LabeledContent("HTTP 状态码", value: "\(status)")
+                        }
+                        if let reason = r.reason, !reason.isEmpty {
+                            LabeledContent("错误标识", value: reason)
+                        }
+                        if let cn = r.reason_cn, !cn.isEmpty {
+                            LabeledContent("说明", value: cn)
+                        }
+                    }
+
+                    Section("设备信息") {
+                        if let name = r.device_name, !name.isEmpty {
+                            LabeledContent("设备名称", value: name)
+                        }
+                        if let model = r.model, !model.isEmpty {
+                            LabeledContent("机型", value: model)
+                        }
+                        if let token = r.device_token, !token.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Device Token")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.dsMuted)
+                                Text(token)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(Color.dsText)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
+                } else {
+                    Text("无检测结果")
+                        .foregroundStyle(Color.dsMuted)
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                }
+            }
+            .navigationTitle("设备检测")
+            .sheetNavStyle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { onDismiss() }
+                }
+            }
+        }
+        .sheetStyle()
+    }
+}
+
+// MARK: - Validate All Result
+
+private struct DeviceValidateAllResultSheet: View {
+    let result: DeviceValidateAllResult?
+    let isLoading: Bool
+    let onDismiss: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if isLoading {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            ProgressView()
+                            Text("正在检测所有设备...")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.dsMuted)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 32)
+                    .listRowBackground(Color.clear)
+                } else if let r = result {
+                    Section {
+                        InlineStatGrid(items: [
+                            ("总计", r.total?.value ?? 0, .dsAccentBlue),
+                            ("有效", r.valid?.value ?? 0, .dsAccent),
+                            ("无效", r.invalid?.value ?? 0, .dsAccentPink),
+                        ])
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
+                    }
+
+                    if let items = r.results, !items.isEmpty {
+                        let invalidItems = items.filter { !$0.valid }
+                        let validItems = items.filter { $0.valid }
+
+                        if !invalidItems.isEmpty {
+                            Section("无效设备 (\(invalidItems.count))") {
+                                ForEach(invalidItems) { item in
+                                    validateItemRow(item)
+                                }
+                            }
+                        }
+
+                        if !validItems.isEmpty {
+                            Section("有效设备 (\(validItems.count))") {
+                                ForEach(validItems) { item in
+                                    validateItemRow(item)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text("无检测结果")
+                        .foregroundStyle(Color.dsMuted)
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                }
+            }
+            .navigationTitle("全部检测")
+            .sheetNavStyle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") { onDismiss() }
+                }
+            }
+        }
+        .sheetStyle()
+    }
+
+    private func validateItemRow(_ item: DeviceValidateItem) -> some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(item.valid ? Color.dsAccent.opacity(0.12) : Color.dsAccentPink.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: item.valid ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(item.valid ? Color.dsAccent : Color.dsAccentPink)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.device_name ?? item.model ?? "未知设备")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.dsText)
+                    .lineLimit(1)
+
+                HStack(spacing: 6) {
+                    if let model = item.model, !model.isEmpty {
+                        Text(model)
+                            .font(.caption2)
+                            .foregroundStyle(Color.dsAccentPurple)
+                    }
+                    Text(item.displayToken)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(Color.dsMuted)
+                }
+
+                if !item.valid, let cn = item.reason_cn, !cn.isEmpty {
+                    Text(cn)
+                        .font(.caption2)
+                        .foregroundStyle(Color.dsAccentPink)
+                }
+            }
+
+            Spacer()
+
+            if let sandbox = item.sandbox {
+                Text(sandbox ? "沙盒" : "生产")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(sandbox ? Color.dsAccentOrange : Color.dsAccent, in: RoundedRectangle(cornerRadius: 4))
+            }
+        }
+        .padding(.vertical, 3)
+        .listRowBackground(Color.clear)
     }
 }

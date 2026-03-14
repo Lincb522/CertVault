@@ -125,6 +125,7 @@ struct CertCheckView: View {
                     .foregroundStyle(.white)
                     .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.plain)
                 .disabled(vm.isValidating)
             }
         }

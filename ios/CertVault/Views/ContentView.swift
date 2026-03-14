@@ -129,6 +129,9 @@ struct MoreView: View {
                     MoreItem(icon: AppIcon.clock, title: "推送历史", subtitle: "查看推送记录和统计数据", color: .dsAccentOrange) {
                         AnyView(PushHistoryView())
                     },
+                    MoreItem(icon: AppIcon.clock, title: "定时推送", subtitle: "创建和管理定时推送任务", color: .dsAccentCyan) {
+                        AnyView(ScheduledPushView())
+                    },
                     MoreItem(icon: AppIcon.settings, title: "推送设置", subtitle: "配置推送服务参数和默认值", color: .dsAccent) {
                         AnyView(PushSettingsView())
                     },
@@ -194,9 +197,11 @@ struct MoreView: View {
                                 Text(item.title)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Color.dsText)
+                                    .lineLimit(1)
                                 Text(item.subtitle)
                                     .font(.caption)
                                     .foregroundStyle(Color.dsMuted)
+                                    .lineLimit(1)
                             }
 
                             Spacer()

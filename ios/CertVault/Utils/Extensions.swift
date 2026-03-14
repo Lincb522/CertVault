@@ -102,7 +102,36 @@ extension String {
     func truncated(_ maxLength: Int = 20) -> String {
         count <= maxLength ? self : String(prefix(maxLength)) + "…"
     }
+
+    /// Parse an ISO 8601 date string (UTC) and format to local timezone.
+    /// `style`: `.short` → "yyyy-MM-dd", `.full` → "yyyy-MM-dd HH:mm", `.dateOnly` → "MM-dd"
+    func toLocalDate(_ style: LocalDateStyle = .full) -> String {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = iso.date(from: self) ?? {
+            iso.formatOptions = [.withInternetDateTime]
+            return iso.date(from: self)
+        }() ?? {
+            let fallback = DateFormatter()
+            fallback.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+            fallback.timeZone = TimeZone(identifier: "UTC")
+            return fallback.date(from: self)
+        }()
+        guard let date else {
+            return String(prefix(16)).replacingOccurrences(of: "T", with: " ")
+        }
+        let out = DateFormatter()
+        out.timeZone = .current
+        switch style {
+        case .short: out.dateFormat = "yyyy-MM-dd"
+        case .full: out.dateFormat = "yyyy-MM-dd HH:mm"
+        case .long: out.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        }
+        return out.string(from: date)
+    }
 }
+
+enum LocalDateStyle { case short, full, long }
 
 // MARK: - View Modifiers
 
@@ -174,19 +203,9 @@ extension View {
 
     @ViewBuilder
     func sheetStyle() -> some View {
-        if #available(iOS 26, *) {
-            self
-                .scrollContentBackground(.hidden)
-                .presentationBackground(.regularMaterial)
-                .presentationCornerRadius(24)
-                .presentationDragIndicator(.visible)
-        } else {
-            self
-                .scrollContentBackground(.hidden)
-                .presentationBackground(.ultraThinMaterial)
-                .presentationCornerRadius(20)
-                .presentationDragIndicator(.visible)
-        }
+        self
+            .presentationCornerRadius(24)
+            .presentationDragIndicator(.visible)
     }
 
     func clearFormBackground() -> some View {
@@ -199,37 +218,17 @@ extension View {
 extension View {
     func glassSheet<Content: View>(isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> Content) -> some View {
         self.sheet(isPresented: isPresented) {
-            if #available(iOS 26, *) {
-                content()
-                    .scrollContentBackground(.hidden)
-                    .presentationBackground(.regularMaterial)
-                    .presentationCornerRadius(24)
-                    .presentationDragIndicator(.visible)
-            } else {
-                content()
-                    .scrollContentBackground(.hidden)
-                    .presentationBackground(.ultraThinMaterial)
-                    .presentationCornerRadius(20)
-                    .presentationDragIndicator(.visible)
-            }
+            content()
+                .presentationCornerRadius(24)
+                .presentationDragIndicator(.visible)
         }
     }
 
     func glassSheet<Item: Identifiable, Content: View>(item: Binding<Item?>, @ViewBuilder content: @escaping (Item) -> Content) -> some View {
         self.sheet(item: item) { val in
-            if #available(iOS 26, *) {
-                content(val)
-                    .scrollContentBackground(.hidden)
-                    .presentationBackground(.regularMaterial)
-                    .presentationCornerRadius(24)
-                    .presentationDragIndicator(.visible)
-            } else {
-                content(val)
-                    .scrollContentBackground(.hidden)
-                    .presentationBackground(.ultraThinMaterial)
-                    .presentationCornerRadius(20)
-                    .presentationDragIndicator(.visible)
-            }
+            content(val)
+                .presentationCornerRadius(24)
+                .presentationDragIndicator(.visible)
         }
     }
 

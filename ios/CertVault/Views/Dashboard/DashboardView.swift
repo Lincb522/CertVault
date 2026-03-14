@@ -132,7 +132,7 @@ struct DashboardView: View {
                                 color: .dsAccentPurple,
                                 title: cert.name ?? L10n.unnamed,
                                 subtitle: certTypeLabel(cert.type),
-                                trailing: cert.created_at?.prefix(10).description
+                                trailing: cert.created_at?.toLocalDate(.short)
                             )
                         }
                         .buttonStyle(.plain)

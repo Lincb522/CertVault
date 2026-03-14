@@ -11,11 +11,46 @@ final class NotificationManager: NSObject, ObservableObject {
 
     private let pushService = PushService()
     private let tokenKey = "apns_device_token"
+    private let lastUploadKey = "apns_last_upload_time"
+    private let uploadInterval: TimeInterval = 30 * 60
+    private var serverTimeOffset: TimeInterval = 0
 
     override private init() {
         super.init()
         if let saved = UserDefaults.standard.string(forKey: tokenKey) {
             deviceToken = saved
+        }
+    }
+
+    private var calibratedNow: Date {
+        Date().addingTimeInterval(serverTimeOffset)
+    }
+
+    func calibrateTime() async {
+        guard let url = URL(string: APIClient.shared.baseURL + "/push/status") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "HEAD"
+        request.timeoutInterval = 5
+        do {
+            let localBefore = Date()
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let localAfter = Date()
+            let localMid = localBefore.addingTimeInterval(localAfter.timeIntervalSince(localBefore) / 2)
+
+            if let httpResp = response as? HTTPURLResponse,
+               let dateStr = httpResp.value(forHTTPHeaderField: "Date") {
+                let df = DateFormatter()
+                df.locale = Locale(identifier: "en_US_POSIX")
+                df.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+                if let serverDate = df.date(from: dateStr) {
+                    serverTimeOffset = serverDate.timeIntervalSince(localMid)
+                    if abs(serverTimeOffset) > 2 {
+                        AppLogger.data.info("🔔 Time calibration: offset \(String(format: "%.1f", self.serverTimeOffset))s")
+                    }
+                }
+            }
+        } catch {
+            AppLogger.data.warning("🔔 Time calibration failed, using local time")
         }
     }
 
@@ -40,11 +75,20 @@ final class NotificationManager: NSObject, ObservableObject {
 
     func didRegister(tokenData: Data) {
         let token = tokenData.map { String(format: "%02x", $0) }.joined()
+        let previousToken = deviceToken
         deviceToken = token
         UserDefaults.standard.set(token, forKey: tokenKey)
         AppLogger.data.info("🔔 APNs token: \(token.prefix(16))...")
 
-        Task { await uploadToken(token) }
+        let tokenChanged = token != previousToken
+        let lastUpload = UserDefaults.standard.double(forKey: lastUploadKey)
+        let elapsed = calibratedNow.timeIntervalSince1970 - lastUpload
+
+        if tokenChanged || elapsed > uploadInterval {
+            Task { await uploadToken(token) }
+        } else {
+            AppLogger.data.info("🔔 Token unchanged, skip upload (last: \(Int(elapsed))s ago)")
+        }
     }
 
     func didFailToRegister(error: Error) {
@@ -81,12 +125,18 @@ final class NotificationManager: NSObject, ObservableObject {
     private func uploadToken(_ token: String) async {
         let device = UIDevice.current
         let deviceName = device.name
-        let model = device.model
+        let model = DeviceInfo.modelName
         let systemVersion = device.systemVersion
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        let fullAppVersion = "\(appVersion)(\(buildNumber))"
 
-        let label = "\(deviceName) · \(model) · iOS \(systemVersion) · v\(appVersion)(\(buildNumber))"
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        fmt.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        let reportTime = fmt.string(from: calibratedNow)
+
+        let label = "\(deviceName) · \(model) · iOS \(systemVersion) · v\(fullAppVersion)"
 
         #if DEBUG
         let isSandbox = true
@@ -99,9 +149,15 @@ final class NotificationManager: NSObject, ObservableObject {
                 token: token,
                 platform: "ios",
                 sandbox: isSandbox,
-                label: label
+                label: label,
+                deviceName: deviceName,
+                model: model,
+                osVersion: "iOS \(systemVersion)",
+                appVersion: fullAppVersion,
+                reportedAt: reportTime
             )
-            AppLogger.data.info("🔔 Token uploaded to server (label: \(label), sandbox: \(isSandbox))")
+            UserDefaults.standard.set(calibratedNow.timeIntervalSince1970, forKey: lastUploadKey)
+            AppLogger.data.info("🔔 Token uploaded to server (model: \(model), sandbox: \(isSandbox))")
         } catch {
             AppLogger.data.error("🔔 Token upload failed: \(error.localizedDescription)")
         }

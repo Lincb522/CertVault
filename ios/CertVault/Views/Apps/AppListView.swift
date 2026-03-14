@@ -75,6 +75,7 @@ struct AppListView: View {
                 .padding(.vertical, 10)
                 .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 10))
             }
+            .buttonStyle(.plain)
         }
         .cardStyle()
     }
@@ -206,6 +207,7 @@ struct AppListView: View {
                             .stroke(Color.dsAccentBlue.opacity(0.15), lineWidth: 1)
                     )
                 }
+                .buttonStyle(.plain)
 
                 Button {
                     selectedApp = app
@@ -226,6 +228,7 @@ struct AppListView: View {
                             .stroke(Color.dsAccentPurple.opacity(0.15), lineWidth: 1)
                     )
                 }
+                .buttonStyle(.plain)
             }
         }
         .cardStyle()
@@ -282,6 +285,7 @@ private struct BuildListSheet: View {
                         Button("重试") {
                             Task { await vm.loadBuilds(appId: app.id) }
                         }
+                        .buttonStyle(.plain)
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)

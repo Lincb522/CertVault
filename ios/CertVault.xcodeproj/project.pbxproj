@@ -16,6 +16,7 @@
 		1199984E421B9DEC90250A83 /* FileDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C317C1AB553A9D6CC2EE45 /* FileDownloadService.swift */; };
 		12D5BD9A3E5D71B9B56BEA03 /* SubmitTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5800841E6945C7E0ABCF43C /* SubmitTemplate.swift */; };
 		193DB31772CD46CD0D7AD55F /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7107384B37481C52912A3C06 /* Extensions.swift */; };
+		D5A1B2C3E4F50617A8B9C0D1 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B2C3D4F5061728B9C0D1E2 /* DesignSystem.swift */; };
 		1E1D84DB5286823090C756F4 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E93F960C4FABA6DE12F56493 /* AppModel.swift */; };
 		2140431B675C683A7630A4D1 /* ProfileDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A00ADED28403F4245CA152D /* ProfileDetailView.swift */; };
 		218DCB335EFCD2720AFEE9AD /* Model+GRDB.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF9B882C89FCE4F57BC791AF /* Model+GRDB.swift */; };
@@ -83,6 +84,8 @@
 		9D61EE5BB2480C34F9C854D9 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 581904BC274B5BBFA1B79C41 /* Localizable.strings */; };
 		A1B2C3D4E5F60001A0000001 /* PushSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A0000001 /* PushSettingsView.swift */; };
 		A1B2C3D4E5F60001A0000002 /* PushHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A0000002 /* PushHistoryView.swift */; };
+		A1B2C3D4E5F60001A0100001 /* PushHistoryDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A0100001 /* PushHistoryDetailSheet.swift */; };
+		A1B2C3D4E5F60001A0100002 /* ScheduledPushView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A0100002 /* ScheduledPushView.swift */; };
 		A1B2C3D4E5F60001A0000003 /* PushDeviceManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A0000003 /* PushDeviceManageView.swift */; };
 		A1B2C3D4E5F60001A0000004 /* PushBroadcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A0000004 /* PushBroadcastView.swift */; };
 		A55F3629B0A7558B92FB6690 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 8ADE0817843B2060592915F6 /* GRDB */; };
@@ -212,6 +215,7 @@
 		6CF9EDA387610D254E67668A /* AccountWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountWidget.swift; sourceTree = "<group>"; };
 		6E74D0B3589338E8317AE252 /* AppListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppListView.swift; sourceTree = "<group>"; };
 		7107384B37481C52912A3C06 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		E6B2C3D4F5061728B9C0D1E2 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		73D32AF47F775DE677BC5BA6 /* CreateProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateProfileView.swift; sourceTree = "<group>"; };
 		74A043673AB3980AE24E1EBC /* CertCheckModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CertCheckModel.swift; sourceTree = "<group>"; };
 		75B8C9E099C2090044862B1F /* UDIDViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDIDViewModel.swift; sourceTree = "<group>"; };
@@ -247,6 +251,8 @@
 		9B44C62884ECD5A9E0EFA7B5 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60002A0000001 /* PushSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushSettingsView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60002A0000002 /* PushHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushHistoryView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60002A0100001 /* PushHistoryDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushHistoryDetailSheet.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60002A0100002 /* ScheduledPushView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledPushView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60002A0000003 /* PushDeviceManageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushDeviceManageView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60002A0000004 /* PushBroadcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushBroadcastView.swift; sourceTree = "<group>"; };
 		A4DF2B2E48CF567B2CC53778 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -360,6 +366,8 @@
 				BD115ADBDF8D9EE921860065 /* PushTestView.swift */,
 				A1B2C3D4E5F60002A0000001 /* PushSettingsView.swift */,
 				A1B2C3D4E5F60002A0000002 /* PushHistoryView.swift */,
+				A1B2C3D4E5F60002A0100001 /* PushHistoryDetailSheet.swift */,
+				A1B2C3D4E5F60002A0100002 /* ScheduledPushView.swift */,
 				A1B2C3D4E5F60002A0000003 /* PushDeviceManageView.swift */,
 				A1B2C3D4E5F60002A0000004 /* PushBroadcastView.swift */,
 			);
@@ -422,6 +430,7 @@
 			children = (
 				B0DB58E817DF6DAC3519B95B /* AppLogger.swift */,
 				F2F0142C2FF8CA5D4062FA78 /* Constants.swift */,
+				E6B2C3D4F5061728B9C0D1E2 /* DesignSystem.swift */,
 				7107384B37481C52912A3C06 /* Extensions.swift */,
 				AE649AFB1EC7CC3A1075F4B2 /* HIcon.swift */,
 				6A725D629302AB254BF99202 /* L10n.swift */,
@@ -900,6 +909,7 @@
 				AE44B2A8F3CC140F6A748E8D /* DownloadButtonStyle.swift in Sources */,
 				BA9D3FE3A292520DED189AB6 /* EmptyStateView.swift in Sources */,
 				D1742B6B6A68373280BF4E40 /* ErrorView.swift in Sources */,
+				D5A1B2C3E4F50617A8B9C0D1 /* DesignSystem.swift in Sources */,
 				193DB31772CD46CD0D7AD55F /* Extensions.swift in Sources */,
 				1199984E421B9DEC90250A83 /* FileDownloadService.swift in Sources */,
 				AB530E887A352E47D26C65F2 /* GetUDIDView.swift in Sources */,
@@ -928,6 +938,8 @@
 				DE1289197BDD3E6DC71D1390 /* PushTestView.swift in Sources */,
 				A1B2C3D4E5F60001A0000001 /* PushSettingsView.swift in Sources */,
 				A1B2C3D4E5F60001A0000002 /* PushHistoryView.swift in Sources */,
+				A1B2C3D4E5F60001A0100001 /* PushHistoryDetailSheet.swift in Sources */,
+				A1B2C3D4E5F60001A0100002 /* ScheduledPushView.swift in Sources */,
 				A1B2C3D4E5F60001A0000003 /* PushDeviceManageView.swift in Sources */,
 				A1B2C3D4E5F60001A0000004 /* PushBroadcastView.swift in Sources */,
 				C314B25B35A0270CD660BC33 /* PushViewModel.swift in Sources */,

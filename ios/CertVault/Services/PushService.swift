@@ -61,7 +61,7 @@ struct PushService {
     func send(request: PushRequest) async throws -> PushResult {
         let resp: APIResponse<PushResult> = try await api.request("/push/send", method: "POST", body: request)
         guard let data = resp.data else {
-            if resp.success { return PushResult(apns_id: nil, status: .int(200), reason: nil) }
+            if resp.success { return PushResult(apns_id: nil, status: .int(200), reason: nil, reason_cn: nil) }
             throw APIError.serverError(resp.message ?? "发送失败")
         }
         return data
@@ -83,13 +83,25 @@ struct PushService {
 
     // MARK: - Device Registration
 
-    func registerDevice(token: String, platform: String = "ios", sandbox: Bool = false, label: String? = nil) async throws {
+    func registerDevice(
+        token: String, platform: String = "ios", sandbox: Bool = false,
+        label: String? = nil, deviceName: String? = nil, model: String? = nil,
+        osVersion: String? = nil, appVersion: String? = nil, reportedAt: String? = nil
+    ) async throws {
         struct Body: Encodable {
             let device_token: String; let platform: String; let sandbox: Bool; let label: String?
+            let device_name: String?; let model: String?
+            let os_version: String?; let app_version: String?
+            let reported_at: String?
         }
         let resp = try await api.requestRaw(
             "/push/register-device", method: "POST",
-            body: Body(device_token: token, platform: platform, sandbox: sandbox, label: label)
+            body: Body(
+                device_token: token, platform: platform, sandbox: sandbox, label: label,
+                device_name: deviceName, model: model,
+                os_version: osVersion, app_version: appVersion,
+                reported_at: reportedAt
+            )
         )
         if !resp.success { throw APIError.serverError(resp.message ?? "注册设备 Token 失败") }
     }
@@ -134,20 +146,36 @@ struct PushService {
         return resp.data?.updated ?? 0
     }
 
-    func addDevice(token: String, platform: String = "ios", sandbox: Bool = false, label: String? = nil) async throws {
+    // MARK: - Device Registration History
+
+    func deviceHistory(deviceToken: String? = nil, action: String? = nil, limit: Int = 50, offset: Int = 0) async throws -> (items: [DeviceRegisterHistory], total: Int) {
+        var path = "/push/device-history?limit=\(limit)&offset=\(offset)"
+        if let t = deviceToken { path += "&device_token=\(t)" }
+        if let a = action { path += "&action=\(a)" }
+        let resp: DeviceHistoryResponse = try await api.request(path)
+        return (resp.data ?? [], resp.total?.value ?? 0)
+    }
+
+    func deviceHistoryDetail(id: Int) async throws -> DeviceRegisterHistory {
+        let resp: APIResponse<DeviceRegisterHistory> = try await api.request("/push/device-history/\(id)")
+        guard let data = resp.data else { throw APIError.noData }
+        return data
+    }
+
+    func addDevice(token: String, platform: String = "ios", sandbox: Bool = false, label: String? = nil, remark: String? = nil) async throws {
         struct Body: Encodable {
-            let device_token: String; let platform: String; let sandbox: Bool; let label: String?
+            let device_token: String; let platform: String; let sandbox: Bool; let label: String?; let remark: String?
         }
         let resp = try await api.requestRaw(
             "/push/devices/add", method: "POST",
-            body: Body(device_token: token, platform: platform, sandbox: sandbox, label: label)
+            body: Body(device_token: token, platform: platform, sandbox: sandbox, label: label, remark: remark)
         )
         if !resp.success { throw APIError.serverError(resp.message ?? "添加设备失败") }
     }
 
-    func updateDevice(id: Int, label: String?, sandbox: Bool?) async throws {
-        struct Body: Encodable { let label: String?; let sandbox: Bool? }
-        let resp = try await api.requestRaw("/push/devices/\(id)", method: "PUT", body: Body(label: label, sandbox: sandbox))
+    func updateDevice(id: Int, label: String?, sandbox: Bool?, remark: String? = nil) async throws {
+        struct Body: Encodable { let label: String?; let sandbox: Bool?; let remark: String? }
+        let resp = try await api.requestRaw("/push/devices/\(id)", method: "PUT", body: Body(label: label, sandbox: sandbox, remark: remark))
         if !resp.success { throw APIError.serverError(resp.message ?? "更新设备失败") }
     }
 
@@ -160,6 +188,26 @@ struct PushService {
         )
         let d = resp.data
         return (d?.valid ?? 0, d?.removed ?? 0, d?.errored ?? 0)
+    }
+
+    func validateDevice(id: Int, bundleId: String? = nil, pushKeyId: String? = nil) async throws -> DeviceValidateResult {
+        struct Body: Encodable { let bundle_id: String?; let push_key_id: String? }
+        let resp: APIResponse<DeviceValidateResult> = try await api.request(
+            "/push/devices/\(id)/validate", method: "POST",
+            body: Body(bundle_id: bundleId, push_key_id: pushKeyId)
+        )
+        guard let data = resp.data else { throw APIError.noData }
+        return data
+    }
+
+    func validateAllDevices(bundleId: String? = nil, pushKeyId: String? = nil) async throws -> DeviceValidateAllResult {
+        struct Body: Encodable { let bundle_id: String?; let push_key_id: String? }
+        let resp: APIResponse<DeviceValidateAllResult> = try await api.request(
+            "/push/devices/validate-all", method: "POST",
+            body: Body(bundle_id: bundleId, push_key_id: pushKeyId)
+        )
+        guard let data = resp.data else { throw APIError.noData }
+        return data
     }
 
     func deviceStats() async throws -> PushDeviceStats {
@@ -201,6 +249,38 @@ struct PushService {
         let resp = try await api.requestRaw("/push/history/clear", method: "POST", body: Body(before_days: beforeDays))
         if !resp.success { throw APIError.serverError(resp.message ?? "清理历史失败") }
     }
+
+    func resendHistory(id: Int) async throws -> ResendResult {
+        let resp: APIResponse<ResendResult> = try await api.request("/push/history/\(id)/resend", method: "POST")
+        if let data = resp.data { return data }
+        if resp.success { return ResendResult(success: true, message: resp.message) }
+        throw APIError.serverError(resp.message ?? "重发失败")
+    }
+
+    // MARK: - Scheduled Pushes
+
+    func listScheduled(page: Int = 1, status: String? = nil) async throws -> (items: [ScheduledPush], total: Int) {
+        var q = [URLQueryItem(name: "page", value: "\(page)"), URLQueryItem(name: "limit", value: "20")]
+        if let status { q.append(URLQueryItem(name: "status", value: status)) }
+        struct Resp: Decodable { let success: Bool; let data: [ScheduledPush]?; let total: FlexInt? }
+        let resp: Resp = try await api.request("/push/scheduled", queryItems: q)
+        return (resp.data ?? [], resp.total?.value ?? 0)
+    }
+
+    func createScheduled(_ item: ScheduledPushCreate) async throws {
+        let resp = try await api.requestRaw("/push/scheduled", method: "POST", body: item)
+        if !resp.success { throw APIError.serverError(resp.message ?? "创建定时推送失败") }
+    }
+
+    func cancelScheduled(id: Int) async throws {
+        let resp = try await api.requestRaw("/push/scheduled/\(id)/cancel", method: "POST")
+        if !resp.success { throw APIError.serverError(resp.message ?? "取消定时推送失败") }
+    }
+
+    func deleteScheduled(id: Int) async throws {
+        let resp = try await api.requestRaw("/push/scheduled/\(id)", method: "DELETE")
+        if !resp.success { throw APIError.serverError(resp.message ?? "删除定时推送失败") }
+    }
 }
 
 struct APNsErrorCode: Decodable, Identifiable {
@@ -218,7 +298,7 @@ struct PushRequest: Encodable {
     var key_id: String?
     var private_key: String?
     var device_token: String
-    var bundle_id: String
+    var bundle_id: String?
     var title: String
     var body: String
     var badge: Int?
@@ -238,6 +318,7 @@ struct PushResult: Decodable {
     let apns_id: String?
     let status: AnyCodableValue?
     let reason: String?
+    let reason_cn: String?
 
     var statusText: String {
         switch status {
@@ -295,7 +376,7 @@ struct BroadcastRequest: Encodable {
     var body: String?
     var badge: Int?
     var sound: String?
-    var bundle_id: String
+    var bundle_id: String?
     var sandbox: Bool?
     var custom_data: [String: String]?
     var thread_id: String?
@@ -305,6 +386,7 @@ struct BroadcastRequest: Encodable {
     var relevance_score: Double?
     var priority: Int?
     var expiration: String?
+    var test_group_id: String?
 }
 
 struct BroadcastResult: Decodable {
@@ -319,6 +401,7 @@ struct BroadcastResult: Decodable {
 struct BroadcastError: Decodable, Identifiable {
     let token: String?
     let reason: String?
+    let reason_cn: String?
     var id: String { (token ?? "") + (reason ?? "") }
 }
 
@@ -329,6 +412,11 @@ struct PushDevice: Decodable, Identifiable {
     let platform: String?
     let sandbox: Bool?
     let label: String?
+    let remark: String?
+    let device_name: String?
+    let model: String?
+    let os_version: String?
+    let app_version: String?
     let created_at: String?
     let username: String?
 
@@ -343,6 +431,85 @@ struct PushDevice: Decodable, Identifiable {
     }
 }
 
+struct DeviceRegisterHistory: Decodable, Identifiable {
+    let id: Int?
+    let device_token: String?
+    let user_id: String?
+    let username: String?
+    let action: String?
+    let platform: String?
+    let sandbox: Bool?
+    let label: String?
+    let remark: String?
+    let device_name: String?
+    let model: String?
+    let os_version: String?
+    let app_version: String?
+    let created_at: String?
+
+    var stableId: String { "\(id ?? 0)" }
+    var displayToken: String {
+        guard let t = device_token, t.count > 16 else { return device_token ?? "-" }
+        return "\(t.prefix(8))...\(t.suffix(8))"
+    }
+    var actionLabel: String {
+        switch action {
+        case "register": return "注册"
+        case "report": return "上报"
+        case "unregister": return "注销"
+        case "invalidated": return "失效"
+        default: return action ?? "未知"
+        }
+    }
+    var displayTitle: String {
+        if let rk = remark, !rk.isEmpty { return rk }
+        if let name = device_name, !name.isEmpty { return name }
+        return "未知设备"
+    }
+}
+
+struct DeviceHistoryResponse: Decodable {
+    let data: [DeviceRegisterHistory]?
+    let total: FlexInt?
+}
+
+struct DeviceValidateResult: Decodable {
+    let valid: Bool
+    let status: Int?
+    let reason: String?
+    let reason_cn: String?
+    let device_id: Int?
+    let device_token: String?
+    let device_name: String?
+    let model: String?
+}
+
+struct DeviceValidateAllResult: Decodable {
+    let total: FlexInt?
+    let valid: FlexInt?
+    let invalid: FlexInt?
+    let results: [DeviceValidateItem]?
+}
+
+struct DeviceValidateItem: Decodable, Identifiable {
+    let device_id: Int?
+    let device_token: String?
+    let device_name: String?
+    let model: String?
+    let sandbox: Bool?
+    let valid: Bool
+    let status: Int?
+    let reason: String?
+    let reason_cn: String?
+    
+    var id: Int { device_id ?? 0 }
+    
+    var displayToken: String {
+        guard let t = device_token, t.count > 12 else { return device_token ?? "—" }
+        return "\(t.prefix(6))...\(t.suffix(6))"
+    }
+}
+
 struct PushSettings: Codable {
     var push_enabled: String?
     var default_push_key_id: String?
@@ -353,6 +520,11 @@ struct PushSettings: Codable {
     var max_concurrency: String?
     var auto_cleanup_enabled: String?
     var history_retention_days: String?
+    var tf_auto_push_enabled: String?
+    var tf_auto_push_title: String?
+    var tf_auto_push_body: String?
+    var tf_auto_push_group_id: String?
+    var tf_auto_push_bundle_id: String?
 
     var isEnabled: Bool { push_enabled == "true" }
 }
@@ -391,6 +563,8 @@ struct PushHistoryItem: Decodable, Identifiable {
     let duration_ms: FlexInt?
     let created_at: String?
     let username: String?
+    let user_id: String?
+    let errors: [PushErrorItem]?
 
     var stableId: String { "\(id ?? 0)" }
     var typeLabel: String { type == "broadcast" ? "广播" : "单推" }
@@ -404,6 +578,69 @@ struct PushHistoryItem: Decodable, Identifiable {
     }
 }
 
+struct PushErrorItem: Decodable, Identifiable {
+    let token: String?
+    let error: String?
+    let status: Int?
+    let reason: String?
+
+    var id: String { token ?? UUID().uuidString }
+}
+
+struct ScheduledPush: Decodable, Identifiable {
+    let id: Int?
+    let user_id: String?
+    let type: String?
+    let title: String?
+    let body: String?
+    let bundle_id: String?
+    let sandbox: Bool?
+    let device_token: String?
+    let push_key_id: String?
+    let scheduled_at: String?
+    let status: String?
+    let result: ScheduledPushResult?
+    let created_at: String?
+    let executed_at: String?
+    let username: String?
+
+    var stableId: String { "\(id ?? 0)" }
+    var typeLabel: String { type == "broadcast" ? "广播" : "单推" }
+    var statusLabel: String {
+        switch status {
+        case "pending": return "待执行"
+        case "executing": return "执行中"
+        case "success": return "成功"
+        case "partial": return "部分成功"
+        case "failed": return "失败"
+        case "cancelled": return "已取消"
+        default: return status ?? "未知"
+        }
+    }
+}
+
+struct ScheduledPushResult: Decodable {
+    let total: Int?
+    let success: Int?
+    let failed: Int?
+    let error: String?
+    let apns_id: String?
+    let status: Int?
+    let reason: String?
+}
+
+struct ScheduledPushCreate: Encodable {
+    var type: String = "broadcast"
+    var title: String
+    var body: String?
+    var bundle_id: String?
+    var sandbox: Bool?
+    var device_token: String?
+    var push_key_id: String?
+    var custom_data: [String: String]?
+    var scheduled_at: String
+}
+
 struct PushHistoryStats: Decodable {
     let total_pushes: FlexInt?
     let today_pushes: FlexInt?
@@ -411,4 +648,18 @@ struct PushHistoryStats: Decodable {
     let total_failed: FlexInt?
     let broadcasts: FlexInt?
     let singles: FlexInt?
+}
+
+struct ResendResult: Decodable {
+    let success: Bool?
+    let message: String?
+    let apns_id: String?
+    let status: AnyCodableValue?
+    let total: FlexInt?
+    let reason_cn: String?
+
+    init(success: Bool, message: String?) {
+        self.success = success; self.message = message
+        self.apns_id = nil; self.status = nil; self.total = nil; self.reason_cn = nil
+    }
 }

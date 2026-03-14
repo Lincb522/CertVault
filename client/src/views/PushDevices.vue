@@ -44,8 +44,22 @@
           <el-button size="small" type="danger" plain :disabled="!selectedIds.length" @click="batchDelete">
             <el-icon><Delete /></el-icon> 批量删除 {{ selectedIds.length ? `(${selectedIds.length})` : '' }}
           </el-button>
+          <el-dropdown :disabled="!selectedIds.length" @command="handleBatchUpdate" style="margin-left: 0">
+            <el-button size="small" type="primary" plain :disabled="!selectedIds.length">
+              <el-icon><Switch /></el-icon> 批量切换 {{ selectedIds.length ? `(${selectedIds.length})` : '' }}
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="production">切换为 Production</el-dropdown-item>
+                <el-dropdown-item command="sandbox">切换为 Sandbox</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-button size="small" type="warning" plain @click="showCleanupDialog = true">
             <el-icon><Brush /></el-icon> 清理无效
+          </el-button>
+          <el-button size="small" type="success" plain @click="showValidateDialog = true">
+            <el-icon><Check /></el-icon> 验证设备
           </el-button>
           <el-button size="small" @click="fetchDevices" :loading="loading">
             <el-icon><Refresh /></el-icon>
@@ -125,6 +139,59 @@
       </el-table>
     </div>
 
+    <!-- 注册历史 -->
+    <div class="content-card" style="margin-top: 20px">
+      <div class="card-header">
+        <h3>注册历史</h3>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <el-select v-model="historyAction" placeholder="全部类型" clearable size="small" style="width: 120px" @change="fetchHistory">
+            <el-option label="全部" value="" />
+            <el-option label="注册" value="register" />
+            <el-option label="上报" value="report" />
+            <el-option label="注销" value="unregister" />
+            <el-option label="失效" value="invalidated" />
+          </el-select>
+          <el-button size="small" @click="fetchHistory" :loading="historyLoading">
+            <el-icon><Refresh /></el-icon>
+          </el-button>
+        </div>
+      </div>
+      <el-table :data="historyItems" stripe v-loading="historyLoading" empty-text="暂无注册历史" size="small">
+        <el-table-column label="操作" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="actionTagType(row.action)" size="small">{{ actionLabel(row.action) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="设备" min-width="150">
+          <template #default="{ row }">
+            <div>{{ row.device_name || row.model || row.label || '未知设备' }}</div>
+            <div v-if="row.model && row.device_name" style="font-size: 11px; color: var(--nask-text-muted)">{{ row.model }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="Token" min-width="140">
+          <template #default="{ row }">
+            <code style="font-size: 11px; color: var(--nask-text-secondary)">{{ (row.device_token || '').substring(0, 16) }}...</code>
+          </template>
+        </el-table-column>
+        <el-table-column label="环境" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.sandbox ? 'warning' : 'success'" size="small" effect="plain">
+              {{ row.sandbox ? '沙盒' : '生产' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="用户" prop="username" width="100" />
+        <el-table-column label="时间" width="170">
+          <template #default="{ row }">
+            <span style="font-size: 13px; color: var(--nask-text-secondary)">{{ formatTime(row.created_at) }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div v-if="historyTotal > historyItems.length" style="text-align: center; padding: 12px">
+        <el-button size="small" @click="loadMoreHistory" :loading="historyLoading">加载更多 ({{ historyItems.length }}/{{ historyTotal }})</el-button>
+      </div>
+    </div>
+
     <!-- 添加设备对话框 -->
     <el-dialog v-model="showAddDialog" title="添加设备 Token" width="520" destroy-on-close>
       <el-form :model="addForm" label-width="100px">
@@ -201,6 +268,53 @@
       </template>
     </el-dialog>
 
+    <!-- 验证设备对话框 -->
+    <el-dialog v-model="showValidateDialog" title="验证设备 Token" width="600" destroy-on-close>
+      <el-alert type="info" :closable="false" style="margin-bottom: 16px">
+        <template #title>发送静默推送验证 Token 有效性</template>
+        通过向所有设备发送静默推送来检测 Token 是否仍然有效，无效 Token 会被标记。
+      </el-alert>
+      <el-form :model="validateForm" label-width="100px">
+        <el-form-item label="推送密钥" required>
+          <el-select v-model="validateForm.push_key_id" style="width: 100%" placeholder="选择推送密钥">
+            <el-option v-for="pk in pushKeys" :key="pk.id" :label="`${pk.name} (${pk.key_id})`" :value="pk.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Bundle ID" required>
+          <el-input v-model="validateForm.bundle_id" placeholder="例如：com.example.myapp" />
+        </el-form-item>
+      </el-form>
+      <div v-if="validateResult" style="margin-top: 16px">
+        <el-descriptions :column="3" border size="small" style="margin-bottom: 12px">
+          <el-descriptions-item label="总计">{{ validateResult.total }}</el-descriptions-item>
+          <el-descriptions-item label="有效"><span style="color: var(--el-color-success)">{{ validateResult.valid }}</span></el-descriptions-item>
+          <el-descriptions-item label="无效"><span style="color: var(--el-color-danger)">{{ validateResult.invalid }}</span></el-descriptions-item>
+        </el-descriptions>
+        <el-table :data="validateResult.results" stripe size="small" max-height="300">
+          <el-table-column label="设备" min-width="120">
+            <template #default="{ row }">{{ row.device_name || row.model || row.device_token?.substring(0, 12) + '...' }}</template>
+          </el-table-column>
+          <el-table-column label="Token" min-width="140">
+            <template #default="{ row }"><code style="font-size: 11px">{{ row.device_token?.substring(0, 16) }}...</code></template>
+          </el-table-column>
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.valid ? 'success' : 'danger'" size="small">{{ row.valid ? '有效' : '无效' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="原因" min-width="120">
+            <template #default="{ row }">
+              <span style="font-size: 12px; color: var(--nask-text-secondary)">{{ row.reason_cn || '-' }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <template #footer>
+        <el-button @click="showValidateDialog = false">关闭</el-button>
+        <el-button type="success" @click="submitValidateAll" :loading="validateLoading">验证全部设备</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 测试推送对话框 -->
     <el-dialog v-model="showTestDialog" title="测试推送" width="480" destroy-on-close>
       <el-form :model="testForm" label-width="100px">
@@ -273,6 +387,19 @@ const editForm = ref({ id: null, device_token: '', sandbox: false, label: '' })
 const showCleanupDialog = ref(false)
 const cleanupLoading = ref(false)
 const cleanupForm = ref({ push_key_id: '', bundle_id: '' })
+
+// 验证
+const showValidateDialog = ref(false)
+const validateLoading = ref(false)
+const validateResult = ref(null)
+const validateForm = ref({ push_key_id: '', bundle_id: '' })
+
+// 历史
+const historyItems = ref([])
+const historyTotal = ref(0)
+const historyLoading = ref(false)
+const historyAction = ref('')
+const historyPage = ref(1)
 
 // 测试
 const showTestDialog = ref(false)
@@ -454,10 +581,82 @@ async function submitTest() {
   }
 }
 
+async function submitValidateAll() {
+  if (!validateForm.value.push_key_id || !validateForm.value.bundle_id) {
+    return ElMessage.warning('请选择推送密钥并填写 Bundle ID')
+  }
+  validateLoading.value = true
+  validateResult.value = null
+  try {
+    const res = await pushApi.validateAllDevices(validateForm.value)
+    validateResult.value = res.data || {}
+    ElMessage.success(res.message || '验证完成')
+    fetchDevices()
+    fetchStats()
+  } catch {} finally {
+    validateLoading.value = false
+  }
+}
+
+async function handleBatchUpdate(command) {
+  if (!selectedIds.value.length) return
+  const sandbox = command === 'sandbox'
+  const label = sandbox ? 'Sandbox' : 'Production'
+  try {
+    await ElMessageBox.confirm(
+      `确定将选中的 ${selectedIds.value.length} 个设备切换为 ${label}？`,
+      '批量切换环境',
+      { type: 'warning' }
+    )
+    await pushApi.batchUpdateDevices(selectedIds.value, { sandbox })
+    ElMessage.success(`已切换 ${selectedIds.value.length} 个设备为 ${label}`)
+    selectedIds.value = []
+    fetchDevices()
+    fetchStats()
+  } catch {}
+}
+
+function actionLabel(action) {
+  const map = { register: '注册', report: '上报', unregister: '注销', invalidated: '失效' }
+  return map[action] || action || '未知'
+}
+
+function actionTagType(action) {
+  const map = { register: 'success', report: 'primary', unregister: 'warning', invalidated: 'danger' }
+  return map[action] || 'info'
+}
+
+async function fetchHistory() {
+  historyLoading.value = true
+  historyPage.value = 1
+  try {
+    const res = await pushApi.deviceHistory({ limit: 30, offset: 0, action: historyAction.value || undefined })
+    historyItems.value = res.data || []
+    historyTotal.value = res.total || 0
+  } catch {
+    historyItems.value = []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+async function loadMoreHistory() {
+  historyLoading.value = true
+  historyPage.value++
+  const offset = (historyPage.value - 1) * 30
+  try {
+    const res = await pushApi.deviceHistory({ limit: 30, offset, action: historyAction.value || undefined })
+    historyItems.value.push(...(res.data || []))
+  } catch {} finally {
+    historyLoading.value = false
+  }
+}
+
 onMounted(() => {
   fetchDevices()
   fetchStats()
   fetchPushKeys()
+  fetchHistory()
 })
 </script>
 

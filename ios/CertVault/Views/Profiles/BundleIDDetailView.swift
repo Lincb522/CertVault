@@ -78,7 +78,7 @@ struct BundleIDDetailView: View {
             detailRow(NSLocalizedString("common.name", comment: ""), value: bundleId.name ?? L10n.na)
             detailRow(L10n.Cert.platform, value: Localized.platform(bundleId.platform ?? L10n.na))
             if let date = bundleId.created_at {
-                detailRow(L10n.Cert.createdAt, value: String(date.prefix(19)))
+                detailRow(L10n.Cert.createdAt, value: date.toLocalDate())
             }
         }
         .cardStyle()

@@ -112,6 +112,68 @@
           </span>
         </div>
 
+        <!-- 构建版本 -->
+        <div style="margin-bottom: 16px; padding: 12px 16px; background: var(--el-fill-color-lighter); border-radius: 8px">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
+            <span style="font-weight: 600; font-size: 14px">构建版本</span>
+            <el-button size="small" type="primary" link @click="showBuildPicker = true" :disabled="!canEditBuild(versionDetail.state)">
+              <el-icon><Link /></el-icon> {{ currentBuild ? '更换构建' : '关联构建' }}
+            </el-button>
+          </div>
+          <div v-if="currentBuild">
+            <el-descriptions :column="2" size="small" border>
+              <el-descriptions-item label="版本号">{{ currentBuild.version }}</el-descriptions-item>
+              <el-descriptions-item label="处理状态">
+                <el-tag :type="currentBuild.processing_state === 'VALID' ? 'success' : 'warning'" size="small">
+                  {{ currentBuild.processing_state }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="上传时间">{{ formatDate(currentBuild.uploaded_date) }}</el-descriptions-item>
+            </el-descriptions>
+          </div>
+          <div v-else style="color: var(--nask-text-muted); font-size: 13px">
+            尚未关联构建版本
+          </div>
+        </div>
+
+        <!-- 分阶段发布 -->
+        <div style="margin-bottom: 16px; padding: 12px 16px; background: var(--el-fill-color-lighter); border-radius: 8px">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
+            <span style="font-weight: 600; font-size: 14px">分阶段发布</span>
+          </div>
+          <div v-if="phasedRelease">
+            <el-descriptions :column="2" size="small" border style="margin-bottom: 10px">
+              <el-descriptions-item label="状态">
+                <el-tag :type="phasedStateType(phasedRelease.state)" size="small">{{ phasedStateLabel(phasedRelease.state) }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="当前天数">第 {{ phasedRelease.current_day_number || 0 }} 天 / 7 天</el-descriptions-item>
+              <el-descriptions-item label="开始时间">{{ formatDate(phasedRelease.start_date) }}</el-descriptions-item>
+              <el-descriptions-item label="暂停时长">{{ phasedRelease.total_pause_duration || 0 }} 天</el-descriptions-item>
+            </el-descriptions>
+            <div style="display: flex; gap: 8px">
+              <el-button v-if="phasedRelease.state === 'ACTIVE'" size="small" type="warning" @click="updatePhasedRelease('PAUSE')" :loading="phasedLoading">
+                暂停发布
+              </el-button>
+              <el-button v-if="phasedRelease.state === 'PAUSED'" size="small" type="success" @click="updatePhasedRelease('RESUME')" :loading="phasedLoading">
+                恢复发布
+              </el-button>
+              <el-button v-if="phasedRelease.state === 'ACTIVE' || phasedRelease.state === 'PAUSED'" size="small" type="primary" @click="updatePhasedRelease('COMPLETE')" :loading="phasedLoading">
+                立即全量发布
+              </el-button>
+              <el-button size="small" type="danger" plain @click="removePhasedRelease" :loading="phasedLoading">
+                取消分阶段
+              </el-button>
+            </div>
+          </div>
+          <div v-else>
+            <div style="color: var(--nask-text-muted); font-size: 13px; margin-bottom: 8px">未启用分阶段发布</div>
+            <el-button size="small" type="primary" @click="createPhasedRelease" :loading="phasedLoading"
+              :disabled="versionDetail?.state !== 'PENDING_DEVELOPER_RELEASE'">
+              启用分阶段发布
+            </el-button>
+          </div>
+        </div>
+
         <template v-for="loc in (versionDetail.localizations || [])" :key="loc.id">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-top: 8px; border-top: 1px solid var(--nask-border)">
             <div style="display: flex; align-items: center; gap: 8px">
@@ -163,6 +225,30 @@
         <el-button type="primary" @click="saveLocalization" :loading="locSaving">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 选择构建版本弹窗 -->
+    <el-dialog v-model="showBuildPicker" title="选择构建版本" width="520" destroy-on-close>
+      <el-table :data="availableBuilds" stripe size="small" v-loading="buildsLoading" empty-text="暂无可用构建">
+        <el-table-column prop="version" label="版本号" width="100" />
+        <el-table-column prop="processing_state" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.processing_state === 'VALID' ? 'success' : 'warning'" size="small">{{ row.processing_state }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="上传时间" min-width="160">
+          <template #default="{ row }">{{ formatDate(row.uploaded_date) }}</template>
+        </el-table-column>
+        <el-table-column label="" width="80">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" @click="selectBuild(row)">选择</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="showBuildPicker = false">取消</el-button>
+        <el-button v-if="currentBuild" type="danger" plain @click="unlinkBuild">取消关联</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -171,7 +257,7 @@ import { ref, watch } from 'vue'
 import { useAppStore } from '../stores/app'
 import { appsApi, appstoreApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Warning, Plus, View, Check, Document, Edit } from '@element-plus/icons-vue'
+import { Refresh, Warning, Plus, View, Check, Document, Edit, Link } from '@element-plus/icons-vue'
 
 const store = useAppStore()
 
@@ -193,6 +279,13 @@ const showLocEditDialog = ref(false)
 const locEditForm = ref(null)
 const locEditId = ref('')
 const locSaving = ref(false)
+
+const currentBuild = ref(null)
+const showBuildPicker = ref(false)
+const availableBuilds = ref([])
+const buildsLoading = ref(false)
+const phasedRelease = ref(null)
+const phasedLoading = ref(false)
 
 async function loadApps() {
   if (!store.currentAccountId) return
@@ -238,9 +331,15 @@ async function viewVersionDetail(row) {
   versionDetail.value = row
   showDetailDialog.value = true
   detailLoading.value = true
+  currentBuild.value = null
+  phasedRelease.value = null
   try {
     const res = await appstoreApi.versionDetail(row.id, store.currentAccountId)
     versionDetail.value = res.data
+    await Promise.all([
+      loadVersionBuild(row.id),
+      loadPhasedRelease(row.id),
+    ])
   } catch (e) { console.error(e) }
   finally { detailLoading.value = false }
 }
@@ -281,6 +380,99 @@ async function saveLocalization() {
   finally { locSaving.value = false }
 }
 
+function canEditBuild(state) {
+  return ['PREPARE_FOR_SUBMISSION', 'READY_FOR_REVIEW'].includes(state)
+}
+
+async function loadVersionBuild(versionId) {
+  try {
+    const res = await appstoreApi.versionBuild(versionId, store.currentAccountId)
+    currentBuild.value = res.data || null
+  } catch { currentBuild.value = null }
+}
+
+async function loadPhasedRelease(versionId) {
+  try {
+    const res = await appstoreApi.phasedRelease(versionId, store.currentAccountId)
+    phasedRelease.value = res.data || null
+  } catch { phasedRelease.value = null }
+}
+
+async function loadBuilds() {
+  if (!selectedAppId.value) return
+  buildsLoading.value = true
+  try {
+    const res = await appsApi.builds(selectedAppId.value, store.currentAccountId)
+    availableBuilds.value = (res.data || []).filter(b => b.processing_state === 'VALID')
+  } catch { availableBuilds.value = [] }
+  finally { buildsLoading.value = false }
+}
+
+async function selectBuild(build) {
+  try {
+    await appstoreApi.setVersionBuild(versionDetail.value.id, {
+      account_id: store.currentAccountId,
+      build_id: build.id,
+    })
+    ElMessage.success('构建版本已关联')
+    currentBuild.value = build
+    showBuildPicker.value = false
+  } catch {}
+}
+
+async function unlinkBuild() {
+  try {
+    await appstoreApi.setVersionBuild(versionDetail.value.id, {
+      account_id: store.currentAccountId,
+      build_id: null,
+    })
+    ElMessage.success('已取消关联')
+    currentBuild.value = null
+    showBuildPicker.value = false
+  } catch {}
+}
+
+async function createPhasedRelease() {
+  phasedLoading.value = true
+  try {
+    await appstoreApi.createPhasedRelease(versionDetail.value.id, store.currentAccountId)
+    ElMessage.success('已启用分阶段发布')
+    await loadPhasedRelease(versionDetail.value.id)
+  } catch {} finally { phasedLoading.value = false }
+}
+
+async function updatePhasedRelease(state) {
+  phasedLoading.value = true
+  try {
+    await appstoreApi.updatePhasedRelease(phasedRelease.value.id, {
+      account_id: store.currentAccountId,
+      state,
+    })
+    ElMessage.success('分阶段发布状态已更新')
+    await loadPhasedRelease(versionDetail.value.id)
+  } catch {} finally { phasedLoading.value = false }
+}
+
+async function removePhasedRelease() {
+  try {
+    await ElMessageBox.confirm('确定取消分阶段发布？', '取消确认', { type: 'warning' })
+    phasedLoading.value = true
+    await appstoreApi.deletePhasedRelease(phasedRelease.value.id, store.currentAccountId)
+    ElMessage.success('已取消分阶段发布')
+    phasedRelease.value = null
+  } catch {} finally { phasedLoading.value = false }
+}
+
+function phasedStateLabel(state) {
+  const map = { INACTIVE: '未激活', ACTIVE: '发布中', PAUSED: '已暂停', COMPLETE: '已完成' }
+  return map[state] || state || '-'
+}
+
+function phasedStateType(state) {
+  const map = { INACTIVE: 'info', ACTIVE: 'success', PAUSED: 'warning', COMPLETE: 'primary' }
+  return map[state] || 'info'
+}
+
 function canSubmit(state) {
   return ['PREPARE_FOR_SUBMISSION', 'READY_FOR_REVIEW'].includes(state)
 }
@@ -306,6 +498,10 @@ function formatDate(d) {
   if (!d) return '-'
   return new Date(d).toLocaleString('zh-CN')
 }
+
+watch(showBuildPicker, (val) => {
+  if (val) loadBuilds()
+})
 
 watch(() => store.currentAccountId, () => {
   apps.value = []

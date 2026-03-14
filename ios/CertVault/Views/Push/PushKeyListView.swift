@@ -108,22 +108,42 @@ private struct PushKeyRow: View {
                 .frame(width: 40, height: 40)
                 .background(Color.dsAccentPink.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(key.displayName)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.dsText)
-                HStack(spacing: 8) {
-                    if let kid = key.key_id {
-                        Text("Key: \(kid)")
+                    .lineLimit(1)
+
+                if let kid = key.key_id, !kid.isEmpty {
+                    HStack(spacing: 4) {
+                        Text("Key")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 3))
+                        Text(kid)
                             .font(.caption.monospaced())
-                            .foregroundStyle(Color.dsMuted)
-                    }
-                    if let tid = key.team_id {
-                        Text("Team: \(tid)")
-                            .font(.caption.monospaced())
-                            .foregroundStyle(Color.dsMuted)
+                            .foregroundStyle(Color.dsText.opacity(0.7))
+                            .lineLimit(1)
                     }
                 }
+
+                if let tid = key.team_id, !tid.isEmpty {
+                    HStack(spacing: 4) {
+                        Text("Team")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.dsAccentPurple, in: RoundedRectangle(cornerRadius: 3))
+                        Text(tid)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(Color.dsText.opacity(0.7))
+                            .lineLimit(1)
+                    }
+                }
+
                 if let bundles = key.bundle_ids, !bundles.isEmpty {
                     Text(bundles)
                         .font(.caption2)

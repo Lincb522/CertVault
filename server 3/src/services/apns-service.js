@@ -1,6 +1,9 @@
 const http2 = require('http2');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const http = require('http');
+const tls = require('tls');
+const url = require('url');
 
 const PROD_HOST = 'https://api.push.apple.com';
 const SANDBOX_HOST = 'https://api.sandbox.push.apple.com';
@@ -49,12 +52,59 @@ function invalidateToken(keyId, teamId) {
 
 const connections = {};
 
-function getConnection(host) {
+function getProxyConfig() {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+  if (!proxyUrl) return null;
+  const parsed = new url.URL(proxyUrl);
+  return { host: parsed.hostname, port: parseInt(parsed.port, 10) };
+}
+
+function connectViaProxy(targetHost, targetPort, proxy) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({
+      host: proxy.host,
+      port: proxy.port,
+      method: 'CONNECT',
+      path: `${targetHost}:${targetPort}`,
+    });
+    req.on('connect', (res, socket) => {
+      if (res.statusCode !== 200) {
+        socket.destroy();
+        return reject(new Error(`Proxy CONNECT failed: ${res.statusCode}`));
+      }
+      const tlsSocket = tls.connect({
+        host: targetHost,
+        socket: socket,
+        ALPNProtocols: ['h2'],
+      }, () => resolve(tlsSocket));
+      tlsSocket.on('error', reject);
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('Proxy connect timeout')); });
+    req.end();
+  });
+}
+
+async function getConnection(host) {
   const existing = connections[host];
   if (existing && !existing.closed && !existing.destroyed) {
     return existing;
   }
-  const client = http2.connect(host);
+
+  const parsed = new url.URL(host);
+  const targetHost = parsed.hostname;
+  const targetPort = parseInt(parsed.port, 10) || 443;
+  const proxy = getProxyConfig();
+
+  let client;
+  if (proxy) {
+    const tlsSocket = await connectViaProxy(targetHost, targetPort, proxy);
+    client = http2.connect(host, { createConnection: () => tlsSocket });
+    console.log(`[APNs] Connected to ${host} via proxy ${proxy.host}:${proxy.port}`);
+  } else {
+    client = http2.connect(host);
+  }
+
   client.on('error', (err) => {
     console.error(`[APNs] Connection error (${host}):`, err.message);
     delete connections[host];
@@ -89,15 +139,15 @@ function getConnectionStatus() {
 
 // ==================== Core Send via HTTP/2 ====================
 
-function sendRequest(host, path, headers, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
-    let client;
-    try {
-      client = getConnection(host);
-    } catch (err) {
-      return reject(new Error(`Failed to connect to ${host}: ${err.message}`));
-    }
+async function sendRequest(host, path, headers, body, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  let client;
+  try {
+    client = await getConnection(host);
+  } catch (err) {
+    throw new Error(`Failed to connect to ${host}: ${err.message}`);
+  }
 
+  return new Promise((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
       if (!settled) {

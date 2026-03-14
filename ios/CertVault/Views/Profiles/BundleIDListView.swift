@@ -65,9 +65,11 @@ struct BundleIDListView: View {
                                             Text(item.displayName)
                                                 .font(.subheadline.weight(.medium))
                                                 .foregroundStyle(Color.dsText)
+                                                .lineLimit(1)
                                             Text(item.identifier ?? "")
                                                 .font(.caption.monospaced())
                                                 .foregroundStyle(Color.dsMuted)
+                                                .lineLimit(1)
                                         }
 
                                         Spacer()

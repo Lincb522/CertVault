@@ -167,12 +167,14 @@ struct AppStoreView: View {
                             Text("v\(ver.version ?? "-")")
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(Color.dsText)
+                                .lineLimit(1)
                             Text(ver.displayState)
                                 .font(.caption2.weight(.semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(stateColor(ver.state).opacity(0.12), in: Capsule())
                                 .foregroundStyle(stateColor(ver.state))
+                                .lineLimit(1)
                         }
 
                         HStack(spacing: 10) {
@@ -184,6 +186,7 @@ struct AppStoreView: View {
                                         .font(.caption2)
                                 }
                                 .foregroundStyle(Color.dsMuted)
+                                .lineLimit(1)
                             }
                             if let rt = ver.release_type {
                                 HStack(spacing: 3) {
@@ -193,12 +196,14 @@ struct AppStoreView: View {
                                         .font(.caption2)
                                 }
                                 .foregroundStyle(Color.dsMuted)
+                                .lineLimit(1)
                             }
                             if let date = ver.created_date {
                                 Spacer()
                                 Text(date)
                                     .font(.caption2)
                                     .foregroundStyle(Color.dsMuted)
+                                    .lineLimit(1)
                             }
                         }
                     }
@@ -603,6 +608,7 @@ private struct VersionDetailSheet: View {
                                 .foregroundStyle(Color.dsAccentOrange)
                                 .background(Color.dsAccentOrange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
                             }
+                            .buttonStyle(.plain)
                         }
 
                         if pr.state == "PAUSED" {
@@ -624,6 +630,7 @@ private struct VersionDetailSheet: View {
                                 .foregroundStyle(Color.dsAccent)
                                 .background(Color.dsAccent.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
                             }
+                            .buttonStyle(.plain)
                         }
 
                         if pr.state == "ACTIVE" || pr.state == "PAUSED" {
@@ -645,6 +652,7 @@ private struct VersionDetailSheet: View {
                                 .foregroundStyle(Color.dsAccentPink)
                                 .background(Color.dsAccentPink.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }

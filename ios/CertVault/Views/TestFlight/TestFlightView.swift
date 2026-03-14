@@ -252,6 +252,7 @@ struct TestFlightView: View {
                     Text(group.displayName)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.dsText)
+                        .lineLimit(1)
                     HStack(spacing: 6) {
                         Text(group.typeLabel)
                             .font(.caption2.weight(.semibold))
@@ -268,9 +269,10 @@ struct TestFlightView: View {
                                 .foregroundStyle(Color.dsAccentCyan)
                         }
                         if let date = group.created_date {
-                            Text(date)
+                            Text(date.toLocalDate(.short))
                                 .font(.caption2)
                                 .foregroundStyle(Color.dsMuted)
+                                .lineLimit(1)
                         }
                     }
                 }
@@ -339,6 +341,7 @@ struct TestFlightView: View {
                 Text(tester.displayName)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.dsText)
+                    .lineLimit(1)
                 Text(tester.email ?? "")
                     .font(.caption)
                     .foregroundStyle(Color.dsMuted)
@@ -353,6 +356,7 @@ struct TestFlightView: View {
                 .padding(.vertical, 4)
                 .background(testerStateColor(tester.state).opacity(0.12), in: Capsule())
                 .foregroundStyle(testerStateColor(tester.state))
+                .lineLimit(1)
         }
         .cardStyle()
         .swipeActions(edge: .trailing) {
@@ -419,6 +423,7 @@ struct TestFlightView: View {
                         Text(build.displayVersion)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.dsText)
+                            .lineLimit(1)
                         if build.expired == true {
                             Text("已过期")
                                 .font(.system(size: 9, weight: .bold))
@@ -429,9 +434,10 @@ struct TestFlightView: View {
                         }
                     }
                     if let date = build.uploaded_date {
-                        Text(String(date.prefix(16)))
+                        Text(date.toLocalDate())
                             .font(.caption2)
                             .foregroundStyle(Color.dsMuted)
+                            .lineLimit(1)
                     }
                 }
                 Spacer()
@@ -626,9 +632,11 @@ private struct GroupTestersSheet: View {
                                         Text(t.displayName)
                                             .font(.subheadline.weight(.medium))
                                             .foregroundStyle(Color.dsText)
+                                            .lineLimit(1)
                                         Text(t.email ?? "")
                                             .font(.caption)
                                             .foregroundStyle(Color.dsMuted)
+                                            .lineLimit(1)
                                     }
                                     Spacer()
                                     Text(t.stateLabel)
@@ -637,6 +645,7 @@ private struct GroupTestersSheet: View {
                                         .padding(.vertical, 3)
                                         .background(Color.dsMuted.opacity(0.12), in: Capsule())
                                         .foregroundStyle(Color.dsMuted)
+                                        .lineLimit(1)
 
                                     Button(role: .destructive) {
                                         Task { try? await vm.removeTestersFromGroup(groupId: group.id, testerIds: [t.id]) }
@@ -708,14 +717,17 @@ private struct AddTesterToGroupSheet: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(tester.displayName)
                                     .font(.subheadline.weight(.medium))
+                                    .lineLimit(1)
                                 Text(tester.email ?? "")
                                     .font(.caption)
                                     .foregroundStyle(Color.dsMuted)
+                                    .lineLimit(1)
                             }
                             Spacer()
                             Text(tester.stateLabel)
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(Color.dsMuted)
+                                .lineLimit(1)
                         }
                     }
                     .environment(\.editMode, .constant(.active))

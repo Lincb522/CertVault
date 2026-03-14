@@ -169,6 +169,17 @@ export const pushApi = {
   historyDelete: (id) => api.delete(`/push/history/${id}`),
   historyClear: (data) => api.post('/push/history/clear', data),
   errorCodes: () => api.get('/push/error-codes'),
+  batchUpdateDevices: (ids, data) => api.post('/push/devices/batch-update', { ids, ...data }),
+  validateDevice: (id, data) => api.post(`/push/devices/${id}/validate`, data),
+  validateAllDevices: (data) => api.post('/push/devices/validate-all', data),
+  deviceHistory: (params) => api.get('/push/device-history', { params }),
+  deviceHistoryDetail: (id) => api.get(`/push/device-history/${id}`),
+  scheduled: (params) => api.get('/push/scheduled', { params }),
+  scheduledDetail: (id) => api.get(`/push/scheduled/${id}`),
+  createScheduled: (data) => api.post('/push/scheduled', data),
+  updateScheduled: (id, data) => api.put(`/push/scheduled/${id}`, data),
+  deleteScheduled: (id) => api.delete(`/push/scheduled/${id}`),
+  cancelScheduled: (id) => api.post(`/push/scheduled/${id}/cancel`),
 }
 
 export const udidApi = {
@@ -210,6 +221,7 @@ export const appsApi = {
 
 export const testflightApi = {
   groups: (accountId, appId) => api.get('/testflight/groups', { params: { account_id: accountId, app_id: appId } }),
+  groupAppInfo: (groupId, accountId) => api.get(`/testflight/groups/${groupId}/app-info`, { params: { account_id: accountId } }),
   createGroup: (data) => api.post('/testflight/groups', data),
   deleteGroup: (id, accountId) => api.delete(`/testflight/groups/${id}`, { params: { account_id: accountId } }),
   groupTesters: (groupId, accountId) => api.get(`/testflight/groups/${groupId}/testers`, { params: { account_id: accountId } }),
@@ -230,6 +242,12 @@ export const appstoreApi = {
   submitForReview: (id, accountId) => api.post(`/appstore/versions/${id}/submit`, { account_id: accountId }),
   localizations: (versionId, accountId) => api.get(`/appstore/versions/${versionId}/localizations`, { params: { account_id: accountId } }),
   updateLocalization: (id, data) => api.patch(`/appstore/localizations/${id}`, data),
+  versionBuild: (id, accountId) => api.get(`/appstore/versions/${id}/build`, { params: { account_id: accountId } }),
+  setVersionBuild: (id, data) => api.patch(`/appstore/versions/${id}/build`, data),
+  phasedRelease: (id, accountId) => api.get(`/appstore/versions/${id}/phased-release`, { params: { account_id: accountId } }),
+  createPhasedRelease: (id, accountId) => api.post(`/appstore/versions/${id}/phased-release`, { account_id: accountId }),
+  updatePhasedRelease: (id, data) => api.patch(`/appstore/phased-release/${id}`, data),
+  deletePhasedRelease: (id, accountId) => api.delete(`/appstore/phased-release/${id}`, { params: { account_id: accountId } }),
 }
 
 export default api

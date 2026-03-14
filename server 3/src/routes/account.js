@@ -8,6 +8,7 @@ const { getDb } = require('../config/database');
 const AppleApiService = require('../services/apple-api');
 const { encrypt, decrypt } = require('../services/encryption');
 const CryptoService = require('../services/crypto');
+const { isPushOrPassCertType } = require('./certificate');
 
 function checkOwnership(account, user) {
   if (!account) return false;
@@ -107,6 +108,7 @@ router.get('/:id', async (req, res, next) => {
           await txUpsertBundle.run(b.id, req.params.id, b.id, b.attributes.identifier, b.attributes.name, b.attributes.platform);
         }
         for (const c of (remoteCerts.data || [])) {
+          if (isPushOrPassCertType(c.attributes?.certificateType)) continue;
           await txUpsertCert.run(c.id, req.params.id, c.id, c.attributes.certificateType, c.attributes.name || c.attributes.certificateType, c.attributes.certificateContent || null, c.attributes.expirationDate);
         }
         for (const p of (remoteProfiles.data || [])) {
@@ -144,7 +146,8 @@ router.get('/:id', async (req, res, next) => {
       // API failure doesn't block returning local data
     }
 
-    const certs = await db.prepare('SELECT id, name, type, expires_at, is_self_signed, created_at FROM certificates WHERE account_id = ? ORDER BY created_at DESC').all(req.params.id);
+    const allCerts = await db.prepare('SELECT id, name, type, expires_at, is_self_signed, created_at FROM certificates WHERE account_id = ? ORDER BY created_at DESC').all(req.params.id);
+    const certs = allCerts.filter(c => !isPushOrPassCertType(c.type));
     const devices = await db.prepare('SELECT id, name, udid, platform, status, created_at FROM devices WHERE account_id = ? ORDER BY created_at DESC').all(req.params.id);
     const bundleIds = await db.prepare('SELECT id, identifier, name, platform, created_at FROM bundle_ids WHERE account_id = ? ORDER BY created_at DESC').all(req.params.id);
     const profiles = await db.prepare('SELECT id, name, type, expires_at, created_at FROM profiles WHERE account_id = ? ORDER BY created_at DESC').all(req.params.id);

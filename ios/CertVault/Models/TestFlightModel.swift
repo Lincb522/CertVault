@@ -8,9 +8,18 @@ struct BetaGroup: Decodable, Identifiable {
     let public_link: String?
     let public_link_limit: Int?
     let created_date: String?
+    let app_id: String?
+    let app_name: String?
+    let bundle_id: String?
 
     var displayName: String { name ?? "未命名分组" }
     var typeLabel: String { (is_internal == true) ? "内部" : "外部" }
+    var groupLabel: String {
+        if let appName = app_name, !appName.isEmpty {
+            return "\(displayName) (\(appName))"
+        }
+        return displayName
+    }
 }
 
 struct BetaGroupDetail: Decodable {

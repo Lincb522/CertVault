@@ -142,7 +142,7 @@ struct BuildDetailSheet: View {
 
     private func formatDate(_ dateStr: String?) -> String {
         guard let s = dateStr else { return "-" }
-        return String(s.prefix(19)).replacingOccurrences(of: "T", with: " ")
+        return s.toLocalDate()
     }
 
     private func audienceLabel(_ type: String) -> String {
@@ -235,6 +235,7 @@ struct BuildDetailSheet: View {
                         .foregroundStyle(.white)
                         .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 10))
                     }
+                    .buttonStyle(.plain)
                     .disabled(isSubmittingReview)
 
                     Text("外部测试组需要通过 Beta 审核后才能分发给测试员")
@@ -429,10 +430,12 @@ struct BuildDetailSheet: View {
             Text(label)
                 .font(.subheadline)
                 .foregroundStyle(Color.dsMuted)
+                .lineLimit(1)
             Spacer()
             Text(value)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Color.dsText)
+                .lineLimit(1)
         }
     }
 
@@ -491,6 +494,7 @@ struct BuildDetailSheet: View {
                     .foregroundStyle(.white)
                     .background(Color.dsAccentPink, in: RoundedRectangle(cornerRadius: 10))
                 }
+                .buttonStyle(.plain)
                 .disabled(isExpiring)
 
                 Text("过期后测试员将无法安装此构建版本，此操作不可撤销")

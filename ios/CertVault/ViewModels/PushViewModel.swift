@@ -23,8 +23,22 @@ final class PushViewModel: ObservableObject {
     @Published var historyTotal = 0
     @Published var historyPage = 1
 
+    @Published var deviceHistory: [DeviceRegisterHistory] = []
+    @Published var deviceHistoryTotal = 0
+    @Published var deviceHistoryPage = 1
+    @Published var deviceHistoryDetail: DeviceRegisterHistory?
+
+    @Published var isValidating = false
+    @Published var validateResult: DeviceValidateResult?
+    @Published var isValidatingAll = false
+    @Published var validateAllResult: DeviceValidateAllResult?
+
+    @Published var testGroups: [BetaGroup] = []
+    @Published var isLoadingTestGroups = false
+
     private let service = PushService()
     private let accountService = AccountService()
+    private let appStoreService = AppStoreConnectService()
     private let certService = CertificateService()
     private let db = DatabaseManager.shared
 
@@ -66,6 +80,18 @@ final class PushViewModel: ObservableObject {
         }
     }
 
+    func loadTestGroups(accountId: String) async {
+        guard !accountId.isEmpty else { return }
+        isLoadingTestGroups = true
+        do {
+            testGroups = try await appStoreService.listGroups(accountId: accountId)
+        } catch is CancellationError { return }
+        catch {
+            if !Task.isCancelled { errorMessage = error.localizedDescription }
+        }
+        if !Task.isCancelled { isLoadingTestGroups = false }
+    }
+
     func createKey(name: String, keyId: String, teamId: String, bundleIds: String, p8Content: String) async throws {
         try await service.createKey(name: name, keyId: keyId, teamId: teamId, bundleIds: bundleIds, p8Content: p8Content)
         await loadKeys()
@@ -89,7 +115,14 @@ final class PushViewModel: ObservableObject {
         sendResult = nil
         do {
             let result = try await service.send(request: request)
-            sendResult = "发送成功！APNs ID: \(result.apns_id ?? "N/A")"
+            if result.isSuccess {
+                sendResult = "发送成功！APNs ID: \(result.apns_id ?? "N/A")"
+            } else {
+                let desc = result.reason_cn ?? result.reason ?? "未知错误"
+                sendResult = "发送失败: \(desc)"
+            }
+        } catch let e as APIError {
+            sendResult = "发送失败: \(e.localizedDescription)"
         } catch {
             sendResult = "发送失败: \(error.localizedDescription)"
         }
@@ -174,13 +207,13 @@ final class PushViewModel: ObservableObject {
         return count
     }
 
-    func addDevice(token: String, platform: String, sandbox: Bool, label: String?) async throws {
-        try await service.addDevice(token: token, platform: platform, sandbox: sandbox, label: label)
+    func addDevice(token: String, platform: String, sandbox: Bool, label: String?, remark: String? = nil) async throws {
+        try await service.addDevice(token: token, platform: platform, sandbox: sandbox, label: label, remark: remark)
         await loadDevices()
     }
 
-    func updateDevice(id: Int, label: String?, sandbox: Bool?) async throws {
-        try await service.updateDevice(id: id, label: label, sandbox: sandbox)
+    func updateDevice(id: Int, label: String?, sandbox: Bool?, remark: String? = nil) async throws {
+        try await service.updateDevice(id: id, label: label, sandbox: sandbox, remark: remark)
         await loadDevices()
     }
 
@@ -224,6 +257,60 @@ final class PushViewModel: ObservableObject {
         await loadHistoryStats()
     }
 
+    func getHistoryDetail(id: Int) async throws -> PushHistoryItem {
+        try await service.getHistoryItem(id: id)
+    }
+
+    @Published var isResending = false
+    @Published var resendResult: String?
+
+    func resendHistory(id: Int) async {
+        isResending = true
+        resendResult = nil
+        do {
+            let result = try await service.resendHistory(id: id)
+            resendResult = result.message ?? "重发成功"
+        } catch {
+            resendResult = "重发失败: \(error.localizedDescription)"
+        }
+        isResending = false
+    }
+
+    // MARK: - Scheduled Pushes
+
+    @Published var scheduledItems: [ScheduledPush] = []
+    @Published var scheduledTotal = 0
+    @Published var scheduledPage = 1
+
+    func loadScheduled(page: Int = 1, status: String? = nil) async {
+        isLoading = true
+        do {
+            let result = try await service.listScheduled(page: page, status: status)
+            if page == 1 { scheduledItems = result.items }
+            else { scheduledItems.append(contentsOf: result.items) }
+            scheduledTotal = result.total
+            scheduledPage = page
+        } catch { if !Task.isCancelled { errorMessage = error.localizedDescription } }
+        if !Task.isCancelled { isLoading = false }
+    }
+
+    func createScheduled(_ item: ScheduledPushCreate) async throws {
+        try await service.createScheduled(item)
+        await loadScheduled()
+    }
+
+    func cancelScheduled(id: Int) async throws {
+        try await service.cancelScheduled(id: id)
+        if let idx = scheduledItems.firstIndex(where: { $0.id == id }) {
+            await loadScheduled()
+        }
+    }
+
+    func deleteScheduled(id: Int) async throws {
+        try await service.deleteScheduled(id: id)
+        scheduledItems.removeAll { $0.id == id }
+    }
+
     // MARK: - Guide & Error Codes
 
     @Published var guideLoaded = false
@@ -239,5 +326,54 @@ final class PushViewModel: ObservableObject {
         do { errorCodes = try await service.errorCodes() }
         catch is CancellationError { return }
         catch {}
+    }
+
+    // MARK: - Device Registration History
+
+    func loadDeviceHistory(deviceToken: String? = nil, action: String? = nil, reset: Bool = true) async {
+        if reset { deviceHistoryPage = 1 }
+        isLoading = true
+        do {
+            let (items, total) = try await service.deviceHistory(
+                deviceToken: deviceToken, action: action,
+                limit: 30, offset: (deviceHistoryPage - 1) * 30
+            )
+            if reset { deviceHistory = items } else { deviceHistory.append(contentsOf: items) }
+            deviceHistoryTotal = total
+        } catch {
+            if !Task.isCancelled { errorMessage = error.localizedDescription }
+        }
+        if !Task.isCancelled { isLoading = false }
+    }
+
+    func loadMoreDeviceHistory(deviceToken: String? = nil, action: String? = nil) async {
+        guard deviceHistory.count < deviceHistoryTotal else { return }
+        deviceHistoryPage += 1
+        await loadDeviceHistory(deviceToken: deviceToken, action: action, reset: false)
+    }
+
+    func loadDeviceHistoryDetail(id: Int) async {
+        isLoading = true
+        do { deviceHistoryDetail = try await service.deviceHistoryDetail(id: id) }
+        catch { if !Task.isCancelled { errorMessage = error.localizedDescription } }
+        if !Task.isCancelled { isLoading = false }
+    }
+
+    // MARK: - Device Validation
+
+    func validateDevice(id: Int) async {
+        isValidating = true
+        validateResult = nil
+        do { validateResult = try await service.validateDevice(id: id) }
+        catch { if !Task.isCancelled { errorMessage = error.localizedDescription } }
+        if !Task.isCancelled { isValidating = false }
+    }
+
+    func validateAllDevices() async {
+        isValidatingAll = true
+        validateAllResult = nil
+        do { validateAllResult = try await service.validateAllDevices() }
+        catch { if !Task.isCancelled { errorMessage = error.localizedDescription } }
+        if !Task.isCancelled { isValidatingAll = false }
     }
 }

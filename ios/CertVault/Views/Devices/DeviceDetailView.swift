@@ -106,7 +106,7 @@ struct DeviceDetailView: View {
                     DetailRow(label: NSLocalizedString("cert.deviceClass", comment: ""), value: Localized.deviceClass(cls))
                 }
                 if let date = device.created_at {
-                    DetailRow(label: NSLocalizedString("cert.addedAt", comment: ""), value: String(date.prefix(19)))
+                    DetailRow(label: NSLocalizedString("cert.addedAt", comment: ""), value: date.toLocalDate())
                 }
             }
         }
@@ -141,14 +141,17 @@ struct DeviceDetailView: View {
                                     Text(cert.name ?? L10n.unnamed)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(Color.dsText)
+                                        .lineLimit(1)
                                     HStack(spacing: 6) {
                                         Text(cert.type ?? "")
                                             .font(.caption)
                                             .foregroundStyle(Color.dsMuted)
+                                            .lineLimit(1)
                                         if let pwd = cert.password {
                                             Text("\(L10n.Cert.password): \(pwd)")
                                                 .font(.caption.monospaced())
                                                 .foregroundStyle(Color.dsAccentBlue)
+                                                .lineLimit(1)
                                         }
                                     }
                                 }
@@ -450,12 +453,13 @@ private struct DetailRow: View {
                 .font(.subheadline)
                 .foregroundStyle(Color.dsMuted)
                 .frame(width: 70, alignment: .leading)
+                .lineLimit(1)
             Spacer()
             Text(value)
                 .font(monospaced ? .subheadline.monospaced() : .subheadline)
                 .foregroundStyle(Color.dsText)
                 .textSelection(.enabled)
-                .multilineTextAlignment(.trailing)
+                .lineLimit(1)
         }
     }
 }

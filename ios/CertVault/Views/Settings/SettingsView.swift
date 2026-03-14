@@ -95,9 +95,11 @@ struct SettingsView: View {
                 Text(authVM.username)
                     .font(.headline)
                     .foregroundStyle(Color.dsText)
+                    .lineLimit(1)
                 Text(roleDisplayName)
                     .font(.caption)
                     .foregroundStyle(Color.dsMuted)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -499,6 +501,7 @@ struct SettingsView: View {
                     .stroke(Color.dsAccentPink.opacity(0.2), lineWidth: 1)
             )
         }
+        .buttonStyle(.plain)
     }
 }
 

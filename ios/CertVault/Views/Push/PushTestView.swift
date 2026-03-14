@@ -5,10 +5,11 @@ struct PushTestView: View {
     @StateObject private var vm = PushViewModel()
     @EnvironmentObject private var notificationManager: NotificationManager
     private let storage = PushStorage.shared
-    @State private var pushMode = 0  // 0=单设备, 1=广播
+    @State private var pushMode = 0  // 0=单设备, 1=广播, 2=测试组
     @State private var authMode = 0
     @State private var selectedPushKeyId = ""
     @State private var selectedAccountId = ""
+    @State private var selectedTestGroupId = ""
     @State private var manualTeamId = ""
     @State private var manualKeyId = ""
     @State private var manualPrivateKey = ""
@@ -37,22 +38,9 @@ struct PushTestView: View {
     var body: some View {
         Form {
             Section {
-                Picker("推送模式", selection: $pushMode) {
-                    HStack(spacing: 4) {
-                        HIcon(AppIcon.person)
-                        Text("单设备")
-                    }.tag(0)
-                    HStack(spacing: 4) {
-                        HIcon(AppIcon.megaphone)
-                        Text("广播")
-                        if let count = vm.deviceCount {
-                            Text("(\(count)台)")
-                                .foregroundStyle(Color.dsMuted)
-                        }
-                    }.tag(1)
-                }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
+                pushModeSelector
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
             }
 
             if !storage.savedTemplates.isEmpty {
@@ -92,7 +80,17 @@ struct PushTestView: View {
                     Picker(L10n.Push.testKeyTab, selection: $selectedPushKeyId) {
                         Text(L10n.select).tag("")
                         ForEach(vm.pushKeys) { key in
-                            Text(key.displayName).tag(key.id)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(key.displayName)
+                                    .lineLimit(1)
+                                if let kid = key.key_id, !kid.isEmpty {
+                                    Text("Key: \(kid)" + (key.team_id.map { " · Team: \($0)" } ?? ""))
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.dsMuted)
+                                        .lineLimit(1)
+                                }
+                            }
+                            .tag(key.id)
                         }
                     }
                     .listRowBackground(Color.clear)
@@ -175,7 +173,7 @@ struct PushTestView: View {
                         }
                         .listRowBackground(Color.clear)
                     }
-                } else {
+                } else if pushMode == 1 {
                     HStack(spacing: 8) {
                         HIcon(AppIcon.megaphone)
                             .foregroundStyle(Color.dsAccentOrange)
@@ -190,16 +188,66 @@ struct PushTestView: View {
                         }
                     }
                     .listRowBackground(Color.clear)
+                } else {
+                    // 测试组模式
+                    if authMode == 0 && selectedPushKeyId.isEmpty {
+                        Text("请先选择推送密钥，再选择测试组")
+                            .font(.caption)
+                            .foregroundStyle(Color.dsMuted)
+                            .listRowBackground(Color.clear)
+                    } else if authMode == 1 && selectedAccountId.isEmpty {
+                        Text("请先选择账号，再选择测试组")
+                            .font(.caption)
+                            .foregroundStyle(Color.dsMuted)
+                            .listRowBackground(Color.clear)
+                    } else {
+                        if vm.isLoadingTestGroups {
+                            HStack(spacing: 8) {
+                                ProgressView().tint(Color.dsAccentBlue)
+                                Text("加载测试组...")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.dsMuted)
+                            }
+                            .listRowBackground(Color.clear)
+                        } else {
+                            Picker("测试组", selection: $selectedTestGroupId) {
+                                Text("选择测试组").tag("")
+                                ForEach(vm.testGroups) { group in
+                                    Text(group.groupLabel).tag(group.id)
+                                }
+                            }
+                            .listRowBackground(Color.clear)
+                            .onChange(of: selectedTestGroupId) { _, newId in
+                                if let group = vm.testGroups.first(where: { $0.id == newId }),
+                                   let bid = group.bundle_id, !bid.isEmpty {
+                                    bundleId = bid
+                                }
+                            }
+
+                            if let group = vm.testGroups.first(where: { $0.id == selectedTestGroupId }),
+                               let bid = group.bundle_id {
+                                HStack(spacing: 4) {
+                                    HIcon(AppIcon.info)
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.dsAccentBlue)
+                                    Text("Bundle ID 已自动填充：\(bid)")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.dsAccentBlue)
+                                }
+                                .listRowBackground(Color.clear)
+                            }
+                        }
+                    }
                 }
 
                 if savedBundleIds.isEmpty {
-                    TextField("Bundle ID", text: $bundleId)
+                    TextField("Bundle ID（留空使用默认）", text: $bundleId)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .listRowBackground(Color.clear)
                 } else {
                     HStack {
-                        TextField("Bundle ID", text: $bundleId)
+                        TextField("Bundle ID（留空使用默认）", text: $bundleId)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                         Menu {
@@ -281,6 +329,8 @@ struct PushTestView: View {
                     Task {
                         if pushMode == 1 {
                             await sendBroadcast()
+                        } else if pushMode == 2 {
+                            await sendTestGroup()
                         } else {
                             await send()
                         }
@@ -292,17 +342,18 @@ struct PushTestView: View {
                         } else {
                             HIcon(AppIcon.pushTest).font(.body)
                         }
-                        Text(pushMode == 1 ? "发送广播" : L10n.Push.testSend)
+                        Text(pushMode == 1 ? "发送广播" : pushMode == 2 ? "推送到测试组" : L10n.Push.testSend)
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
                     .foregroundStyle(isSendButtonEnabled ? Color.white : Color.dsMuted)
                     .background(
-                        isSendButtonEnabled ? (pushMode == 1 ? Color.dsAccentOrange : Color.dsAccentBlue) : Color.dsSurfaceLight,
+                        isSendButtonEnabled ? (pushMode == 1 ? Color.dsAccentOrange : pushMode == 2 ? Color.dsAccentPurple : Color.dsAccentBlue) : Color.dsSurfaceLight,
                         in: RoundedRectangle(cornerRadius: 12)
                     )
                 }
+                .buttonStyle(.plain)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .disabled(!isSendButtonEnabled)
@@ -330,12 +381,11 @@ struct PushTestView: View {
                         if let errs = br.errors, !errs.isEmpty {
                             DisclosureGroup("失败详情 (\(errs.count))") {
                                 ForEach(errs) { err in
-                                    HStack {
+                                    VStack(alignment: .leading, spacing: 3) {
                                         Text(err.token?.prefix(16).appending("...") ?? "-")
                                             .font(.caption.monospaced())
                                             .foregroundStyle(Color.dsMuted)
-                                        Spacer()
-                                        Text(err.reason ?? "未知")
+                                        Text(err.reason_cn ?? err.reason ?? "未知")
                                             .font(.caption)
                                             .foregroundStyle(Color.dsAccentPink)
                                     }
@@ -394,10 +444,32 @@ struct PushTestView: View {
             await vm.loadAccounts()
             await vm.loadDeviceCount()
             await vm.loadDevices()
+            await vm.loadSettings()
+            if bundleId.isEmpty, let def = vm.pushSettings?.default_bundle_id, !def.isEmpty {
+                bundleId = def
+            }
+            if selectedPushKeyId.isEmpty, let def = vm.pushSettings?.default_push_key_id, !def.isEmpty {
+                selectedPushKeyId = def
+            }
+            if let defSandbox = vm.pushSettings?.default_sandbox {
+                sandbox = defSandbox == "true"
+            }
             savedBundleIds = storage.savedBundleIds
             if deviceToken.isEmpty, let token = notificationManager.deviceToken {
                 deviceToken = token
             }
+        }
+        .onChange(of: pushMode) { _, newMode in
+            if newMode == 2 { Task { await loadTestGroupsForCurrentAuth() } }
+        }
+        .onChange(of: selectedAccountId) { _, _ in
+            if pushMode == 2 { Task { await loadTestGroupsForCurrentAuth() } }
+        }
+        .onChange(of: selectedPushKeyId) { _, _ in
+            if pushMode == 2 { Task { await loadTestGroupsForCurrentAuth() } }
+        }
+        .onChange(of: authMode) { _, _ in
+            if pushMode == 2 { Task { await loadTestGroupsForCurrentAuth() } }
         }
     }
 
@@ -413,9 +485,53 @@ struct PushTestView: View {
         priority = tpl.priority ?? "10"
     }
 
+    // MARK: - Push Mode Selector
+
+    private var pushModeSelector: some View {
+        HStack(spacing: 0) {
+            pushModeTab(index: 0, icon: AppIcon.person, label: "单设备", color: .dsAccentBlue)
+            pushModeTab(index: 1, icon: AppIcon.megaphone, label: "广播", color: .dsAccentOrange, badge: vm.deviceCount.map { "\($0)" })
+            pushModeTab(index: 2, icon: AppIcon.docText, label: "测试组", color: .dsAccentPurple)
+        }
+        .padding(4)
+        .background(Color.dsMuted.opacity(0.08), in: RoundedRectangle(cornerRadius: DS.Radius.md))
+        .padding(.horizontal, DS.Spacing.md)
+        .padding(.vertical, DS.Spacing.sm)
+    }
+
+    private func pushModeTab(index: Int, icon: UIImage, label: String, color: Color, badge: String? = nil) -> some View {
+        let selected = pushMode == index
+        return Button {
+            withAnimation(DS.Animation.fast) { pushMode = index }
+        } label: {
+            VStack(spacing: 4) {
+                HIcon(icon)
+                    .font(.system(size: 16, weight: selected ? .semibold : .regular))
+                HStack(spacing: 2) {
+                    Text(label)
+                        .font(.caption.weight(selected ? .semibold : .regular))
+                    if let badge {
+                        Text(badge)
+                            .font(.caption2.weight(.bold).monospacedDigit())
+                            .foregroundStyle(selected ? color : Color.dsMuted)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .foregroundStyle(selected ? color : Color.dsMuted)
+            .background(
+                selected ? color.opacity(0.12) : Color.clear,
+                in: RoundedRectangle(cornerRadius: DS.Radius.sm)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var canSend: Bool {
-        guard !bundleId.isEmpty else { return false }
         if pushMode == 0 && deviceToken.isEmpty { return false }
+        if pushMode == 2 && selectedTestGroupId.isEmpty { return false }
+        if title.isEmpty { return false }
         switch authMode {
         case 0: return !selectedPushKeyId.isEmpty
         case 1: return !selectedAccountId.isEmpty && !manualTeamId.isEmpty
@@ -440,13 +556,13 @@ struct PushTestView: View {
     }
 
     private func send() async {
-        storage.saveBundleId(bundleId)
+        if !bundleId.isEmpty { storage.saveBundleId(bundleId) }
         savedBundleIds = storage.savedBundleIds
 
         let adv = advancedOptions
         var request = PushRequest(
             device_token: deviceToken,
-            bundle_id: bundleId,
+            bundle_id: bundleId.isEmpty ? nil : bundleId,
             title: title,
             body: messageBody,
             badge: Int(badge),
@@ -471,7 +587,7 @@ struct PushTestView: View {
     }
 
     private func sendBroadcast() async {
-        storage.saveBundleId(bundleId)
+        if !bundleId.isEmpty { storage.saveBundleId(bundleId) }
         savedBundleIds = storage.savedBundleIds
 
         let adv = advancedOptions
@@ -480,7 +596,7 @@ struct PushTestView: View {
             body: messageBody,
             badge: Int(badge),
             sound: sound.isEmpty ? nil : sound,
-            bundle_id: bundleId,
+            bundle_id: bundleId.isEmpty ? nil : bundleId,
             sandbox: sandbox,
             thread_id: adv.threadId,
             collapse_id: adv.collapseId,
@@ -498,6 +614,56 @@ struct PushTestView: View {
         }
 
         await vm.broadcast(request: request)
+    }
+
+    private func sendTestGroup() async {
+        guard let group = vm.testGroups.first(where: { $0.id == selectedTestGroupId }) else { return }
+        let effectiveBundleId = bundleId.isEmpty ? (group.bundle_id ?? "") : bundleId
+        if !effectiveBundleId.isEmpty { storage.saveBundleId(effectiveBundleId) }
+        savedBundleIds = storage.savedBundleIds
+
+        let adv = advancedOptions
+        var request = BroadcastRequest(
+            title: title,
+            body: messageBody,
+            badge: Int(badge),
+            sound: sound.isEmpty ? nil : sound,
+            bundle_id: effectiveBundleId.isEmpty ? nil : effectiveBundleId,
+            sandbox: sandbox,
+            thread_id: adv.threadId,
+            collapse_id: adv.collapseId,
+            mutable_content: adv.mutableContent,
+            interruption_level: adv.interruptionLevel,
+            relevance_score: adv.relevanceScore,
+            priority: adv.priority,
+            expiration: adv.expiration
+        )
+        request.test_group_id = selectedTestGroupId
+
+        switch authMode {
+        case 0: request.push_key_id = selectedPushKeyId
+        case 1: request.account_id = selectedAccountId; request.team_id = manualTeamId
+        default: break
+        }
+
+        await vm.broadcast(request: request)
+    }
+
+    private func loadTestGroupsForCurrentAuth() async {
+        selectedTestGroupId = ""
+        switch authMode {
+        case 0:
+            guard !selectedPushKeyId.isEmpty else { return }
+            if let accountId = vm.accounts.first?.id, !accountId.isEmpty {
+                await vm.loadTestGroups(accountId: accountId)
+            }
+        case 1:
+            if !selectedAccountId.isEmpty {
+                await vm.loadTestGroups(accountId: selectedAccountId)
+            }
+        default:
+            break
+        }
     }
 
     private func broadcastStatBadge(_ label: String, value: Int, color: Color) -> some View {

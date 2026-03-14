@@ -39,6 +39,7 @@ struct ErrorView: View {
                     .foregroundStyle(Color.dsAccentBlue)
                     .background(Color.dsAccentBlue.opacity(0.12), in: Capsule())
                 }
+                .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

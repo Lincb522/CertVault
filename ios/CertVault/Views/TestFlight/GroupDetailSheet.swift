@@ -135,7 +135,7 @@ struct GroupDetailSheet: View {
                 .padding(.vertical, 4)
                 .background(d.is_internal == true ? Color.dsAccentBlue : Color.dsAccentOrange, in: Capsule())
             if let date = d.created_date {
-                Text("创建于 \(String(date.prefix(10)))")
+                Text("创建于 \(date.toLocalDate(.short))")
                     .font(.caption2)
                     .foregroundStyle(Color.dsMuted)
             }
@@ -453,10 +453,12 @@ struct GroupDetailSheet: View {
                                 Text(tester.displayName)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Color.dsText)
+                                    .lineLimit(1)
                                 if let email = tester.email {
                                     Text(email)
                                         .font(.caption2)
                                         .foregroundStyle(Color.dsMuted)
+                                        .lineLimit(1)
                                 }
                             }
                             Spacer()
@@ -467,10 +469,12 @@ struct GroupDetailSheet: View {
                                     .padding(.vertical, 2)
                                     .background(testerStateColor(tester.state).opacity(0.12), in: Capsule())
                                     .foregroundStyle(testerStateColor(tester.state))
+                                    .lineLimit(1)
                                 if let type = tester.invite_type {
                                     Text(inviteTypeLabel(type))
                                         .font(.system(size: 9))
                                         .foregroundStyle(Color.dsMuted)
+                                        .lineLimit(1)
                                 }
                             }
                         }
@@ -522,7 +526,7 @@ struct GroupDetailSheet: View {
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Color.dsText)
                                 if let date = build.uploaded_date {
-                                    Text(String(date.prefix(10)))
+                                    Text(date.toLocalDate(.short))
                                         .font(.caption2)
                                         .foregroundStyle(Color.dsMuted)
                                 }
@@ -607,9 +611,9 @@ struct GroupDetailSheet: View {
 
     private func infoRow(_ label: String, _ value: String) -> some View {
         HStack {
-            Text(label).font(.subheadline).foregroundStyle(Color.dsMuted)
+            Text(label).font(.subheadline).foregroundStyle(Color.dsMuted).lineLimit(1)
             Spacer()
-            Text(value).font(.subheadline.weight(.medium)).foregroundStyle(Color.dsText)
+            Text(value).font(.subheadline.weight(.medium)).foregroundStyle(Color.dsText).lineLimit(1)
         }
     }
 
@@ -800,15 +804,18 @@ private struct InviteTesterSheet: View {
                                             Text(tester.displayName)
                                                 .font(.subheadline.weight(.medium))
                                                 .foregroundStyle(Color.dsText)
+                                                .lineLimit(1)
                                             if let email = tester.email {
                                                 Text(email)
                                                     .font(.caption2)
                                                     .foregroundStyle(Color.dsMuted)
+                                                    .lineLimit(1)
                                             }
                                         }
                                         Spacer()
                                         Text(tester.stateLabel)
                                             .font(.caption2)
+                                            .lineLimit(1)
                                             .foregroundStyle(Color.dsMuted)
                                     }
                                 }
@@ -850,7 +857,9 @@ private struct InviteTesterSheet: View {
                         .foregroundStyle(canInvite ? .white : Color.dsMuted)
                         .background(canInvite ? Color.dsAccentBlue : Color.dsSurfaceLight, in: RoundedRectangle(cornerRadius: 12))
                     }
+                    .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                     .disabled(!canInvite || isInviting)
                 }
             }
@@ -1000,7 +1009,9 @@ private struct DeviceCriteriaSheet: View {
                         .foregroundStyle(.white)
                         .background(Color.dsAccentBlue, in: RoundedRectangle(cornerRadius: 12))
                     }
+                    .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                     .disabled(isSaving)
                 }
 

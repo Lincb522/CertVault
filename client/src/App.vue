@@ -56,7 +56,7 @@
         <div class="nav-group">
           <div class="nav-group-label">App Store Connect</div>
           <router-link to="/apps" class="nav-item" active-class="active" @click="sidebarOpen = false">
-            <HIcon name="component" /> 应用管理
+            <HIcon name="category" /> 应用管理
           </router-link>
           <router-link to="/testflight" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <HIcon name="send-1" /> TestFlight
@@ -105,6 +105,9 @@
           </router-link>
           <router-link to="/push-history" class="nav-item" active-class="active" @click="sidebarOpen = false">
             <HIcon name="document-align-left-1" /> 推送历史
+          </router-link>
+          <router-link to="/push-scheduled" class="nav-item" active-class="active" @click="sidebarOpen = false">
+            <HIcon name="time-circle-1" /> 定时推送
           </router-link>
         </div>
       </nav>

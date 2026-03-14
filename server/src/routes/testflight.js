@@ -17,23 +17,59 @@ router.get('/groups', async (req, res, next) => {
   try {
     const api = await getApi(req);
     const params = {
-      'fields[betaGroups]': 'name,isInternalGroup,publicLinkEnabled,publicLinkLimit,publicLink,createdDate',
+      'fields[betaGroups]': 'name,isInternalGroup,publicLinkEnabled,publicLinkLimit,publicLink,createdDate,app',
+      include: 'app',
       limit: req.query.limit || 50,
     };
     if (req.query.app_id) {
       params['filter[app]'] = req.query.app_id;
     }
     const result = await api.listBetaGroups(params);
-    const groups = (result.data || []).map(g => ({
-      id: g.id,
-      name: g.attributes?.name,
-      is_internal: g.attributes?.isInternalGroup,
-      public_link_enabled: g.attributes?.publicLinkEnabled,
-      public_link: g.attributes?.publicLink,
-      public_link_limit: g.attributes?.publicLinkLimit,
-      created_date: g.attributes?.createdDate,
-    }));
+    const included = result.included || [];
+    const groups = (result.data || []).map(g => {
+      const appRel = g.relationships?.app?.data;
+      const appData = appRel ? included.find(i => i.type === 'apps' && i.id === appRel.id) : null;
+      return {
+        id: g.id,
+        name: g.attributes?.name,
+        is_internal: g.attributes?.isInternalGroup,
+        public_link_enabled: g.attributes?.publicLinkEnabled,
+        public_link: g.attributes?.publicLink,
+        public_link_limit: g.attributes?.publicLinkLimit,
+        created_date: g.attributes?.createdDate,
+        app_id: appRel?.id,
+        app_name: appData?.attributes?.name,
+        bundle_id: appData?.attributes?.bundleId,
+      };
+    });
     res.json({ success: true, data: groups });
+  } catch (err) { next(err); }
+});
+
+router.get('/groups/:id/app-info', async (req, res, next) => {
+  try {
+    const api = await getApi(req);
+    const query = new URLSearchParams({
+      include: 'app',
+      'fields[betaGroups]': 'name,app',
+      'fields[apps]': 'name,bundleId',
+    }).toString();
+    const result = await api.request('GET', `/betaGroups/${req.params.id}?${query}`);
+    const group = result.data;
+    const included = result.included || [];
+    const appRel = group.relationships?.app?.data;
+    const appData = appRel ? included.find(i => i.type === 'apps' && i.id === appRel.id) : null;
+    
+    res.json({
+      success: true,
+      data: {
+        group_id: group.id,
+        group_name: group.attributes?.name,
+        app_id: appRel?.id,
+        app_name: appData?.attributes?.name,
+        bundle_id: appData?.attributes?.bundleId,
+      }
+    });
   } catch (err) { next(err); }
 });
 
