@@ -419,6 +419,9 @@ struct PushDevice: Decodable, Identifiable {
     let app_version: String?
     let created_at: String?
     let username: String?
+    let token_key: String?
+    let token_name: String?
+    let token_valid: Bool?
 
     var stableId: String { "\(id ?? 0)" }
     var displayToken: String {
@@ -429,6 +432,7 @@ struct PushDevice: Decodable, Identifiable {
     var envColor: Color {
         sandbox == true ? Color(red: 0.95, green: 0.60, blue: 0.07) : Color(red: 0.20, green: 0.78, blue: 0.35)
     }
+    var hasTokenInfo: Bool { token_key != nil && !(token_key?.isEmpty ?? true) }
 }
 
 struct DeviceRegisterHistory: Decodable, Identifiable {
@@ -446,8 +450,12 @@ struct DeviceRegisterHistory: Decodable, Identifiable {
     let os_version: String?
     let app_version: String?
     let created_at: String?
+    let token_key: String?
+    let token_name: String?
+    let token_valid: Bool?
 
     var stableId: String { "\(id ?? 0)" }
+    var hasTokenInfo: Bool { token_key != nil && !(token_key?.isEmpty ?? true) }
     var displayToken: String {
         guard let t = device_token, t.count > 16 else { return device_token ?? "-" }
         return "\(t.prefix(8))...\(t.suffix(8))"

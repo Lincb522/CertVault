@@ -279,6 +279,22 @@ struct PushDeviceManageView: View {
                         .lineLimit(1)
                 }
 
+                if device.hasTokenInfo {
+                    HStack(spacing: 4) {
+                        HIcon(AppIcon.key)
+                            .font(.system(size: 9))
+                        Text(device.token_name ?? device.token_key ?? "")
+                            .font(.caption2.weight(.medium))
+                        if let valid = device.token_valid {
+                            Circle()
+                                .fill(valid ? Color.dsAccent : Color.dsAccentPink)
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .foregroundStyle(device.token_valid == true ? Color.dsAccentCyan : Color.dsAccentPink)
+                    .lineLimit(1)
+                }
+
                 HStack {
                     Text(device.displayToken)
                         .font(.caption2.monospaced())
@@ -580,6 +596,37 @@ private struct EditDeviceSheet: View {
                     }
                 }
 
+                if device.hasTokenInfo {
+                    Section("Token 验证") {
+                        if let name = device.token_name, !name.isEmpty {
+                            LabeledContent("Token 用户") {
+                                Text(name)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color.dsAccentCyan)
+                            }
+                        }
+                        if let key = device.token_key, !key.isEmpty {
+                            LabeledContent("Token Key") {
+                                Text(key)
+                                    .font(.subheadline.monospaced())
+                                    .foregroundStyle(Color.dsMuted)
+                            }
+                        }
+                        if let valid = device.token_valid {
+                            LabeledContent("验证状态") {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(valid ? Color.dsAccent : Color.dsAccentPink)
+                                        .frame(width: 8, height: 8)
+                                    Text(valid ? "有效" : "无效/已过期")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(valid ? Color.dsAccent : Color.dsAccentPink)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Section("编辑") {
                     TextField("标签", text: $label)
                     TextField("备注", text: $remark, axis: .vertical)
@@ -854,9 +901,20 @@ struct DeviceRegisterHistoryView: View {
                     .foregroundStyle(Color.dsAccentBlue)
                 }
 
-                Text(item.displayToken)
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(Color.dsMuted)
+                if item.hasTokenInfo {
+                    HStack(spacing: 3) {
+                        HIcon(AppIcon.key)
+                            .font(.system(size: 9))
+                        Text(item.token_name ?? item.token_key ?? "")
+                        if let valid = item.token_valid {
+                            Circle()
+                                .fill(valid ? Color.dsAccent : Color.dsAccentPink)
+                                .frame(width: 5, height: 5)
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(item.token_valid == true ? Color.dsAccentCyan : Color.dsAccentPink)
+                }
 
                 Spacer()
 
@@ -987,6 +1045,37 @@ private struct DeviceHistoryDetailSheet: View {
                     if let date = item.created_at {
                         LabeledContent("时间") {
                             Text(date.toLocalDate()).font(.subheadline).foregroundStyle(Color.dsMuted)
+                        }
+                    }
+                }
+
+                if item.hasTokenInfo {
+                    Section("Token 验证") {
+                        if let name = item.token_name, !name.isEmpty {
+                            LabeledContent("Token 用户") {
+                                Text(name)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color.dsAccentCyan)
+                            }
+                        }
+                        if let key = item.token_key, !key.isEmpty {
+                            LabeledContent("Token Key") {
+                                Text(key)
+                                    .font(.subheadline.monospaced())
+                                    .foregroundStyle(Color.dsMuted)
+                            }
+                        }
+                        if let valid = item.token_valid {
+                            LabeledContent("验证状态") {
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(valid ? Color.dsAccent : Color.dsAccentPink)
+                                        .frame(width: 8, height: 8)
+                                    Text(valid ? "有效" : "无效/已过期")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(valid ? Color.dsAccent : Color.dsAccentPink)
+                                }
+                            }
                         }
                     }
                 }

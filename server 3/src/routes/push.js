@@ -7,8 +7,51 @@ const { decrypt } = require('../services/encryption');
 const { apnsService, APNsService } = require('../services/apns-service');
 const { getTransporter } = require('../config/email');
 
+const TOKEN_ADMIN_URL = process.env.TOKEN_ADMIN_URL || 'http://127.0.0.1:3388';
+
+async function verifyTokenKey(tokenKey) {
+  if (!tokenKey) return { valid: false, name: null };
+  try {
+    const resp = await fetch(`${TOKEN_ADMIN_URL}/api/verify?token=${encodeURIComponent(tokenKey)}`, { signal: AbortSignal.timeout(3000) });
+    const data = await resp.json();
+    return { valid: !!data.valid, name: data.name || null };
+  } catch {
+    return { valid: false, name: null };
+  }
+}
+
+async function findTokenByName(username) {
+  if (!username) return null;
+  try {
+    const resp = await fetch(`${TOKEN_ADMIN_URL}/api/health`, { signal: AbortSignal.timeout(3000) });
+    const data = await resp.json();
+    if (data.status !== 'ok') return null;
+    const svc = data.service || {};
+    if (!svc.globalEnabled) return { key: null, name: username, valid: true, globalOff: true };
+    return null;
+  } catch { return null; }
+}
+
+async function lookupTokenForUser(username, adminPassword) {
+  if (!username || !adminPassword) return null;
+  try {
+    const resp = await fetch(`${TOKEN_ADMIN_URL}/api/status`, {
+      headers: { 'x-admin-token': adminPassword },
+      signal: AbortSignal.timeout(3000),
+    });
+    const data = await resp.json();
+    if (!data.tokens) return null;
+    const lowerName = username.toLowerCase();
+    const match = data.tokens.find(t => (t.name || '').toLowerCase() === lowerName);
+    if (!match) return null;
+    const expired = match.expiresAt && new Date(match.expiresAt) <= new Date();
+    return { key: match.key, name: match.name, valid: match.enabled && !expired };
+  } catch { return null; }
+}
+
 async function sendNewDeviceEmail({ token, platform, sandbox, label, username, totalDevices, isNew = true,
-                                    deviceName, model, osVersion, appVersion, remark } = {}) {
+                                    deviceName, model, osVersion, appVersion, remark,
+                                    tokenKey, tokenName, tokenValid } = {}) {
   try {
     const t = getTransporter();
     if (!t) return;
@@ -122,6 +165,8 @@ async function sendNewDeviceEmail({ token, platform, sandbox, label, username, t
         ${infoRow(iconApp, 'App 版本', appVersion ? 'v' + appVersion : null, '#ea580c')}
         ${infoRow(iconGrid, '平台', platform ? platform.toUpperCase() : null)}
         ${infoRow(iconUser, '注册用户', username, '#3b82f6')}
+        ${infoRow(iconKey, 'API Token', tokenName ? `${tokenName} <span style="color:#94a3b8;font-size:11px">(${tokenKey || '-'})</span>` : null, tokenValid ? '#06b6d4' : '#ef4444')}
+        ${infoRow(iconKey, 'Token 状态', tokenKey ? (tokenValid ? '✅ 有效' : '❌ 无效/已过期') : null, tokenValid ? '#22c55e' : '#ef4444')}
         ${infoRow(iconNote, '备注', remark)}
       </tbody>
     </table>
@@ -376,9 +421,25 @@ function parseLegacyLabel(label) {
 router.post('/register-device', async (req, res, next) => {
   try {
     let { device_token, platform = 'ios', sandbox = false, label, remark,
-            device_name, model, os_version, app_version, reported_at } = req.body;
+            device_name, model, os_version, app_version, reported_at,
+            token_key } = req.body;
     if (!device_token) {
       return res.status(400).json({ success: false, message: '缺少 device_token' });
+    }
+
+    let tokenKey = token_key || null, tokenValid = null, tokenName = null;
+    if (tokenKey) {
+      const result = await verifyTokenKey(tokenKey);
+      tokenValid = result.valid;
+      tokenName = result.name;
+    } else {
+      const adminPwd = process.env.TOKEN_ADMIN_PASSWORD;
+      const match = await lookupTokenForUser(req.user?.username, adminPwd);
+      if (match) {
+        tokenKey = match.key;
+        tokenName = match.name;
+        tokenValid = match.valid;
+      }
     }
 
     const hasStructuredFields = !!(device_name || model);
@@ -425,16 +486,21 @@ router.post('/register-device', async (req, res, next) => {
       await db.prepare(
         `UPDATE push_devices SET user_id = ?, platform = ?, sandbox = ?, label = ?,
          remark = ?, device_name = ?, model = ?, os_version = ?, app_version = ?,
+         token_key = COALESCE(?, token_key), token_name = COALESCE(?, token_name),
+         token_valid = COALESCE(?, token_valid),
          created_at = NOW() WHERE device_token = ?`
       ).run(req.user.id, platform, sandbox, finalLabel,
             finalRemark, finalDeviceName, finalModel, finalOsVersion, finalAppVersion,
+            tokenKey, tokenName, tokenValid,
             device_token);
     } else {
       await db.prepare(
         `INSERT INTO push_devices (user_id, device_token, platform, sandbox, label, remark,
-         device_name, model, os_version, app_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         device_name, model, os_version, app_version, token_key, token_name, token_valid)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(req.user.id, device_token, platform, sandbox, finalLabel, finalRemark,
-            finalDeviceName, finalModel, finalOsVersion, finalAppVersion);
+            finalDeviceName, finalModel, finalOsVersion, finalAppVersion,
+            tokenKey, tokenName, tokenValid);
     }
 
     const totalCount = await db.prepare('SELECT COUNT(*) as count FROM push_devices').get();
@@ -442,17 +508,19 @@ router.post('/register-device', async (req, res, next) => {
     try {
       await db.prepare(
         `INSERT INTO device_register_history (device_token, user_id, username, action, platform, sandbox,
-         label, remark, device_name, model, os_version, app_version)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         label, remark, device_name, model, os_version, app_version, token_key, token_name, token_valid)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(device_token, req.user.id, req.user.username, isNew ? 'register' : 'report',
             platform, sandbox, finalLabel, finalRemark,
-            finalDeviceName, finalModel, finalOsVersion, finalAppVersion);
+            finalDeviceName, finalModel, finalOsVersion, finalAppVersion,
+            tokenKey, tokenName, tokenValid);
     } catch (_) {}
 
     sendNewDeviceEmail({
       token: device_token, platform, sandbox, label, username: req.user.username,
       totalDevices: totalCount.count, isNew, remark: finalRemark,
       deviceName: finalDeviceName, model: finalModel, osVersion: finalOsVersion, appVersion: finalAppVersion,
+      tokenKey, tokenName, tokenValid,
     }).catch(() => {});
 
     res.json({ success: true, message: '设备 Token 注册成功' });
@@ -547,6 +615,7 @@ router.get('/devices', async (req, res, next) => {
     const devices = await db.prepare(
       `SELECT pd.id, pd.device_token, pd.platform, pd.sandbox, pd.label, pd.remark,
               pd.device_name, pd.model, pd.os_version, pd.app_version,
+              pd.token_key, pd.token_name, pd.token_valid,
               pd.created_at, u.username
        FROM push_devices pd
        LEFT JOIN users u ON pd.user_id = u.id
