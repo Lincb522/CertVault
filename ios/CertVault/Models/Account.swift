@@ -28,8 +28,15 @@ struct AccountStats: Codable {
     let profiles: Int?
 }
 
+struct TestflightInviteResult: Decodable {
+    let added: Bool?
+    let mode: String?
+    let tester_id: String?
+}
+
 struct TestConnectionResult: Decodable {
     let issuer_id: String?
     let key_id: String?
     let certificates_found: Int?
+    let testflight_invite: TestflightInviteResult?
 }

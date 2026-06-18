@@ -1,0 +1,278 @@
+CertVault 服务器维护文档
+
+服务器: 125.110.207.231 | SSH 端口: 23 | 用户: zhiwen | sudo 密码: 123
+内网 IP: 10.101.0.3
+
+================================================================================
+一、连接服务器
+================================================================================
+
+ssh -p 23 zhiwen@125.110.207.231
+
+本地测试（SSH 隧道）：
+ssh -p 23 -L 8080:127.0.0.1:3006 zhiwen@125.110.207.231 -N
+然后浏览器访问 http://localhost:8080/admin/
+
+
+================================================================================
+二、目录结构
+================================================================================
+
+项目根目录:       /www/wwwroot/cert-manager/deploy/
+后端入口:         /www/wwwroot/cert-manager/deploy/app.js
+后端路由:         /www/wwwroot/cert-manager/deploy/routes/
+后端配置:         /www/wwwroot/cert-manager/deploy/config/
+后端服务:         /www/wwwroot/cert-manager/deploy/services/
+前端静态文件:     /www/wwwroot/cert-manager/deploy/client/
+运行时数据:       /www/wwwroot/cert-manager/deploy/data/
+环境变量:         /www/wwwroot/cert-manager/deploy/.env
+Nginx 配置:       /www/server/panel/vhost/nginx/node_cert-manager.conf
+PM2 输出日志:     /root/.pm2/logs/cert-manager-out.log
+PM2 错误日志:     /root/.pm2/logs/cert-manager-error.log
+
+
+================================================================================
+三、服务管理（PM2）
+================================================================================
+
+# 查看状态
+echo "123" | sudo -S pm2 status
+
+# 查看最近 50 行日志
+echo "123" | sudo -S pm2 logs cert-manager --lines 50 --nostream
+
+# 查看实时日志
+echo "123" | sudo -S pm2 logs cert-manager
+
+# 重启服务
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+# 停止服务
+echo "123" | sudo -S pm2 stop cert-manager
+
+# 启动服务
+echo "123" | sudo -S pm2 start cert-manager
+
+# 验证服务正常
+curl -s http://127.0.0.1:3006/api/health
+
+
+================================================================================
+四、更新后端代码
+================================================================================
+
+将代码文件上传到服务器 /tmp/ 目录后，在服务器上执行：
+
+# 更新单个文件（以 routes/auth.js 为例）
+echo "123" | sudo -S cp /tmp/auth.js /www/wwwroot/cert-manager/deploy/routes/auth.js
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+# 更新单个配置文件（以 config/database.js 为例）
+echo "123" | sudo -S cp /tmp/database.js /www/wwwroot/cert-manager/deploy/config/database.js
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+# 更新整个后端（tar 包上传到 /tmp/cert-backend.tar.gz 后）
+echo "123" | sudo -S tar -xzf /tmp/cert-backend.tar.gz -C /www/wwwroot/cert-manager/deploy/
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+# 安装新依赖（package.json 有变化时）
+cd /www/wwwroot/cert-manager/deploy && echo "123" | sudo -S npm install --production
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+
+================================================================================
+五、更新前端代码
+================================================================================
+
+将 dist.zip 上传到服务器 /tmp/ 目录后，在服务器上执行：
+
+unzip -o /tmp/dist.zip -d /tmp/dist_tmp
+echo "123" | sudo -S cp -r /tmp/dist_tmp/dist/. /www/wwwroot/cert-manager/deploy/client/
+rm -rf /tmp/dist_tmp /tmp/dist.zip
+echo "前端更新完成"
+
+# 验证前端文件
+ls /www/wwwroot/cert-manager/deploy/client/
+# 应有: index.html assets/ icons/
+
+
+================================================================================
+六、环境变量配置（.env）
+================================================================================
+
+# 查看
+echo "123" | sudo -S cat /www/wwwroot/cert-manager/deploy/.env
+
+# 编辑
+echo "123" | sudo -S nano /www/wwwroot/cert-manager/deploy/.env
+
+当前配置：
+----------------------------------------
+PORT=3006
+SERVER_URL=https://p12.g600.cn
+PG_HOST=127.0.0.1
+PG_PORT=5432
+PG_DATABASE=CertManager
+PG_USER=CertManager
+PG_PASSWORD=CertManager@2025
+ENCRYPTION_KEY=47f8496afac08e225dadde549cca593f
+APP_NAME=CertVault
+SMTP_HOST=smtp.163.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=zhiwen2528@163.com
+SMTP_PASS=MGeziS9iNnfECuSS
+SMTP_FROM=zhiwen2528@163.com
+SMTP_FROM_NAME=CertVault
+----------------------------------------
+
+注意：ENCRYPTION_KEY 不可更改，改了历史加密数据将无法解密！
+
+修改后重启：
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+
+================================================================================
+七、数据库管理（PostgreSQL）
+================================================================================
+
+连接信息：
+  主机: 127.0.0.1  端口: 5432  库名: CertManager  用户: CertManager  密码: CertManager@2025
+
+# 连接数据库
+PGPASSWORD='CertManager@2025' psql -U CertManager -h 127.0.0.1 -d CertManager
+
+# 查看各表记录数
+PGPASSWORD='CertManager@2025' psql -U CertManager -h 127.0.0.1 -d CertManager -c \
+  "SELECT COUNT(*) as users FROM users; SELECT COUNT(*) as accounts FROM accounts; SELECT COUNT(*) as devices FROM devices; SELECT COUNT(*) as certificates FROM certificates;"
+
+# 查看用户列表
+PGPASSWORD='CertManager@2025' psql -U CertManager -h 127.0.0.1 -d CertManager -c \
+  "SELECT id, username, role, email FROM users;"
+
+# 重置管理员账号（清空后重启自动创建 admin / admin123）
+PGPASSWORD='CertManager@2025' psql -U CertManager -h 127.0.0.1 -d CertManager -c \
+  "DELETE FROM users WHERE role='superadmin';"
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+# 手动备份数据库
+PGPASSWORD='CertManager@2025' pg_dump -U CertManager -h 127.0.0.1 CertManager > ~/backup_$(date +%Y%m%d_%H%M).sql
+
+# 恢复数据库
+PGPASSWORD='CertManager@2025' psql -U CertManager -h 127.0.0.1 CertManager < ~/backup_YYYYMMDD_HHMM.sql
+
+# 修改数据库密码（改完后同步修改 .env 里的 PG_PASSWORD，再重启服务）
+echo "123" | sudo -S -u postgres psql -c "ALTER USER \"CertManager\" WITH PASSWORD '新密码';"
+echo "123" | sudo -S nano /www/wwwroot/cert-manager/deploy/.env
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+# 修改数据库名（改完后同步修改 .env 里的 PG_DATABASE，再重启服务）
+echo "123" | sudo -S pm2 stop cert-manager
+echo "123" | sudo -S -u postgres psql -c "ALTER DATABASE \"CertManager\" RENAME TO \"新数据库名\";"
+echo "123" | sudo -S nano /www/wwwroot/cert-manager/deploy/.env
+echo "123" | sudo -S pm2 restart cert-manager --update-env
+
+# 新增数据库（用于部署新的独立实例）
+echo "123" | sudo -S -u postgres psql -c "CREATE USER \"新用户名\" WITH PASSWORD '新密码';"
+echo "123" | sudo -S -u postgres psql -c "CREATE DATABASE \"新库名\" OWNER \"新用户名\";"
+echo "123" | sudo -S -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"新库名\" TO \"新用户名\";"
+# 然后修改新实例的 .env 填入对应的 PG_DATABASE / PG_USER / PG_PASSWORD
+
+
+================================================================================
+八、Nginx 管理
+================================================================================
+
+配置文件：/www/server/panel/vhost/nginx/node_cert-manager.conf
+绑定域名：p12.g600.cn p12.6ta.net p12.6wz.net p12.lla8.com p12.52ojk.com p12.kefu.me
+反向代理到：127.0.0.1:3006
+
+# 查看配置
+echo "123" | sudo -S cat /www/server/panel/vhost/nginx/node_cert-manager.conf
+
+# 编辑配置
+echo "123" | sudo -S nano /www/server/panel/vhost/nginx/node_cert-manager.conf
+
+# 测试配置语法
+echo "123" | sudo -S nginx -t
+
+# 重载配置
+echo "123" | sudo -S nginx -s reload
+
+# 查看 Nginx 错误日志
+echo "123" | sudo -S tail -50 /www/server/nginx/logs/error.log
+
+
+================================================================================
+九、SSL 证书配置
+================================================================================
+
+注意：需要路由器先把 80/443 端口映射到内网 10.101.0.3，才能申请证书
+
+# 安装 certbot
+echo "123" | sudo -S apt install -y certbot python3-certbot-nginx
+
+# 申请证书（所有域名）
+echo "123" | sudo -S certbot --nginx \
+  -d p12.g600.cn \
+  -d p12.6ta.net \
+  -d p12.6wz.net \
+  -d p12.lla8.com \
+  -d p12.52ojk.com \
+  -d p12.kefu.me
+
+# 查看证书状态
+echo "123" | sudo -S certbot certificates
+
+# 手动续期
+echo "123" | sudo -S certbot renew
+
+
+================================================================================
+十、常见问题排查
+================================================================================
+
+服务不可用（502/连接失败）：
+  echo "123" | sudo -S pm2 status
+  curl -s http://127.0.0.1:3006/api/health
+  echo "123" | sudo -S pm2 logs cert-manager --lines 50 --nostream
+
+数据库列缺失（column does not exist）：
+  # 根据错误提示的列名手动添加
+  PGPASSWORD='CertManager@2025' psql -U CertManager -h 127.0.0.1 -d CertManager -c \
+    "ALTER TABLE 表名 ADD COLUMN IF NOT EXISTS 列名 数据类型;"
+
+数据库连接失败：
+  echo "123" | sudo -S systemctl status postgresql
+  PGPASSWORD='CertManager@2025' psql -U CertManager -h 127.0.0.1 -d CertManager -c "SELECT 1;"
+
+前端页面空白/404：
+  ls /www/wwwroot/cert-manager/deploy/client/
+  # 应有 index.html 和 assets 目录
+
+外部无法访问（只能内网用）：
+  # 原因：服务器内网 IP 10.101.0.3，需路由器把 80/443 映射过来
+  # 临时方案：SSH 隧道本地访问
+  ssh -p 23 -L 8080:127.0.0.1:3006 zhiwen@125.110.207.231 -N
+  # 然后访问 http://localhost:8080/admin/
+
+
+================================================================================
+十一、账号信息（请妥善保管！）
+================================================================================
+
+管理员账号:   admin
+管理员密码:   admin123
+SSH 用户:     zhiwen
+SSH 端口:     23
+sudo 密码:    123
+数据库名:     CertManager
+数据库用户:   CertManager
+数据库密码:   CertManager@2025
+加密密钥:     47f8496afac08e225dadde549cca593f
+SMTP 邮箱:    zhiwen2528@163.com
+SMTP 授权码:  MGeziS9iNnfECuSS
+
+================================================================================
+文档结束
+================================================================================

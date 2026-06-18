@@ -327,6 +327,28 @@
         <el-button @click="showDetailDialog = false" round>关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 测试连接（可选：同时加入 TestFlight 测试组） -->
+    <el-dialog v-model="showTestDialog" title="测试 API 连接" width="520px" destroy-on-close @closed="resetTestForm">
+      <p style="margin: 0 0 12px; font-size: 13px; color: var(--nask-text-secondary); line-height: 1.6">
+        先验证与 App Store Connect API 是否正常。若同时填写<strong>邮箱</strong>与<strong>测试组 ID</strong>，连接成功后会自动将该邮箱加入对应 TestFlight 外部测试组（可在 TestFlight 页复制分组 ID）。
+      </p>
+      <el-form label-width="100px" label-position="left">
+        <el-form-item label="邀请邮箱">
+          <el-input v-model="testForm.email" placeholder="选填，与测试组 ID 成对使用" clearable />
+        </el-form-item>
+        <el-form-item label="姓名">
+          <el-input v-model="testForm.full_name" placeholder="选填，默认 Tester" clearable />
+        </el-form-item>
+        <el-form-item label="测试组 ID">
+          <el-input v-model="testForm.group_id" placeholder="选填，betaGroups 的 UUID" clearable />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showTestDialog = false" round>取消</el-button>
+        <el-button type="primary" round :loading="!!testingId" @click="runTestConnection">开始测试</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -349,6 +371,9 @@ const saving = ref(false)
 const importing = ref(false)
 const editingId = ref(null)
 const testingId = ref(null)
+const showTestDialog = ref(false)
+const testPendingId = ref(null)
+const testForm = ref({ email: '', full_name: '', group_id: '' })
 const isDragging = ref(false)
 const p8FileName = ref('')
 const p8KeyType = ref('')
@@ -615,11 +640,42 @@ function downloadP8(row) {
   window.open(accountApi.downloadP8(row.id), '_blank')
 }
 
-async function testConnection(id) {
+function resetTestForm() {
+  testForm.value = { email: '', full_name: '', group_id: '' }
+  testPendingId.value = null
+}
+
+function openTestDialog(id) {
+  testPendingId.value = id
+  testForm.value = { email: '', full_name: '', group_id: '' }
+  showTestDialog.value = true
+}
+
+async function runTestConnection() {
+  const id = testPendingId.value
+  if (!id) return
+  const { email, full_name, group_id } = testForm.value
+  const e = (email || '').trim()
+  const g = (group_id || '').trim()
+  if ((e && !g) || (!e && g)) {
+    return ElMessage.warning('邀请测试员需同时填写邮箱与测试组 ID，或两项均留空')
+  }
   testingId.value = id
   try {
-    const res = await accountApi.test(id)
-    ElMessage.success(`API 连接成功，发现 ${res.data?.certificates_found || 0} 个证书`)
+    const payload = {}
+    if (e && g) {
+      payload.email = e
+      payload.group_id = g
+      const fn = (full_name || '').trim()
+      if (fn) payload.full_name = fn
+    }
+    const res = await accountApi.test(id, payload)
+    let msg = `API 连接成功，发现 ${res.data?.certificates_found || 0} 个证书`
+    if (res.data?.testflight_invite?.added) {
+      msg += '；已将该邮箱加入测试组'
+    }
+    ElMessage.success(msg)
+    showTestDialog.value = false
   } catch (err) {
     const data = err.response?.data
     const msg = data?.message || '连接失败'
@@ -638,6 +694,10 @@ async function testConnection(id) {
   } finally {
     testingId.value = null
   }
+}
+
+function testConnection(id) {
+  openTestDialog(id)
 }
 
 function handleCommand(cmd, row) {

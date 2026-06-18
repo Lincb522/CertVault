@@ -54,7 +54,7 @@ export const accountApi = {
   create: (data) => api.post('/accounts', data),
   update: (id, data) => api.put(`/accounts/${id}`, data),
   delete: (id) => api.delete(`/accounts/${id}`),
-  test: (id) => api.post(`/accounts/${id}/test`),
+  test: (id, data) => api.post(`/accounts/${id}/test`, data || {}),
   downloadP8: (id) => downloadUrl(`/accounts/${id}/download-p8`),
   uploadP8: (file) => {
     const formData = new FormData()
@@ -183,7 +183,7 @@ export const pushApi = {
 }
 
 export const udidApi = {
-  createRequest: () => api.post('/udid/create-request'),
+  createRequest: (accountId) => api.post('/udid/create-request', accountId ? { account_id: accountId } : {}),
   enrollUrl: (requestId, host) => `/api/udid/enroll/${requestId}?host=${encodeURIComponent(host)}`,
   result: (requestId) => api.get(`/udid/result/${requestId}`),
 }
@@ -220,6 +220,9 @@ export const appsApi = {
 }
 
 export const testflightApi = {
+  createShareLink: (data) => api.post('/testflight/share-links', data),
+  listShareLinks: (accountId) => api.get('/testflight/share-links', { params: { account_id: accountId } }),
+  deleteShareLink: (slug) => api.delete(`/testflight/share-links/${slug}`),
   groups: (accountId, appId) => api.get('/testflight/groups', { params: { account_id: accountId, app_id: appId } }),
   groupAppInfo: (groupId, accountId) => api.get(`/testflight/groups/${groupId}/app-info`, { params: { account_id: accountId } }),
   createGroup: (data) => api.post('/testflight/groups', data),

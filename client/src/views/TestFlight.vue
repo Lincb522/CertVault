@@ -64,10 +64,20 @@
             <el-table-column prop="created_date" label="创建时间" min-width="160">
               <template #default="{ row }">{{ formatDate(row.created_date) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="250" fixed="right">
+            <el-table-column label="操作" width="340" fixed="right">
               <template #default="{ row }">
                 <el-button size="small" @click="viewGroupTesters(row)">
                   <el-icon><User /></el-icon> 测试员
+                </el-button>
+                <el-button
+                  size="small"
+                  type="success"
+                  plain
+                  :loading="shareTargetId === row.id"
+                  :disabled="!!shareTargetId && shareTargetId !== row.id"
+                  @click="createUserShare(row)"
+                >
+                  <el-icon><Link /></el-icon> 邀请链接
                 </el-button>
                 <el-button size="small" type="primary" @click="openDistributeDialog(row)">
                   <el-icon><Promotion /></el-icon> 分发
@@ -221,6 +231,20 @@
       </el-table>
     </el-dialog>
 
+    <!-- 用户端公开页链接（发给测试员，无需登录） -->
+    <el-dialog v-model="showShareUrlDialog" title="邀请测试员填写信息" width="520px" destroy-on-close>
+      <p style="font-size: 13px; color: var(--nask-text-secondary); margin: 0 0 12px; line-height: 1.55">
+        将下方链接发给测试员。对方<strong>无需登录</strong>，在页面填写<strong>姓名与邮箱</strong>即可加入本测试组，Apple 会向其邮箱发送 TestFlight 邀请。
+      </p>
+      <el-input v-model="shareUrlFull" readonly type="textarea" :rows="2" />
+      <template #footer>
+        <el-button @click="showShareUrlDialog = false">关闭</el-button>
+        <el-button type="primary" @click="copyShareUrl">
+          <el-icon><DocumentCopy /></el-icon> 复制链接
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- 分发构建弹窗 -->
     <el-dialog v-model="showDistributeDialog" :title="`分发构建到「${selectedGroup?.name || ''}`" width="560px" destroy-on-close>
       <el-alert v-if="!builds.length" type="info" title="请先在「构建版本」Tab 中加载构建列表" :closable="false" style="margin-bottom: 12px" />
@@ -261,7 +285,7 @@ import { ref, watch } from 'vue'
 import { useAppStore } from '../stores/app'
 import { appsApi, testflightApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Warning, Plus, Delete, User, Promotion, Box } from '@element-plus/icons-vue'
+import { Refresh, Warning, Plus, Delete, User, Promotion, Box, Link, DocumentCopy } from '@element-plus/icons-vue'
 
 const store = useAppStore()
 const activeTab = ref('groups')
@@ -293,6 +317,42 @@ const groupTestersLoading = ref(false)
 const showDistributeDialog = ref(false)
 const distributeForm = ref({ build_ids: [], whats_new: '', locale: 'zh-Hans' })
 const distributing = ref(false)
+
+const showShareUrlDialog = ref(false)
+const shareUrlFull = ref('')
+const shareTargetId = ref(null)
+
+function adminBaseUrl() {
+  const base = import.meta.env.BASE_URL || '/admin/'
+  return `${window.location.origin}${base.replace(/\/$/, '')}`
+}
+
+async function createUserShare(row) {
+  if (!store.currentAccountId) return
+  shareTargetId.value = row.id
+  try {
+    const res = await testflightApi.createShareLink({
+      account_id: store.currentAccountId,
+      group_id: row.id,
+    })
+    const path = res.data?.path || ''
+    shareUrlFull.value = `${adminBaseUrl()}${path}`
+    showShareUrlDialog.value = true
+    ElMessage.success('已生成邀请链接')
+  } catch (e) {
+    console.error(e)
+  } finally {
+    shareTargetId.value = null
+  }
+}
+
+function copyShareUrl() {
+  if (!shareUrlFull.value) return
+  navigator.clipboard.writeText(shareUrlFull.value).then(
+    () => ElMessage.success('已复制'),
+    () => ElMessage.warning('复制失败，请手动选择文本复制')
+  )
+}
 
 async function loadApps() {
   if (!store.currentAccountId) return

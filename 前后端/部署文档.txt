@@ -1,0 +1,719 @@
+================================================================================
+                    CertVault 部署文档（纯文本 · 详版）
+================================================================================
+
+
+
+
+--------------------------------------------------------------------------------
+一、部署完成后你应得到什么（目标）
+--------------------------------------------------------------------------------
+
+完成全部步骤后，正常情况下应满足：
+
+  1）用浏览器访问 https://你的域名/admin/ 能看到 CertVault 管理端页面（或登录页）。
+
+  2）服务器本机某端口（例如 3006）上有 Node 进程在监听，进程由 PM2 管理，服务器重启后
+     能自动拉起。
+
+  3）PostgreSQL 里有一个业务库（名称与 .env 里 PG_DATABASE 一致），里面的表由程序
+     第一次成功启动时自动创建，不需要你手工建表。
+
+  4）对外只暴露 80/443（由 Nginx 处理），数据库端口不对公网开放；HTTPS 证书已配置。
+
+若某一步与上述不符，可到文末「十三、常见问题」对照排查。
+
+
+--------------------------------------------------------------------------------
+二、开始部署前的确认清单
+--------------------------------------------------------------------------------
+
+步骤 2.1  操作系统与权限
+
+  · 你有一台 Linux 服务器（VPS 或物理机），能通过 SSH 用 root 或 sudo 用户登录。
+
+  · 已安装宝塔面板，并能用浏览器登录面板（用于后面添加网站、SSL、反代）。
+
+步骤 2.2  域名与解析
+
+  · 你已有一个域名（例如 p12.example.com），且已在域名服务商处添加 A 记录，指向
+    这台服务器的公网 IP。
+
+  · 在服务器上执行（把域名换成你的）：
+
+        ping -c 2 p12.example.com
+
+    返回的 IP 应与本机 curl -4 ifconfig.me 或面板显示的公网 IP 一致（若使用 CDN，
+    可能先解析到 CDN，需保证最终能到你的源站，HTTPS 证书通常绑定源站域名）。
+
+步骤 2.3  统一路径约定
+
+  · 下文默认项目根目录（含 package.json、.env 的目录）为：
+
+        /www/wwwroot/cert-manager/deploy
+
+  · 若你希望放在别的目录（例如 /data/certvault），请从「四、准备项目目录」起把所有
+    路径改成你自己的，并保持整篇一致。
+
+步骤 2.4  准备记录本
+
+  · 建议用纸笔或密码管理器记录：数据库用户密码、.env 中的 ENCRYPTION_KEY（生成后只存
+    安全处）、SMTP 密码等。ENCRYPTION_KEY 一旦用于生产数据后不可再改。
+
+
+--------------------------------------------------------------------------------
+三、安装并配置 PostgreSQL（详）
+--------------------------------------------------------------------------------
+
+目标：本机 127.0.0.1 上运行 PostgreSQL，存在用户 CertManager、数据库 CertManager，
+      且能用密码从本机连接。表结构由 CertVault 首次启动创建。
+
+步骤 3.1  安装 PostgreSQL 软件
+
+  任选其一。
+
+  方式 A — 宝塔安装（适合不熟悉命令行的用户）
+
+    · 登录宝塔 → 软件商店 → 搜索「PostgreSQL」→ 选择版本（建议 14 或 15）→ 安装。
+    · 安装完成后，在软件商店已安装列表里找到 PostgreSQL，点击「设置」，确认服务状态
+      为「运行中」。记下「数据目录」路径，后面排错可能用到。
+
+  方式 B — 系统包安装（以常见情况为例，具体以你系统文档为准）
+
+    · Ubuntu / Debian 示例：
+
+          sudo apt update
+          sudo apt install -y postgresql postgresql-contrib
+          sudo systemctl enable postgresql
+          sudo systemctl start postgresql
+
+    · CentOS 系列可使用发行版对应的 PostgreSQL 官方源安装指定大版本，安装后同样
+      systemctl enable 与 start。
+
+  验证安装：
+
+        psql --version
+
+  应输出版本号，例如 psql (PostgreSQL) 15.x。
+
+步骤 3.2  进入数据库超级用户会话
+
+  PostgreSQL 默认有一个操作系统用户 postgres，对应数据库超级用户。在 SSH 执行：
+
+        sudo -u postgres psql
+
+  若成功，提示符类似：
+
+        postgres=#
+
+  若提示找不到用户 postgres，可试：
+
+        sudo su - postgres -c "psql"
+
+  仍失败时，检查 PostgreSQL 是否已启动：
+
+        sudo systemctl status postgresql
+
+  服务名可能是 postgresql、postgresql-15 等，以 systemctl 列表为准。
+
+步骤 3.3  创建业务用户与数据库
+
+  在 psql 提示符 postgres=# 下，逐行执行（把「你的强密码」换成你自己设的密码，并记下）：
+
+        CREATE USER "CertManager" WITH PASSWORD '你的强密码';
+        CREATE DATABASE "CertManager" OWNER "CertManager";
+        GRANT ALL PRIVILEGES ON DATABASE "CertManager" TO "CertManager";
+
+  说明：
+
+    · 用户名、数据库名使用双引号且大小写与下文 .env 中完全一致（CertManager）。
+
+    · 若提示角色已存在，说明以前建过，可改用 DROP USER 前先确认无其他库依赖，或换
+      新用户名并在全篇统一修改。
+
+  退出 psql：
+
+        \q
+
+步骤 3.4  配置本机密码登录（pg_hba.conf）
+
+  PostgreSQL 默认可能只允许 peer 或 trust，需要允许 127.0.0.1 使用 md5 密码。
+
+  查询配置文件路径：
+
+        sudo -u postgres psql -c "SHOW hba_file;"
+
+  记下返回的路径，用 root 或 sudo 编辑，例如：
+
+        sudo vi /var/lib/pgsql/15/data/pg_hba.conf
+
+  （路径因安装方式而异，以 SHOW hba_file 为准。）
+
+  在文件中找到或追加（注意顺序：更具体的规则在前；若已有冲突规则需调整）：
+
+        local   all             all                                     md5
+        host    all             all             127.0.0.1/32            md5
+
+  若你使用 PostgreSQL 15+ 且策略要求 scram-sha-256，可把 md5 改成 scram-sha-256，
+  并确保用户密码重新设置过一次以使用新加密方式。
+
+  保存文件后重载配置（服务名按实际修改）：
+
+        sudo systemctl reload postgresql
+
+  若 reload 失败，可 restart（会短暂断开连接）：
+
+        sudo systemctl restart postgresql
+
+步骤 3.5  测试业务用户能否连接
+
+  在 SSH 执行（把密码换成步骤 3.3 中的密码，一行内不要换行）：
+
+        PGPASSWORD='你的强密码' psql -h 127.0.0.1 -U CertManager -d CertManager -c "SELECT 1;"
+
+  预期：输出包含一行，其中有数字 1。
+
+  若报 password authentication failed：检查密码、pg_hba、用户名是否带引号导致大小写问题。
+
+  若报 could not connect：检查 PostgreSQL 是否监听 127.0.0.1（postgresql.conf 中
+  listen_addresses），宝塔安装时一般在面板里可勾选监听地址。
+
+步骤 3.6  关于建表
+
+  此时不要手工 CREATE TABLE。CertVault 应用第一次成功连接数据库时会自动创建表结构。
+  若你提前用空库也可以，只要用户对该库有权限即可。
+
+步骤 3.7  安全提醒
+
+  不要将 PostgreSQL 的 5432 端口对公网 0.0.0.0 放行，除非你很清楚风险并做好认证与防火墙。
+
+
+--------------------------------------------------------------------------------
+四、准备项目目录并上传代码（详）
+--------------------------------------------------------------------------------
+
+目标：服务器上存在目录 /www/wwwroot/cert-manager/deploy，其中有 package.json、src、
+      .env.example，后续在此目录执行 npm 与 pm2。
+
+步骤 4.1  创建目录
+
+  SSH 执行：
+
+        mkdir -p /www/wwwroot/cert-manager
+        cd /www/wwwroot/cert-manager
+
+步骤 4.2  获取代码到 deploy
+
+  方式 A — 本地打包上传
+
+    · 在你自己的电脑上，进入后端工程目录（含 package.json 的目录），排除 node_modules
+      与 .env 打包，例如：
+
+          tar --exclude=node_modules --exclude=.env -czvf cert-src.tar.gz .
+
+    · 用 scp 传到服务器：
+
+          scp cert-src.tar.gz root@服务器IP:/www/wwwroot/cert-manager/
+
+    · 在服务器上：
+
+          cd /www/wwwroot/cert-manager
+          mkdir -p deploy
+          tar -xzvf cert-src.tar.gz -C deploy
+          rm -f cert-src.tar.gz
+
+  方式 B — Git
+
+        cd /www/wwwroot/cert-manager
+        git clone 你的仓库地址 deploy
+        cd deploy
+        git checkout 你需要发布的分支或标签
+
+  方式 C — 宝塔文件管理
+
+    · 在面板「文件」中进入 /www/wwwroot/cert-manager，上传 zip 并解压到 deploy。
+
+步骤 4.3  检查关键文件是否存在
+
+  在服务器执行：
+
+        ls -la /www/wwwroot/cert-manager/deploy/
+
+  应至少看到：package.json、src、.env.example。
+
+  若缺少 .env.example，可从仓库根目录 server 工程里复制一份到 deploy。
+
+步骤 4.4  前端目录说明
+
+  · 若仓库里已有 client 且内含构建好的 index.html，可暂时保留。
+
+  · 若没有，留空即可，第七节会单独把构建产物上传进来。
+
+步骤 4.5  设置目录所有者（避免 Node 无法写 data）
+
+  宝塔下网站用户常为 www，执行：
+
+        chown -R www:www /www/wwwroot/cert-manager/deploy
+
+  若你以 root 跑 pm2，也可 chown 为 root，但通常与 Nginx 统一为 www 更安全。
+
+步骤 4.6  检查磁盘空间
+
+        df -h /www/wwwroot/cert-manager
+
+  保证有数 GB 可用空间，证书与上传会增长。
+
+
+--------------------------------------------------------------------------------
+五、安装 Node 依赖与创建数据子目录（详）
+--------------------------------------------------------------------------------
+
+目标：install 成功；data 下各子目录存在，供运行时写入。
+
+步骤 5.1  确认 Node 与 npm 可用
+
+  在服务器执行：
+
+        node -v
+        npm -v
+
+  若 command not found，在宝塔「软件商店」安装「Node 版本管理器」，选一个 LTS 版本
+  安装，或在系统里用官方方式安装 Node 18+。
+
+步骤 5.2  进入 deploy 并安装依赖
+
+        cd /www/wwwroot/cert-manager/deploy
+        npm install --production
+
+  说明：
+
+    · --production 会省略 devDependencies，适合线上。若安装报错缺少某包，再改全量
+      npm install 排查。
+
+    · 若网络慢，可配置国内 npm 镜像（按你公司策略）。
+
+  预期：最后显示 added 若干 packages，无 ERR。
+
+步骤 5.3  创建 data 子目录
+
+        mkdir -p data/certificates data/profiles data/p8keys data/uploads
+        mkdir -p data/downloads data/tmp data/signed_ipa data/ssl
+
+  再次改属主（新建目录也要）：
+
+        chown -R www:www data
+
+步骤 5.4  各子目录用途（便于以后排错）
+
+  data/certificates    用户证书、p12 等
+  data/profiles        描述文件 mobileprovision 等
+  data/p8keys          Apple p8 等密钥材料
+  data/uploads         用户上传
+  data/downloads       对外下载文件（如示例 IPA）
+  data/tmp             临时文件
+  data/signed_ipa      UDID 一键签名生成的 IPA
+  data/ssl             可选：自行放置 fullchain、privkey 供 mobileconfig 签名
+
+
+--------------------------------------------------------------------------------
+六、配置环境变量 .env（详）
+--------------------------------------------------------------------------------
+
+目标：deploy/.env 存在且变量正确，应用能连库、对外 URL 正确。
+
+步骤 6.1  生成文件
+
+        cd /www/wwwroot/cert-manager/deploy
+        cp .env.example .env
+
+步骤 6.2  编辑方式
+
+  可用 nano .env、vi .env，或在宝塔文件管理中点开编辑。注意不要引入 Windows 回车符
+  （若从本地上传，建议 UTF-8 无 BOM）。
+
+步骤 6.3  逐项填写 — PORT 与 SERVER_URL
+
+  PORT=3006
+
+    · 表示 Node 监听本机 3006 端口。若你改成 8080，则全文所有 3006 都要改成 8080。
+
+  SERVER_URL=https://你的域名
+
+    · 必须带 https://，域名与证书一致，不要写成 IP（除非证书也是 IP 证书）。
+    · 末尾一般不要加斜杠，除非你知道后端如何拼接 URL。
+    · 此值会用于邮件里的链接、UDID 回调等，填错会导致跳转错误域名。
+
+步骤 6.4  逐项填写 — PostgreSQL
+
+  PG_HOST=127.0.0.1
+  PG_PORT=5432
+  PG_DATABASE=CertManager
+  PG_USER=CertManager
+  PG_PASSWORD=第三节设置的密码
+
+    · 密码中若含特殊字符，一般不需要引号，但若有问题可尝试用单引号包裹或换密码。
+
+步骤 6.5  逐项填写 — ENCRYPTION_KEY
+
+  在任意装了 Node 的机器执行：
+
+        node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
+
+  输出为一行 32 个十六进制字符，复制到：
+
+        ENCRYPTION_KEY=这一行粘贴不要有空格
+
+  重要：
+
+    · 第一次上线前就要定好；上线并写入敏感数据后不要再改，否则历史加密数据无法解密。
+    · 不要将 .env 提交到公开 Git 仓库。
+
+步骤 6.6  建议填写 — APP_NAME
+
+  APP_NAME=CertVault
+
+    · 会显示在部分页面与描述文件中，可按品牌修改。
+
+步骤 6.7  可选 — SMTP（发邮件）
+
+  若需要验证码、通知邮件，按你的邮箱服务商填写，例如常见 QQ 邮箱：
+
+  SMTP_HOST=smtp.qq.com
+  SMTP_PORT=465
+  SMTP_SECURE=true
+  SMTP_USER=你的邮箱@qq.com
+  SMTP_PASS=SMTP 授权码（不是 QQ 登录密码）
+  SMTP_FROM=你的邮箱@qq.com
+
+  不配则不发邮件；具体键名以 .env.example 为准（若还有 SMTP_FROM_NAME 等一并填）。
+
+步骤 6.8  可选 — APNs
+
+  APNS_SANDBOX=true
+
+    · 沙箱与生产环境按 Apple 后台与项目要求选择 true/false。
+
+步骤 6.9  可选 — UDID 描述文件签名证书
+
+  若项目支持环境变量 SSL_CERT_PATH、SSL_KEY_PATH、SSL_CHAIN_PATH：
+
+    · 可填宝塔为该站点申请的 Let’s Encrypt 证书路径（fullchain.pem、privkey.pem），
+      使 mobileconfig 被 iOS 信任。路径须为服务器绝对路径。
+
+步骤 6.10  保存后设置权限
+
+        chmod 600 .env
+        chown www:www .env
+
+步骤 6.11  自检
+
+  执行（不要泄露真实密码给他人）：
+
+        grep -E '^[A-Z]' .env | sed 's/PASSWORD=.*/PASSWORD=***/' | sed 's/KEY=.*/KEY=***/'
+
+  确认没有空行错误、没有全角符号。
+
+
+--------------------------------------------------------------------------------
+七、部署前端静态文件（详）
+--------------------------------------------------------------------------------
+
+目标：deploy/client/ 下有 index.html 与 assets（或构建产物目录结构）。
+
+步骤 7.1  在开发机构建
+
+  进入前端工程（例如 client 目录），执行：
+
+        npm install
+        npm run build
+
+  构建成功后，会生成 dist 目录（名称以项目为准）。
+
+步骤 7.2  上传 dist 内全部内容
+
+  注意：上传的是 dist「里面」的文件，不要把 dist 文件夹本身作为一层嵌套错位置。
+
+  服务器上应为：
+
+        /www/wwwroot/cert-manager/deploy/client/index.html
+        /www/wwwroot/cert-manager/deploy/client/assets/...
+
+  可用 scp -r dist/* user@server:/www/wwwroot/cert-manager/deploy/client/
+
+步骤 7.3  关于 base 路径
+
+  若 vite/webpack 配置了 base: '/admin/'，必须与线上访问路径一致。构建完成后可打开
+  dist/index.html 看资源引用是否以 /admin/ 开头。
+
+步骤 7.4  浏览器验证（可先跳过 SSL，用 IP+端口测，正式仍应用域名 HTTPS）
+
+  完成第八、九节后访问：
+
+        https://你的域名/admin/
+
+  若 404，检查 client 是否在正确路径、pm2 是否运行、反代是否指到同一端口。
+
+
+--------------------------------------------------------------------------------
+八、在宝塔添加网站、HTTPS、反向代理（详）
+--------------------------------------------------------------------------------
+
+前提：域名已解析到本机；第三节数据库与第六节 .env 已就绪；第九节启动后 Node 才响应端口。
+
+步骤 8.1  添加站点
+
+  宝塔左侧「网站」→「添加站点」→
+
+    · 域名：填你的正式域名，如 p12.example.com
+    · 根目录：默认即可（证书与反代不依赖根目录静态文件时，根目录仅作占位）
+    · PHP 版本：选「纯静态」
+    · 数据库：不创建（已在第三节单独建 PostgreSQL）
+    · 提交
+
+步骤 8.2  申请或上传 SSL 证书
+
+  进入该站点 →「SSL」→
+
+    · 若域名已解析好，可尝试 Let’s Encrypt 一键申请（注意 80 端口可被访问用于验证）。
+    · 或上传已有证书（pem/key）。
+
+  开启「强制 HTTPS」，使 http 自动跳转到 https。
+
+步骤 8.3  配置反向代理
+
+  进入该站点 →「设置」→「反向代理」→「添加反向代理」：
+
+    · 代理名称：certvault（任意）
+    · 目标 URL：http://127.0.0.1:3006
+    · 发送域名：默认 $host（按宝塔版本勾选「保留 Host」类选项，使后端能识别域名）
+
+  其中端口 3006 必须与 .env 中 PORT 完全一致。
+
+步骤 8.4  高级：超时与 WebSocket（按需）
+
+  若面板提供「读取超时」「发送超时」，可调到 60 秒或更大，避免大文件或长请求断开。
+  若应用使用 WebSocket，在反代中开启相关支持（视宝塔版本说明）。
+
+步骤 8.5  检查 Nginx 配置（可选）
+
+  在站点「配置文件」中确认存在 proxy_pass http://127.0.0.1:3006; 且无语法错误。
+  修改后「重载」Nginx。
+
+步骤 8.6  防火墙
+
+  宝塔「安全」中放行 80、443。若使用云厂商安全组，同样在控制台放行。
+
+步骤 8.7  不要对公网开放 5432 与 Node 端口
+
+  仅本机 Nginx 反代访问 Node；数据库仅 127.0.0.1。
+
+
+--------------------------------------------------------------------------------
+九、使用 PM2 启动后端（详）
+--------------------------------------------------------------------------------
+
+目标：进程名 cert-manager（可自定）常驻，开机自启。
+
+步骤 9.1  安装 PM2（若未装）
+
+        npm install -g pm2
+
+  若权限不足，可用 sudo 或配置 npm 全局目录到用户目录。
+
+步骤 9.2  确认工作目录
+
+        cd /www/wwwroot/cert-manager/deploy
+        pwd
+        ls -la .env package.json src/app.js
+
+  应能看到 .env 与入口文件（入口名以项目为准，常见为 src/app.js）。
+
+步骤 9.3  首次启动
+
+        pm2 start src/app.js --name cert-manager
+
+  若入口不是 src/app.js，以仓库实际为准（如根目录 app.js）。
+
+步骤 9.4  看日志
+
+        pm2 logs cert-manager --lines 80
+
+  关注：
+
+    · 是否出现数据库连接成功、Server running on 之类字样。
+    · 若报 ENCRYPTION_KEY 错误，检查长度是否为 32 位十六进制。
+    · 若报 connect ECONNREFUSED 到 127.0.0.1:5432，检查 PostgreSQL 与 PG_*。
+
+  按 Ctrl+C 退出日志跟随（不停止进程）。
+
+步骤 9.5  保存进程列表
+
+        pm2 save
+
+步骤 9.6  开机自启
+
+        pm2 startup
+
+  终端会输出一条以 sudo 开头的命令，完整复制执行一次。然后再 pm2 save。
+
+步骤 9.7  若 .env 未加载
+
+  若日志提示找不到模块或配置，检查：
+
+    · 当前 pm2 的 cwd：pm2 show cert-manager 查看 exec cwd。
+    · 若 cwd 不是 deploy，可用 pm2 delete cert-manager 后加参数重启：
+
+          cd /www/wwwroot/cert-manager/deploy
+          pm2 start src/app.js --name cert-manager --cwd /www/wwwroot/cert-manager/deploy
+
+    · 或查阅项目是否要求从上级目录启动（少数项目如此）。
+
+步骤 9.8  常用 PM2 命令
+
+        pm2 status
+        pm2 restart cert-manager
+        pm2 stop cert-manager
+        pm2 delete cert-manager
+
+
+--------------------------------------------------------------------------------
+十、整体验证（详）
+--------------------------------------------------------------------------------
+
+步骤 10.1  进程状态
+
+        pm2 status
+
+  cert-manager 一行 status 应为 online，restart 次数不应持续暴增。
+
+步骤 10.2  本机 HTTP
+
+        curl -I http://127.0.0.1:3006/
+
+  应返回 HTTP/1.1 及状态码（200 或 302 等），不是 Connection refused。
+
+步骤 10.3  浏览器 HTTPS
+
+  访问 https://你的域名/admin/
+
+  应出现前端页面。若证书报错，检查 SSL 是否部署在正确站点、域名是否一致。
+
+步骤 10.4  数据库表
+
+        PGPASSWORD='你的密码' psql -h 127.0.0.1 -U CertManager -d CertManager -c "\dt"
+
+  在应用已启动并访问过后，应能看到多张表（具体表名以项目为准）。若仍为空，可能尚未
+  触发迁移，可看应用日志是否报错。
+
+步骤 10.5  对外端口扫描（可选）
+
+  不应从外网 telnet 你的 IP 3006 成功（若未对公网映射该端口）。仅 443 可访问站点。
+
+
+--------------------------------------------------------------------------------
+十一、可选：邮件与推送
+--------------------------------------------------------------------------------
+
+邮件：
+
+  · .env 配好 SMTP 后，在系统设置里发测试邮件（若有该功能），或触发注册验证码流程。
+  · 收不到时查垃圾箱、SMTP 授权码、端口是否被云厂商封禁。
+
+推送（APNs）：
+
+  · 在 Apple Developer 创建 Key、配置 Bundle ID 与权限。
+  · .env 中 APNS 相关项按项目文档填写（若项目另有独立配置文件，一并配置）。
+
+
+--------------------------------------------------------------------------------
+十二、日常升级与备份（详）
+--------------------------------------------------------------------------------
+
+升级前必做：
+
+  步骤 12.1  备份数据库
+
+        PGPASSWORD='密码' pg_dump -h 127.0.0.1 -U CertManager CertManager > ~/certvault_backup_日期.sql
+
+  步骤 12.2  打包 data
+
+        tar -czvf ~/certvault_data_日期.tar.gz -C /www/wwwroot/cert-manager/deploy data
+
+  步骤 12.3  停服务（可选，减少写入）
+
+        pm2 stop cert-manager
+
+  步骤 12.4  覆盖代码（保留 .env 与 data）
+
+        · 用 git pull 或上传新包解压，注意不要覆盖 .env。
+
+  步骤 12.5  安装依赖
+
+        cd /www/wwwroot/cert-manager/deploy
+        npm install --production
+
+  步骤 12.6  若前端有更新，重新 build 并覆盖 client
+
+  步骤 12.7  启动
+
+        pm2 restart cert-manager
+        pm2 logs cert-manager --lines 50
+
+日常看日志：
+
+        pm2 logs cert-manager --lines 200
+
+
+--------------------------------------------------------------------------------
+十三、常见问题（详）
+--------------------------------------------------------------------------------
+
+现象：浏览器 502 Bad Gateway
+
+  · pm2 status 是否 online。
+  · PORT 与反代、.env 是否一致。
+  · pm2 logs 是否有崩溃循环。
+  · Nginx 错误日志：宝塔站点 → 日志。
+
+现象：数据库 connection refused
+
+  · systemctl status postgresql
+  · PG_HOST 是否为 127.0.0.1，防火墙是否拦截本机回环（少见）。
+
+现象：数据库 password authentication failed
+
+  · 密码是否与第三节一致，.env 是否保存正确。
+  · pg_hba 是否允许 127.0.0.1 md5。
+
+现象：登录后部分功能异常或解密失败
+
+  · ENCRYPTION_KEY 是否与最初一致，是否误改 .env。
+  · SERVER_URL 是否错误导致回调域名不对。
+
+现象：UDID 描述文件安装提示未签名或不受信任
+
+  · 配置 SSL_CERT_PATH 等为合法域名证书；mobileconfig 签名链完整。
+
+现象：仅 HTTP 能访问、HTTPS 不行
+
+  · 检查 443 是否放行、SSL 是否部署、证书是否过期。
+
+
+--------------------------------------------------------------------------------
+十四、目录结构参考
+--------------------------------------------------------------------------------
+
+/www/wwwroot/cert-manager/deploy/
+  .env                 环境变量（勿提交公开仓库）
+  .env.example
+  package.json
+  package-lock.json
+  src/                 后端源码
+  client/              前端构建产物
+  node_modules/        npm 依赖（勿手工改）
+  data/                运行时数据
+
+
+================================================================================
+文档结束
+================================================================================

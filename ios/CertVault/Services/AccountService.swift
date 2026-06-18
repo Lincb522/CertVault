@@ -46,8 +46,31 @@ struct AccountService {
         _ = try await api.requestRaw("/accounts/\(id)", method: "DELETE")
     }
 
-    func test(id: String) async throws -> TestConnectionResult {
-        let resp: APIResponse<TestConnectionResult> = try await api.request("/accounts/\(id)/test", method: "POST")
+    func test(
+        id: String,
+        inviteEmail: String = "",
+        inviteFullName: String = "",
+        betaGroupId: String = ""
+    ) async throws -> TestConnectionResult {
+        struct Body: Encodable {
+            let email: String?
+            let full_name: String?
+            let group_id: String?
+        }
+        let e = inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let g = betaGroupId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fn = inviteFullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body: Body?
+        if e.isEmpty && g.isEmpty {
+            body = nil
+        } else if !e.isEmpty && !g.isEmpty {
+            body = Body(email: e, full_name: fn.isEmpty ? nil : fn, group_id: g)
+        } else {
+            throw APIError.serverError("邀请测试员需同时填写邮箱与测试组 ID，或两项均留空")
+        }
+        let resp: APIResponse<TestConnectionResult> = try await api.request(
+            "/accounts/\(id)/test", method: "POST", body: body
+        )
         guard let data = resp.data else { throw APIError.serverError(resp.message ?? "测试失败") }
         return data
     }

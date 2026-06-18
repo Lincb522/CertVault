@@ -102,9 +102,11 @@ app.get('/api/app/version', (req, res) => {
 });
 
 const udidRoutes = require('./routes/udid');
+const publicTfRoutes = require('./routes/public-tf');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/udid', udidRoutes);
+app.use('/api/public', publicTfRoutes);
 
 app.get('/udid-result', (req, res) => {
   res.send(require('./pages/udid-result')());

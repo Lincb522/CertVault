@@ -79,13 +79,22 @@ final class AccountViewModel: ObservableObject {
         AppLogger.data.info("👤 Account deleted")
     }
 
-    func testConnection(id: String) async {
+    func testConnection(id: String, inviteEmail: String = "", inviteFullName: String = "", betaGroupId: String = "") async {
         AppLogger.data.info("👤 Testing connection id=\(id)")
         isTesting = true
         testResult = nil
         do {
-            let result = try await service.test(id: id)
-            testResult = "连接成功！发现 \(result.certificates_found ?? 0) 个证书"
+            let result = try await service.test(
+                id: id,
+                inviteEmail: inviteEmail,
+                inviteFullName: inviteFullName,
+                betaGroupId: betaGroupId
+            )
+            var msg = "连接成功！发现 \(result.certificates_found ?? 0) 个证书"
+            if result.testflight_invite?.added == true {
+                msg += "；已将该邮箱加入测试组"
+            }
+            testResult = msg
             AppLogger.data.info("👤 Connection test OK | certs=\(result.certificates_found ?? 0)")
         } catch is CancellationError {
             isTesting = false

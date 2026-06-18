@@ -1,4 +1,6 @@
 const express = require('express');
+const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 const AppleApiService = require('../services/apple-api');
 const { getDecryptedAccount, checkAccountOwnership } = require('../services/account-helper');
@@ -725,5 +727,68 @@ async function triggerTfAutoPush(userId, buildInfo = {}) {
 
   console.log(`TF自动推送[${versionStr}]: ${results.success}成功 ${results.failed}失败 (共${devices.length}设备)`);
 }
+
+// ---- 用户端公开页：分享 slug（无需登录访问 /tf/s/:slug）----
+router.post('/share-links', async (req, res, next) => {
+  try {
+    const { account_id, group_id, enable_public_link } = req.body;
+    if (!account_id || !group_id) {
+      return res.status(400).json({ success: false, message: '请选择账号与测试组' });
+    }
+    const allowed = await checkAccountOwnership(account_id, req.user);
+    if (!allowed) return res.status(403).json({ success: false, message: '无权操作此账号' });
+    if (enable_public_link === true) {
+      try {
+        const api = await getApi(req);
+        await api.updateBetaGroup(group_id, { publicLinkEnabled: true });
+      } catch (e) {
+        console.warn('[share-links] publicLinkEnabled:', e.message);
+      }
+    }
+    const slug = crypto.randomBytes(12).toString('hex');
+    const id = uuidv4();
+    const db = getDb();
+    await db.prepare(
+      'INSERT INTO tf_share_links (id, slug, account_id, group_id, user_id) VALUES (?, ?, ?, ?, ?)'
+    ).run(id, slug, account_id, group_id, req.user.id);
+    res.json({
+      success: true,
+      message: '已生成用户端链接',
+      data: { slug, path: `/tf/s/${slug}` },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/share-links', async (req, res, next) => {
+  try {
+    const accountId = req.query.account_id;
+    if (!accountId) return res.status(400).json({ success: false, message: '请选择账号' });
+    const allowed = await checkAccountOwnership(accountId, req.user);
+    if (!allowed) return res.status(403).json({ success: false, message: '无权操作此账号' });
+    const db = getDb();
+    const rows = await db.prepare(
+      'SELECT id, slug, group_id, created_at FROM tf_share_links WHERE account_id = ? ORDER BY created_at DESC'
+    ).all(accountId);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/share-links/:slug', async (req, res, next) => {
+  try {
+    const db = getDb();
+    const row = await db.prepare('SELECT * FROM tf_share_links WHERE slug = ?').get(req.params.slug);
+    if (!row) return res.status(404).json({ success: false, message: '不存在' });
+    const allowed = await checkAccountOwnership(row.account_id, req.user);
+    if (!allowed) return res.status(403).json({ success: false, message: '无权操作' });
+    await db.prepare('DELETE FROM tf_share_links WHERE slug = ?').run(req.params.slug);
+    res.json({ success: true, message: '已删除' });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;

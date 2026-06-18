@@ -5,7 +5,7 @@ enum AppConstants {
         if let url = Bundle.main.infoDictionary?["ServerURL"] as? String, !url.isEmpty, !url.contains("$(") {
             return url
         }
-        return "https://p12.zijiu522.cn"
+        return "https:///p12.zijiu522.cn"
     }()
 
     static let keychainServiceName = "com.certmanager.app"

@@ -25,6 +25,7 @@ const routes = [
   { path: '/settings', name: 'Settings', component: () => import('../views/Settings.vue'), meta: { title: '系统设置', requireSuperAdmin: true } },
   { path: '/apps', name: 'Apps', component: () => import('../views/Apps.vue'), meta: { title: '应用管理' } },
   { path: '/testflight', name: 'TestFlight', component: () => import('../views/TestFlight.vue'), meta: { title: 'TestFlight' } },
+  { path: '/tf/s/:slug', name: 'PublicTfShare', component: () => import('../views/PublicTfShare.vue'), meta: { title: 'TestFlight 邀请', public: true } },
   { path: '/appstore', name: 'AppStore', component: () => import('../views/AppStore.vue'), meta: { title: 'App Store 版本' } },
 ]
 

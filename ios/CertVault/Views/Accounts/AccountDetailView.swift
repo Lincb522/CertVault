@@ -6,6 +6,9 @@ struct AccountDetailView: View {
     @StateObject private var vm = AccountViewModel()
     @State private var showEditSheet = false
     @ObservedObject private var downloadService = FileDownloadService.shared
+    @State private var testInviteEmail = ""
+    @State private var testInviteName = ""
+    @State private var testInviteGroupId = ""
 
     var body: some View {
         Group {
@@ -108,8 +111,32 @@ struct AccountDetailView: View {
 
     private func actionsSection(_ account: Account) -> some View {
         VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("TestFlight（可选）")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.dsMuted)
+                TextField("邀请邮箱（与测试组 ID 成对填写）", text: $testInviteEmail)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                TextField("姓名", text: $testInviteName)
+                    .textFieldStyle(.roundedBorder)
+                TextField("测试组 ID（betaGroups UUID）", text: $testInviteGroupId)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             Button {
-                Task { await vm.testConnection(id: accountId) }
+                Task {
+                    await vm.testConnection(
+                        id: accountId,
+                        inviteEmail: testInviteEmail,
+                        inviteFullName: testInviteName,
+                        betaGroupId: testInviteGroupId
+                    )
+                }
             } label: {
                 HStack(spacing: 8) {
                     if vm.isTesting {

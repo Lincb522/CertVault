@@ -1,0 +1,116 @@
+name: CertVault
+options:
+  bundleIdPrefix: com.certvault
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+configFiles:
+  Debug: CertVault/Config/Secrets.xcconfig
+  Release: CertVault/Config/Secrets.xcconfig
+
+packages:
+  HiconIcons:
+    path: HiconIcons
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
+
+targets:
+  CertVault:
+    type: application
+    platform: iOS
+    sources:
+      - path: CertVault
+        type: group
+        excludes:
+          - "Config/Secrets.xcconfig"
+          - "Config/Secrets.xcconfig.example"
+          - "Info.plist"
+    info:
+      path: CertVault/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        ServerURL: $(SERVER_URL)
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - certvault
+            CFBundleURLName: com.certmanager.app
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    dependencies:
+      - package: HiconIcons
+      - package: GRDB
+      - target: CertVaultWidget
+        embed: true
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: CertVault/CertVault.entitlements
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_CFBundleDisplayName: "CertVault"
+        PRODUCT_BUNDLE_IDENTIFIER: com.certmanager.app
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: T63A78YFJY
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  CertVaultWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - CertVaultWidget
+      - path: CertVault/Models/Account.swift
+        type: file
+      - path: CertVault/Models/Certificate.swift
+        type: file
+      - path: CertVault/Models/Profile.swift
+        type: file
+      - path: CertVault/Models/Device.swift
+        type: file
+      - path: CertVault/Models/DashboardStats.swift
+        type: file
+      - path: CertVault/Models/BundleID.swift
+        type: file
+      - path: CertVault/Models/PushKey.swift
+        type: file
+      - path: CertVault/Models/Model+GRDB.swift
+        type: file
+      - path: CertVault/Utils/Constants.swift
+        type: file
+    info:
+      path: CertVaultWidget/Info.plist
+      properties:
+        CFBundleDisplayName: CertVault Widget
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    dependencies:
+      - package: GRDB
+      - sdk: SwiftUI.framework
+      - sdk: WidgetKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.certmanager.app.widget
+        CODE_SIGN_ENTITLEMENTS: CertVaultWidget/CertVaultWidget.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: T63A78YFJY
+        SWIFT_VERSION: "5.9"
+        SKIP_INSTALL: YES

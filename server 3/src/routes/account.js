@@ -9,6 +9,7 @@ const AppleApiService = require('../services/apple-api');
 const { encrypt, decrypt } = require('../services/encryption');
 const CryptoService = require('../services/crypto');
 const { isPushOrPassCertType } = require('./certificate');
+const { parseTesterName, addTesterToBetaGroupAfterConnect } = require('../services/beta-tester-invite');
 
 function checkOwnership(account, user) {
   if (!account) return false;
@@ -264,6 +265,29 @@ router.post('/:id/test', async (req, res) => {
     const result = await api.listCertificates({ 'limit': 1 });
     const certCount = result.data?.length || 0;
 
+    const email = (req.body?.email || '').trim();
+    const groupId = (req.body?.group_id || req.body?.beta_group_id || '').trim();
+    let testflightInvite = null;
+
+    if (email || groupId) {
+      if (!email || !groupId) {
+        return res.status(400).json({
+          success: false,
+          message: '同时填写邮箱与测试组 ID 时才会在连接成功后自动加入测试组；请补全或留空两项',
+        });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ success: false, message: '邮箱格式不正确' });
+      }
+      const { firstName, lastName } = parseTesterName(req.body);
+      testflightInvite = await addTesterToBetaGroupAfterConnect(api, {
+        email,
+        groupId,
+        firstName,
+        lastName,
+      });
+    }
+
     res.json({
       success: true,
       message: 'API 连接成功',
@@ -272,6 +296,7 @@ router.post('/:id/test', async (req, res) => {
         key_id: account.key_id,
         key_preview: keyPreview,
         certificates_found: certCount,
+        testflight_invite: testflightInvite,
       }
     });
   } catch (err) {

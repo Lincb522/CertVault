@@ -298,6 +298,18 @@ async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_drh_created ON device_register_history(created_at DESC);
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tf_share_links (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      account_id TEXT NOT NULL,
+      group_id TEXT NOT NULL,
+      user_id TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_tf_share_account ON tf_share_links(account_id);
+  `);
+
   // Scheduled pushes table
   await pool.query(`
     CREATE TABLE IF NOT EXISTS scheduled_pushes (
