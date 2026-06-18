@@ -20,7 +20,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.certmanager.app</string>
+			<string>com.example.certvault</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>certvault</string>
@@ -32,7 +32,7 @@
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<false/>
 	</dict>
 	<key>ServerURL</key>
 	<string>$(SERVER_URL)</string>

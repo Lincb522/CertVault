@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
-# 将本地 server 3 后端变更同步到维护文档中的服务器目录并重启 PM2。
+# 将本地 server 后端变更同步到服务器并重启 PM2。
 # 用法（在项目根目录）:
 #   chmod +x scripts/deploy-backend-ssh.sh
 #   ./scripts/deploy-backend-ssh.sh
 #
 # 可选环境变量:
-#   SSH_HOST=zhiwen@125.110.207.231
-#   SSH_PORT=23
+#   SSH_HOST=root@your-server.example
+#   SSH_PORT=22
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT/server 3/src"
-REMOTE_USER_HOST="${SSH_HOST:-zhiwen}"
-REMOTE_PORT="${SSH_PORT:-23}"
-REMOTE_BASE="/www/wwwroot/cert-manager/deploy/src"
+SRC="$ROOT/server/src"
+REMOTE_USER_HOST="${SSH_HOST:-}"
+REMOTE_PORT="${SSH_PORT:-22}"
+REMOTE_BASE="${REMOTE_BASE:-/www/wwwroot/certvault/src}"
 REMOTE_TMP="certvault-deploy-$(date +%s)"
+
+if [[ -z "$REMOTE_USER_HOST" ]]; then
+  echo "请先设置 SSH_HOST，例如: SSH_HOST=root@your-server.example $0" >&2
+  exit 1
+fi
 
 FILES=(
   "routes/account.js"

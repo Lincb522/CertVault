@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>加入 TestFlight 测试</title>
+    <link rel="icon" href="/favicon.ico">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            color-scheme: dark;
+            --bg: #020617; --bg2: #0F172A; --bg3: #1E293B;
+            --glass: rgba(15,23,42,0.65); --glass-solid: rgba(15,23,42,0.88);
+            --glass-hover: rgba(30,41,59,0.55); --glass-dim: rgba(255,255,255,0.03);
+            --bd: rgba(255,255,255,0.08); --bd2: rgba(255,255,255,0.14);
+            --bd-g: rgba(34,197,94,0.28);
+            --c1: #F8FAFC; --c2: #94A3B8; --c3: #475569;
+            --g: #22C55E; --g2: #4ADE80;
+            --g-soft: rgba(34,197,94,0.10); --g-glow: rgba(34,197,94,0.22);
+            --grad: linear-gradient(135deg,#16A34A,#22C55E 50%,#4ADE80);
+            --ok: #22C55E; --ok-bg: rgba(34,197,94,0.12);
+            --warn: #F59E0B; --warn-bg: rgba(245,158,11,0.12);
+            --err: #EF4444; --err-bg: rgba(239,68,68,0.12);
+            --info: #3B82F6; --info-bg: rgba(59,130,246,0.12);
+            --sh-sm: 0 2px 8px rgba(0,0,0,0.4); --sh-md: 0 4px 20px rgba(0,0,0,0.5);
+            --r-xs:6px; --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-full:9999px;
+            --f: 'Fira Sans',-apple-system,BlinkMacSystemFont,"PingFang SC",system-ui,sans-serif;
+            --fm: 'Fira Code',ui-monospace,monospace;
+            --ease: cubic-bezier(.16,1,.3,1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+        body {
+            font-family: var(--f); font-size: 14px; font-weight: 400; line-height: 1.6;
+            color: var(--c1); background: var(--bg); min-height: 100vh;
+        }
+
+        body::before {
+            content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(600px 400px at 8% 12%, rgba(59,130,246,0.10), transparent),
+                radial-gradient(400px 350px at 92% 8%, rgba(34,197,94,0.06), transparent),
+                radial-gradient(700px 500px at 45% 85%, rgba(59,130,246,0.04), transparent);
+            animation: orbPulse 12s ease-in-out infinite alternate;
+        }
+        @keyframes orbPulse { 0%{opacity:1} 100%{opacity:.6} }
+
+        body::after {
+            content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        h1, h2, h3 { font-weight: 700; line-height: 1.2; color: var(--c1); letter-spacing: -.025em; }
+
+        .tf-shell {
+            max-width: 440px; margin: 0 auto; padding: 60px 20px 40px;
+            min-height: 100vh; display: flex; flex-direction: column;
+            position: relative; z-index: 1;
+        }
+
+        .tf-brand { text-align: center; margin-bottom: 48px; }
+        .tf-brand .tf-icon {
+            width: 72px; height: 72px; border-radius: var(--r-lg);
+            display: inline-flex; justify-content: center; align-items: center;
+            font-size: 34px; font-weight: 800; color: #fff; letter-spacing: -2px;
+            background: linear-gradient(135deg, #007aff, #5856d6);
+            box-shadow: var(--sh-md), 0 0 40px rgba(0,122,255,0.15);
+            border: 2px solid rgba(0,122,255,0.3);
+            margin-bottom: 16px;
+        }
+        .tf-brand h1 { font-size: 26px; font-weight: 700; color: var(--c1); letter-spacing: -0.03em; }
+        .tf-brand p { font-size: 13px; color: var(--c3); margin-top: 6px; line-height: 1.5; }
+
+        .tf-card {
+            background: var(--glass); border: 1px solid var(--bd); border-radius: var(--r-xl);
+            padding: 28px 24px; margin-bottom: 16px;
+            backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+        }
+        .tf-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+        .tf-card .desc { font-size: 13px; color: var(--c3); line-height: 1.6; margin-bottom: 20px; }
+
+        .field { display: flex; flex-direction: column; gap: 8px; }
+        .field label {
+            font-size: 11px; font-weight: 600; color: var(--c3);
+            text-transform: uppercase; letter-spacing: .08em;
+        }
+        input[type="text"], input[type="email"] {
+            width: 100%; padding: 12px 16px; font-family: var(--f); font-size: 14px;
+            font-weight: 500; color: var(--c1); background: rgba(255,255,255,.04);
+            border: 1px solid var(--bd); border-radius: var(--r-sm);
+            transition: all .15s var(--ease); -webkit-appearance: none; outline: none;
+        }
+        input:focus {
+            border-color: var(--g);
+            box-shadow: 0 0 0 3px var(--g-soft), 0 0 16px rgba(34,197,94,.06);
+        }
+        input::placeholder { color: var(--c3); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 20px; font-family: var(--f); font-size: 13px; font-weight: 600;
+            line-height: 1; border: none; border-radius: var(--r-sm); cursor: pointer;
+            transition: all .15s var(--ease); white-space: nowrap; user-select: none;
+        }
+        .btn:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-primary {
+            background: var(--grad); color: #fff;
+            box-shadow: var(--sh-sm), 0 0 14px rgba(34,197,94,.18);
+        }
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: var(--sh-md), 0 0 28px rgba(34,197,94,.28); transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: var(--glass-dim); color: var(--c1);
+            border: 1px solid var(--bd); box-shadow: var(--sh-sm);
+        }
+        .btn-secondary:hover:not(:disabled) { background: var(--glass-hover); border-color: var(--bd2); }
+        .btn-large { padding: 16px 24px; font-size: 15px; border-radius: var(--r-md); }
+
+        .tf-alert {
+            padding: 14px 16px; border-radius: var(--r-sm); font-size: 13px;
+            line-height: 1.5; margin-bottom: 14px; display: none;
+        }
+        .tf-alert.show { display: block; animation: fadeUp 0.3s var(--ease); }
+        .tf-alert.alert-err { background: var(--err-bg); border: 1px solid rgba(239,68,68,0.2); color: var(--err); }
+        .tf-alert.alert-warn { background: var(--warn-bg); border: 1px solid rgba(245,158,11,0.2); color: var(--warn); }
+        .tf-alert.alert-ok { background: var(--ok-bg); border: 1px solid rgba(34,197,94,0.2); color: var(--ok); }
+        .tf-alert.alert-info { background: var(--info-bg); border: 1px solid rgba(59,130,246,0.2); color: var(--info); }
+
+        .tf-token-display { display: none; margin-top: 20px; }
+        .tf-token-display.show { display: block; animation: fadeUp 0.4s var(--ease); }
+
+        .tf-token-box {
+            background: var(--g-soft); border: 1px solid var(--bd-g);
+            border-radius: var(--r-md); padding: 20px; margin-bottom: 16px;
+        }
+        .tf-token-box .label {
+            font-size: 10px; font-weight: 700; color: var(--g); text-transform: uppercase;
+            letter-spacing: 0.12em; margin-bottom: 8px;
+        }
+        .tf-token-box .key {
+            font-family: var(--fm); font-size: 22px; font-weight: 700;
+            color: var(--g2); letter-spacing: 2px; word-break: break-all;
+        }
+        .tf-token-box .copy-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+        .tf-token-box .copy-btn {
+            padding: 6px 16px; background: var(--g-soft); border: 1px solid var(--bd-g);
+            border-radius: var(--r-xs); color: var(--g2); font-size: 12px;
+            font-weight: 600; font-family: var(--f); cursor: pointer;
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .tf-token-box .copy-btn:hover { background: rgba(34,197,94,0.18); }
+        .tf-token-box .copy-btn.copied { background: var(--ok-bg); border-color: rgba(34,197,94,0.3); color: var(--ok); }
+
+        .tf-public-link { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--bd); }
+        .tf-public-link.show { display: block; }
+        .tf-public-link p { font-size: 13px; color: var(--c3); margin-bottom: 12px; text-align: center; }
+        .tf-public-link .link-box {
+            font-family: var(--fm); font-size: 13px; font-weight: 600;
+            color: var(--info); letter-spacing: 0.5px; word-break: break-all;
+            padding: 12px; background: var(--info-bg); border: 1px solid rgba(59,130,246,0.2);
+            border-radius: var(--r-sm); margin-bottom: 10px; text-align: center;
+        }
+
+        .tf-success-icon {
+            width: 56px; height: 56px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; margin: 0 auto 16px;
+            background: var(--ok-bg); color: var(--ok); border: 2px solid var(--ok);
+        }
+
+        .tf-guide { margin-top: auto; padding-top: 32px; }
+        .tf-guide-title {
+            font-size: 10px; font-weight: 700; color: var(--c3); text-transform: uppercase;
+            letter-spacing: 0.12em; margin-bottom: 12px;
+        }
+        .tf-guide-item { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--bd); }
+        .tf-guide-item .gi-num {
+            width: 22px; height: 22px; border-radius: var(--r-xs);
+            background: var(--info-bg); color: var(--info);
+            font-size: 11px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .tf-guide-item .gi-text { font-size: 13px; color: var(--c3); line-height: 1.5; }
+        .tf-guide-item .gi-text strong { color: var(--c2); }
+
+        .tf-footer { text-align: center; padding: 24px 0 8px; }
+        .tf-footer p { font-size: 11px; color: var(--c3); }
+
+        .spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
+            border-radius: 50%; animation: spin 0.6s linear infinite;
+            vertical-align: middle; margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="tf-shell">
+    <div class="tf-brand">
+        <div class="tf-icon" id="appIcon">A</div>
+        <h1 id="appName">载入中...</h1>
+        <p id="groupName">TestFlight 测试组</p>
+    </div>
+
+    <!-- Form View -->
+    <div id="formView">
+        <div class="tf-card">
+            <h2>加入测试</h2>
+            <div class="desc">填写你的信息以加入 TestFlight 测试组，提交后将通过邮件收到邀请。</div>
+
+            <div id="alertBox" class="tf-alert"></div>
+
+            <form id="joinForm">
+                <div class="field">
+                    <label>测试姓名</label>
+                    <input type="text" id="inputName" placeholder="例如：张三" maxlength="50" required>
+                </div>
+                <div class="field" style="margin-top:14px">
+                    <label>Apple ID 邮箱</label>
+                    <input type="email" id="inputEmail" placeholder="用于接收 TestFlight 邀请" required>
+                </div>
+                <div class="field" style="margin-top:14px">
+                    <label>保护码</label>
+                    <input type="text" id="inputProtectCode" placeholder="请输入保护码" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;font-family:var(--fm)">
+                </div>
+                <button type="submit" class="btn btn-primary btn-large" id="submitBtn" style="width:100%;margin-top:18px">提交并加入测试组</button>
+            </form>
+
+            <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--bd); text-align:center">
+                <p style="font-size:12px; color:var(--c3); margin-bottom:10px">没有保护码？可免费体验 1 小时</p>
+                <button type="button" class="btn btn-secondary btn-large" id="trialBtn" style="width:100%" onclick="doTrial()">免保护码体验</button>
+            </div>
+
+            <div id="publicLinkSection" class="tf-public-link">
+                <p>或直接使用 TestFlight 公开链接加入：</p>
+                <div class="link-box" id="publicLinkText"></div>
+                <button type="button" class="btn btn-secondary btn-large" id="copyPublicLinkBtn" style="width:100%">复制公开链接</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Result View -->
+    <div id="resultView" style="display:none">
+        <div class="tf-card" style="text-align:center">
+            <div class="tf-success-icon">✓</div>
+            <h2 style="color:var(--ok); margin-bottom:4px">报名成功！</h2>
+            <p class="desc" id="resultEmailDesc" style="margin-bottom:0">已记录您的测试信息。</p>
+        </div>
+
+        <!-- Token Section -->
+        <div id="tokenSection" class="tf-token-display">
+            <div class="tf-token-box">
+                <div class="label">您的专属体验 Token</div>
+                <div class="key" id="tokenValue"></div>
+                <div class="copy-row">
+                    <button class="copy-btn" id="copyTokenBtn">复制 Token</button>
+                    <span style="font-size:11px;color:var(--c3)">请妥善保存</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Steps -->
+        <div class="tf-guide" style="padding-top:0">
+            <div class="tf-guide-title">下一步</div>
+            <div class="tf-guide-item">
+                <span class="gi-num">1</span>
+                <span class="gi-text">查收 Apple 发送的 TestFlight 邀请邮件，复制<strong>兑换码</strong></span>
+            </div>
+            <div class="tf-guide-item">
+                <span class="gi-num">2</span>
+                <span class="gi-text">打开手机 TestFlight App → 右上角头像 → <strong>兑换邀请</strong></span>
+            </div>
+            <div class="tf-guide-item">
+                <span class="gi-num">3</span>
+                <span class="gi-text">粘贴兑换码安装应用</span>
+            </div>
+            <div class="tf-guide-item" id="guideStep4" style="display:none">
+                <span class="gi-num">4</span>
+                <span class="gi-text">打开应用 → <strong>设置</strong> → <strong>高级功能</strong> → 粘贴上方 <strong>Token</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="tf-guide" id="initialGuide">
+        <div class="tf-guide-title">如何加入测试</div>
+        <div class="tf-guide-item">
+            <span class="gi-num">1</span>
+            <span class="gi-text">填写<strong>姓名</strong>和 <strong>Apple ID 邮箱</strong></span>
+        </div>
+        <div class="tf-guide-item">
+            <span class="gi-num">2</span>
+            <span class="gi-text">等待 TestFlight <strong>邀请邮件</strong></span>
+        </div>
+        <div class="tf-guide-item">
+            <span class="gi-num">3</span>
+            <span class="gi-text">在 TestFlight App 中<strong>兑换邀请码</strong>即可安装</span>
+        </div>
+    </div>
+
+    <footer class="tf-footer">
+        <p>Powered by CertVault & Apple TestFlight</p>
+    </footer>
+</div>
+
+<script>
+    const pathParts = window.location.pathname.split('/');
+    const slug = pathParts[pathParts.length - 1] === '' ? pathParts[pathParts.length - 2] : pathParts[pathParts.length - 1];
+
+    const formView = document.getElementById('formView');
+    const resultView = document.getElementById('resultView');
+    const alertBox = document.getElementById('alertBox');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let isInternalGroup = false;
+
+    function showAlert(msg, type = 'err') {
+        alertBox.textContent = msg;
+        alertBox.className = 'tf-alert show alert-' + type;
+    }
+
+    function hideAlert() {
+        alertBox.className = 'tf-alert';
+    }
+
+    function setLoading(isLoading) {
+        if (isLoading) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span>处理中...';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '提交并加入测试组';
+        }
+    }
+
+    async function loadInfo() {
+        try {
+            const res = await fetch('/api/public/tf/' + encodeURIComponent(slug));
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                showAlert(data.message || '链接已失效或不存在', 'err');
+                submitBtn.disabled = true;
+                return;
+            }
+
+            document.getElementById('appName').textContent = data.data.app_name || '加入测试';
+            document.getElementById('groupName').textContent = data.data.group_name || '内部群组';
+
+            if (data.data.app_name && data.data.app_name.length > 0) {
+                document.getElementById('appIcon').textContent = data.data.app_name.charAt(0).toUpperCase();
+            }
+
+            if (data.data.is_internal) {
+                isInternalGroup = true;
+                showAlert('此为内部测试组，不支持通过公开页面报名加入。请联系管理员为您手动添加。', 'warn');
+                document.getElementById('inputName').disabled = true;
+                document.getElementById('inputEmail').disabled = true;
+                submitBtn.disabled = true;
+            }
+
+            if (data.data.public_link_enabled && data.data.public_link) {
+                const section = document.getElementById('publicLinkSection');
+                section.classList.add('show');
+                document.getElementById('publicLinkText').textContent = data.data.public_link;
+                const copyPubLink = document.getElementById('copyPublicLinkBtn');
+                copyPubLink.onclick = () => {
+                    navigator.clipboard.writeText(data.data.public_link).then(() => {
+                        copyPubLink.textContent = '✓ 已复制';
+                        setTimeout(() => copyPubLink.textContent = '复制公开链接', 2000);
+                    });
+                };
+            }
+        } catch (err) {
+            showAlert('网络错误，请稍后重试', 'err');
+        }
+    }
+
+    function handleSuccess(data, email, isTrial) {
+        const desc = isTrial ? '已获得 1 小时体验，邀请邮件将发送至: ' + email : '邀请邮件将发送至: ' + email;
+        document.getElementById('resultEmailDesc').textContent = desc;
+        formView.style.display = 'none';
+        document.getElementById('initialGuide').style.display = 'none';
+        resultView.style.display = 'block';
+
+        if (data.data && data.data.token_auto && data.data.token_auto.key) {
+            document.getElementById('tokenSection').classList.add('show');
+            document.getElementById('guideStep4').style.display = '';
+            const tokenKey = data.data.token_auto.key;
+            document.getElementById('tokenValue').textContent = tokenKey;
+
+            const copyBtn = document.getElementById('copyTokenBtn');
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(tokenKey).then(() => {
+                    copyBtn.textContent = '✓ 复制成功';
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => {
+                        copyBtn.textContent = '复制 Token';
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                });
+            };
+        }
+    }
+
+    document.getElementById('joinForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideAlert();
+
+        const name = document.getElementById('inputName').value.trim();
+        const email = document.getElementById('inputEmail').value.trim();
+        const protectCode = document.getElementById('inputProtectCode').value.trim();
+
+        if (!name || !email) return;
+
+        setLoading(true);
+
+        try {
+            const res = await fetch('/api/public/tf/' + encodeURIComponent(slug) + '/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name: name, email: email, protect_code: protectCode })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                showAlert(data.message || '提交失败', 'err');
+                setLoading(false);
+                return;
+            }
+
+            handleSuccess(data, email, false);
+
+        } catch (err) {
+            showAlert('网络错误，无法提交', 'err');
+            setLoading(false);
+        }
+    });
+
+    async function doTrial() {
+        hideAlert();
+
+        const name = document.getElementById('inputName').value.trim();
+        const email = document.getElementById('inputEmail').value.trim();
+
+        if (!name || !email) {
+            showAlert('请先填写姓名和邮箱', 'warn');
+            return;
+        }
+
+        const trialBtn = document.getElementById('trialBtn');
+        trialBtn.disabled = true;
+        trialBtn.innerHTML = '<span class="spinner"></span>处理中...';
+
+        try {
+            const res = await fetch('/api/public/tf/' + encodeURIComponent(slug) + '/join-trial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name: name, email: email })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                showAlert(data.message || '体验申请失败', 'err');
+                trialBtn.disabled = false;
+                trialBtn.textContent = '免保护码体验';
+                return;
+            }
+
+            handleSuccess(data, email, true);
+
+        } catch (err) {
+            showAlert('网络错误，无法提交', 'err');
+            trialBtn.disabled = false;
+            trialBtn.textContent = '免保护码体验';
+        }
+    }
+
+    loadInfo();
+</script>
+</body>
+</html>

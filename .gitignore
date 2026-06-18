@@ -1,25 +1,40 @@
 # Dependencies
-node_modules/
-client/node_modules/
-server/node_modules/
+**/node_modules/
 
-# Build output
+# Build and release output
 client/dist/
+server/client/
+.build/
+dist/
+releases/
+出售版/
 *.tar.gz
+*.zip
 
 # Runtime data
 server/data/
 server/db/
+*.db
+*.sqlite
+*.sqlite3
 
-# Environment & Secrets
+# Environment and secrets
 .env
 .env.*
 !.env.example
 ios/CertVault/Config/Secrets.xcconfig
 
-# macOS
+# Logs
+*.log
+npm-debug.log*
+
+# macOS and editors
 .DS_Store
 **/.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # Xcode
 ios/CertVault.xcodeproj/xcuserdata/
@@ -31,16 +46,6 @@ DerivedData/
 *.dSYM.zip
 *.dSYM
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Claude / Cursor
+# Local AI/editor configuration
 .claude/
 .cursor/
-
-# Logs
-*.log
-npm-debug.log*

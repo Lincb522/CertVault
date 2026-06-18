@@ -988,7 +988,7 @@
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = CertVaultWidget/CertVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 7VJKFX4HF8;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = CertVaultWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -996,7 +996,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.cartvault.com.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.certvault.widget;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.9;
@@ -1012,7 +1012,7 @@
 				CODE_SIGN_ENTITLEMENTS = CertVault/CertVault.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 7VJKFX4HF8;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = CertVault/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CertVault;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -1024,7 +1024,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.cartvault.com;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.certvault;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1036,7 +1036,7 @@
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = CertVaultWidget/CertVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 7VJKFX4HF8;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = CertVaultWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1044,7 +1044,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.cartvault.com.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.certvault.widget;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.9;
@@ -1060,7 +1060,7 @@
 				CODE_SIGN_ENTITLEMENTS = CertVault/CertVault.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 7VJKFX4HF8;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = CertVault/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CertVault;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -1072,7 +1072,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.cartvault.com;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.certvault;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

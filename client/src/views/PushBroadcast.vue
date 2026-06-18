@@ -28,7 +28,7 @@
             </el-form-item>
 
             <el-form-item label="Bundle ID" required>
-              <el-input v-model="form.bundle_id" placeholder="例如：zijiu.Aside.com" />
+              <el-input v-model="form.bundle_id" placeholder="例如：com.example.app" />
             </el-form-item>
 
             <!-- 目标设备 -->

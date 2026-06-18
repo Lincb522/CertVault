@@ -1,119 +1,70 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TIMESTAMP=$(date +%Y%m%d%H%M%S)
-
-# 颜色
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-log() { echo -e "${BLUE}[打包]${NC} $1"; }
-ok()  { echo -e "${GREEN}[完成]${NC} $1"; }
-warn(){ echo -e "${YELLOW}[提示]${NC} $1"; }
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+MODE="${1:-release}"
+TIMESTAMP="$(date +%Y%m%d%H%M%S)"
+BUILD_DIR="$ROOT/.build"
+RELEASE_DIR="$ROOT/releases"
 
 usage() {
-  echo "用法: ./build.sh [选项]"
-  echo ""
-  echo "  full       全量打包（后端 + 前端，含 node_modules）"
-  echo "  lite       轻量打包（后端 + 前端，不含 node_modules）"
-  echo "  patch      增量包（仅后端 src + 前端 dist）"
-  echo "  server     仅后端 src"
-  echo "  client     仅前端（自动构建 dist）"
-  echo ""
-  echo "示例: ./build.sh patch"
-  exit 1
+  echo "用法: ./build.sh [release|patch|server|client]"
+  echo "  release  完整部署包：后端、依赖清单、public、前端构建产物"
+  echo "  patch    增量部署包：后端 src 与前端构建产物"
+  echo "  server   仅后端 src"
+  echo "  client   仅前端构建产物"
 }
-
-MODE=${1:-patch}
 
 build_client() {
-  if [ -f "$PROJECT_DIR/client/package.json" ]; then
-    log "构建前端..."
-    cd "$PROJECT_DIR/client"
-    npm run build
-    cd "$PROJECT_DIR"
-    ok "前端构建完成"
-  fi
+  echo "[build] 构建 Web 前端"
+  npm --prefix "$ROOT/client" run build
 }
 
-DIST_DIR="$PROJECT_DIR/dist"
-rm -rf "$DIST_DIR"
-mkdir -p "$DIST_DIR"
+prepare() {
+  rm -rf "$BUILD_DIR"
+  mkdir -p "$BUILD_DIR" "$RELEASE_DIR"
+}
+
+pack() {
+  local name="$1"
+  tar -czf "$RELEASE_DIR/$name" -C "$BUILD_DIR" .
+  echo "[build] 已生成 $RELEASE_DIR/$name"
+}
+
+prepare
 
 case "$MODE" in
-  full)
-    log "全量打包模式"
+  release)
     build_client
-    OUTFILE="certvault-full-${TIMESTAMP}.tar.gz"
-    tar czf "$PROJECT_DIR/$OUTFILE" \
-      -C "$PROJECT_DIR" \
-      server/package.json \
-      server/package-lock.json \
-      server/src \
-      server/node_modules \
-      -C "$PROJECT_DIR" \
-      client/dist
-    ok "全量包: $OUTFILE ($(du -h "$PROJECT_DIR/$OUTFILE" | cut -f1))"
-    warn "部署: 解压后 cd server && node src/app.js"
+    cp "$ROOT/server/package.json" "$ROOT/server/package-lock.json" "$BUILD_DIR/"
+    cp -R "$ROOT/server/src" "$BUILD_DIR/src"
+    cp -R "$ROOT/server/public" "$BUILD_DIR/public"
+    cp -R "$ROOT/client/dist" "$BUILD_DIR/client"
+    [ ! -f "$ROOT/server/.env.example" ] || cp "$ROOT/server/.env.example" "$BUILD_DIR/.env.example"
+    [ ! -f "$ROOT/server/ecosystem.config.js" ] || cp "$ROOT/server/ecosystem.config.js" "$BUILD_DIR/ecosystem.config.js"
+    [ ! -f "$ROOT/server/start.sh" ] || cp "$ROOT/server/start.sh" "$BUILD_DIR/start.sh"
+    pack "certvault-release-$TIMESTAMP.tar.gz"
     ;;
-
-  lite)
-    log "轻量打包模式（不含 node_modules）"
-    build_client
-    OUTFILE="certvault-lite-${TIMESTAMP}.tar.gz"
-    tar czf "$PROJECT_DIR/$OUTFILE" \
-      -C "$PROJECT_DIR" \
-      server/package.json \
-      server/package-lock.json \
-      server/src \
-      -C "$PROJECT_DIR" \
-      client/dist
-    ok "轻量包: $OUTFILE ($(du -h "$PROJECT_DIR/$OUTFILE" | cut -f1))"
-    warn "部署: 解压后 cd server && npm install --production && node src/app.js"
-    ;;
-
   patch)
-    log "增量打包模式（仅源码）"
-    OUTFILE="certvault-patch-${TIMESTAMP}.tar.gz"
-    mkdir -p "$DIST_DIR/src" "$DIST_DIR/client"
-    cp -r "$PROJECT_DIR/server/src/"* "$DIST_DIR/src/"
-    if [ -d "$PROJECT_DIR/client/dist" ]; then
-      cp -r "$PROJECT_DIR/client/dist/"* "$DIST_DIR/client/"
-    fi
-    tar czf "$PROJECT_DIR/$OUTFILE" -C "$DIST_DIR" .
-    ok "增量包: $OUTFILE ($(du -h "$PROJECT_DIR/$OUTFILE" | cut -f1))"
-    warn "部署: 在服务器项目根目录解压覆盖，重启服务"
-    ;;
-
-  server)
-    log "仅后端打包"
-    OUTFILE="certvault-server-${TIMESTAMP}.tar.gz"
-    mkdir -p "$DIST_DIR/src"
-    cp -r "$PROJECT_DIR/server/src/"* "$DIST_DIR/src/"
-    tar czf "$PROJECT_DIR/$OUTFILE" -C "$DIST_DIR" .
-    ok "后端包: $OUTFILE ($(du -h "$PROJECT_DIR/$OUTFILE" | cut -f1))"
-    warn "部署: 覆盖服务器 src/ 目录，重启服务"
-    ;;
-
-  client)
-    log "仅前端打包"
     build_client
-    OUTFILE="certvault-client-${TIMESTAMP}.tar.gz"
-    mkdir -p "$DIST_DIR/client"
-    cp -r "$PROJECT_DIR/client/dist/"* "$DIST_DIR/client/"
-    tar czf "$PROJECT_DIR/$OUTFILE" -C "$DIST_DIR" .
-    ok "前端包: $OUTFILE ($(du -h "$PROJECT_DIR/$OUTFILE" | cut -f1))"
-    warn "部署: 覆盖服务器 client/ 目录"
+    cp -R "$ROOT/server/src" "$BUILD_DIR/src"
+    cp -R "$ROOT/client/dist" "$BUILD_DIR/client"
+    pack "certvault-patch-$TIMESTAMP.tar.gz"
     ;;
-
+  server)
+    cp -R "$ROOT/server/src" "$BUILD_DIR/src"
+    pack "certvault-server-$TIMESTAMP.tar.gz"
+    ;;
+  client)
+    build_client
+    cp -R "$ROOT/client/dist" "$BUILD_DIR/client"
+    pack "certvault-client-$TIMESTAMP.tar.gz"
+    ;;
   *)
     usage
+    rm -rf "$BUILD_DIR"
+    exit 1
     ;;
 esac
 
-rm -rf "$DIST_DIR"
-echo ""
-ok "打包完成 → $OUTFILE"
+rm -rf "$BUILD_DIR"

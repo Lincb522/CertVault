@@ -259,7 +259,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="Bundle ID" required>
-          <el-input v-model="cleanupForm.bundle_id" placeholder="例如：zijiu.Aside.com" />
+          <el-input v-model="cleanupForm.bundle_id" placeholder="例如：com.example.yourapp" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -335,7 +335,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="Bundle ID" required>
-          <el-input v-model="testForm.bundle_id" placeholder="例如：zijiu.Aside.com" />
+          <el-input v-model="testForm.bundle_id" placeholder="例如：com.example.yourapp" />
         </el-form-item>
         <el-form-item label="标题" required>
           <el-input v-model="testForm.title" placeholder="推送标题" />

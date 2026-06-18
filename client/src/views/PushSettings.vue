@@ -70,7 +70,7 @@
                 </el-select>
               </el-form-item>
               <el-form-item label="默认 Bundle ID">
-                <el-input v-model="form.default_bundle_id" placeholder="例如：zijiu.Aside.com" />
+                <el-input v-model="form.default_bundle_id" placeholder="例如：com.example.yourapp" />
               </el-form-item>
               <el-form-item label="默认环境">
                 <el-radio-group v-model="form.default_sandbox">

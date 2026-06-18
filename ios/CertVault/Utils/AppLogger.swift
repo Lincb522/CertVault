@@ -2,7 +2,7 @@ import Foundation
 import os.log
 
 enum AppLogger {
-    private static let subsystem = Bundle.main.bundleIdentifier ?? "com.certmanager.app"
+    private static let subsystem = Bundle.main.bundleIdentifier ?? "com.example.certvault"
 
     static let api = Logger(subsystem: subsystem, category: "API")
     static let auth = Logger(subsystem: subsystem, category: "Auth")

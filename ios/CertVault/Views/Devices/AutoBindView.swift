@@ -177,7 +177,7 @@ struct AutoBindView: View {
             }
             if bundleId.isEmpty {
                 let rand = Int.random(in: 1000...9999)
-                bundleId = "zj-\(rand).zijiu522.cn"
+                bundleId = "com.example.device.\(rand)"
                 bundleName = "zj-\(rand)"
             }
         }

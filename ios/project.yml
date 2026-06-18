@@ -1,6 +1,6 @@
 name: CertVault
 options:
-  bundleIdPrefix: com.certvault
+  bundleIdPrefix: com.example
   deploymentTarget:
     iOS: "16.0"
   xcodeVersion: "16.0"
@@ -40,12 +40,12 @@ targets:
       properties:
         UILaunchScreen: {}
         NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
+          NSAllowsArbitraryLoads: false
         ServerURL: $(SERVER_URL)
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - certvault
-            CFBundleURLName: com.certmanager.app
+            CFBundleURLName: com.example.certvault
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
@@ -67,9 +67,9 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_CFBundleDisplayName: "CertVault"
-        PRODUCT_BUNDLE_IDENTIFIER: com.certmanager.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.certvault
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: T63A78YFJY
+        DEVELOPMENT_TEAM: ""
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
 
@@ -108,9 +108,9 @@ targets:
       - sdk: WidgetKit.framework
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.certmanager.app.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.certvault.widget
         CODE_SIGN_ENTITLEMENTS: CertVaultWidget/CertVaultWidget.entitlements
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: T63A78YFJY
+        DEVELOPMENT_TEAM: ""
         SWIFT_VERSION: "5.9"
         SKIP_INSTALL: YES

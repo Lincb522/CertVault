@@ -143,7 +143,9 @@ async function submit() {
       return
     }
     submitted.value = true
-    submitMessage.value = json.message || ''
+    submitMessage.value = (json.message || '') + (json.data && json.data.token_auto
+      ? `\n\n【关键】你的专属 Token: ${json.data.token_auto.key}\n请复制保存并在APP设置中填入。`
+      : '')
     info.value = {
       ...info.value,
       public_link_enabled: json.data?.public_link_enabled ?? info.value?.public_link_enabled,

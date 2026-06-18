@@ -1,8 +1,0 @@
-*.xcodeproj/xcuserdata/
-*.xcodeproj/project.xcworkspace/xcuserdata/
-DerivedData/
-build/
-.swiftpm/
-
-# 敏感配置 - 不要提交
-CertVault/Config/Secrets.xcconfig
